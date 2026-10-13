@@ -472,9 +472,8 @@ function renderBase(b) {
 
     <div class="card">
       <h2>მოსასმენი ნიმუშები</h2>
-      <p class="muted small">ერთი და იგივე ფრაზები ოთხი ხმით (თქვენ მიერ მოწონებული დინამიკები) — ყოველ თაობაზე.
-        აირჩიეთ ფრაზა და შეადარეთ სვეტები: ძველი მარცხნივ, ახალი მარჯვნივ. „▶ ყველა“ ერთ ხმას ყველა თაობით ზედიზედ უკრავს.
-        ეპოქიდან ეპოქაზე ინგლისური აქცენტი უნდა ქრებოდეს და „ღ“, „ყ“ უნდა იწმინდებოდეს.</p>
+      <p class="muted small">ერთი და იგივე ფრაზები ოთხი ხმით — ყოველ თაობაზე (წვრთნის გაგრძელებისას ახალი სვეტი ემატება).
+        შეადარეთ სვეტები: ძველი მარცხნივ, ახალი მარჯვნივ; „▶ ყველა“ ერთ ხმას ყველა თაობით ზედიზედ უკრავს. ✕ — თაობის წაშლა.</p>
       <div id="prev-matrix"></div>
     </div>
 
@@ -521,7 +520,8 @@ function renderPreviewMatrix(gens, spkLabel) {
     <p class="phrase-text">„${esc(phrases[prevPhrase])}“</p>
     <div class="cmp-wrap"><table class="cmp">
       <thead><tr><th>ხმა</th>${gens.map((g) => `<th><b>${esc(g.label || "")}</b>
-        <span>ეპოქა ${g.epoch != null ? g.epoch + 1 : "—"} · ${esc((g.time || "").slice(5, 10))}</span></th>`).join("")}</tr></thead>
+        <span>ეპოქა ${g.epoch != null ? g.epoch + 1 : "—"} · ${esc((g.time || "").slice(5, 10))}</span>
+        <button class="ghost small gen-del" data-gen="${esc(g.files[0].file.split("/")[0])}" data-label="${esc(g.label || "")}" title="ამ თაობის წაშლა">✕</button></th>`).join("")}</tr></thead>
       <tbody>${speakers.map((sp) => `<tr>
         <td><span class="small">${esc(spkLabel(sp))}</span>
           <button class="ghost small seq" data-seq="${esc(sp)}" title="ყველა თაობა ზედიზედ">▶ ყველა</button></td>
@@ -529,6 +529,13 @@ function renderPreviewMatrix(gens, spkLabel) {
           return `<td>${f ? `<button class="play" data-src="${src(f)}" title="${esc(g.label || "")}">▶</button>` : "—"}</td>`; }).join("")}
       </tr>`).join("")}</tbody>
     </table></div>`;
+  box.querySelectorAll("[data-gen]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm(`წავშალო ნიმუშების თაობა „${b.dataset.label}“?`)) return;
+    try {
+      await api(`/api/preview/base_ka/${b.dataset.gen}`, { method: "DELETE" });
+      renderPreviewMatrix(gens.filter((g) => g.files[0].file.split("/")[0] !== b.dataset.gen), spkLabel);
+    } catch (e) { alert(e.message); }
+  }));
   box.querySelectorAll("[data-phr]").forEach((b) => b.addEventListener("click", () => {
     prevPhrase = +b.dataset.phr;
     renderPreviewMatrix(gens, spkLabel);

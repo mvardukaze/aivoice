@@ -359,6 +359,16 @@ def api_roadmap():
     return read_json(ROOT / "data" / "roadmap.json", {"stages": []})
 
 
+@app.delete("/api/preview/{slot}/{n}")
+def api_preview_delete(slot: str, n: str):
+    """ნიმუშების ერთი თაობის წაშლა (საბაზო მოდელი → „მოსასმენი ნიმუშები“ → ✕)."""
+    d = (cpath("runs") / slot / "previews" / n).resolve()
+    if not d.is_relative_to(cpath("runs").resolve()) or d.parent.name != "previews" or not d.is_dir():
+        raise HTTPException(404)
+    shutil.rmtree(d)
+    return {"ok": True}
+
+
 @app.get("/api/preview/{slot}/{n}/{name}")
 def api_preview(slot: str, n: str, name: str):
     path = (cpath("runs") / slot / "previews" / n / name).resolve()
