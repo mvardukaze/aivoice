@@ -25,6 +25,7 @@ import argparse
 import json
 import random
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -208,7 +209,8 @@ GPU_HOT, GPU_COOL = 80, 70  # °C: ამის ზემოთ ვჩერდ�
 
 def gpu_temp() -> int | None:
     try:
-        out = subprocess.run(["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
+        smi = shutil.which("nvidia-smi") or "/usr/lib/wsl/lib/nvidia-smi"  # WSL: სერვისის PATH-ში არ არის
+        out = subprocess.run([smi, "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
                              capture_output=True, text=True, timeout=10).stdout
         return int(out.split()[0])
     except (OSError, ValueError, IndexError, subprocess.TimeoutExpired):
