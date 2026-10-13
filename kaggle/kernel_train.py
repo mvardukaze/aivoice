@@ -19,7 +19,10 @@ CFG = json.loads('''__CONFIG__''')
 SLOT = CFG["slot"]
 IN = Path("/kaggle/input")
 WARM = next(p for p in IN.rglob(CFG["warmstart"]))  # საწყისი checkpoint — aivoice-base-ში ან ცალკე dataset-ში (init-*)
-OVERLAY = next(IN.rglob("piper_overlay.tar"))  # ჩვენი შესწორებები Piper-ის train/-ზე + core.pyx (repo: piper_overlay/)
+# ჩვენი შესწორებები Piper-ის train/-ზე + core.pyx (repo: piper_overlay/). Kaggle ატვირთულ .tar-ს ხშირად თავად
+# ხსნის (→ piper_overlay/piper/...), ამიტომ ორივე ვარიანტს ვეძებთ.
+OVERLAY = next(IN.rglob("piper_overlay.tar"), None) or next(
+    p for p in IN.rglob("piper") if p.is_dir() and (p / "train" / "vits" / "dataset.py").exists())
 SLUG = SLOT.replace("_", "-")
 VOICE = next(p for p in IN.rglob("metadata.csv") if f"aivoice-{SLUG}" in str(p)).parent
 RESUME = next(iter(IN.rglob("resume.ckpt")), None)
@@ -69,8 +72,11 @@ import tarfile  # noqa: E402
 
 import piper  # noqa: E402
 
-with tarfile.open(OVERLAY) as t:
-    t.extractall(Path(piper.__file__).parent.parent)  # piper/train/... ჩანაცვლდება
+if OVERLAY.is_dir():
+    shutil.copytree(OVERLAY, Path(piper.__file__).parent, dirs_exist_ok=True)  # piper/train/... ჩანაცვლდება
+else:
+    with tarfile.open(OVERLAY) as t:
+        t.extractall(Path(piper.__file__).parent.parent)
 ma = Path(piper.__file__).parent / "train" / "vits" / "monotonic_align"
 sh(f"cd {ma} && cythonize -i core.pyx && mkdir -p monotonic_align && mv core*.so monotonic_align/")
 for marker, f in [("aivoice: with DDP", "train/vits/dataset.py"), ("aivoice: resuming", "train/vits/lightning.py")]:
