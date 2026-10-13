@@ -233,8 +233,11 @@ def finish(slot, st):
             c = json.loads(v.read_text(encoding="utf-8"))
             c["inference"] = j["inference"]
             v.write_text(json.dumps(c, ensure_ascii=False, indent=2), encoding="utf-8")
-        ctl(slot, stage="done", note="მზადაა — „ხმების“ ჩანართში", finished=now())
-        print(f"✓ {slot} მზადაა — „ხმების“ ჩანართში")
+        ctl(slot, stage="done", note="გაწვრთნილია — მოწმდება („ხმები“ → „შემოწმება“)", finished=now())
+        print(f"✓ {slot} გაწვრთნილია — ავტომატური შემოწმება…", flush=True)
+        r = subprocess.run([str(ROOT / "aivoice"), "check", slot], cwd=ROOT)
+        ctl(slot, note="სატესტოა — მოუსმინეთ „ხმები“ → „შემოწმება“ და დააჭირეთ „მზადაა“" if r.returncode == 0
+            else "გაწვრთნილია; შემოწმება ვერ შესრულდა — „ხმები“ → „შემოწმება“")
     else:
         ctl(slot, stage=st.get("status"), note=str(st.get("error") or "იხ. სტატუსი"))
         print(f"! {slot}: {st.get('status')} {st.get('error') or ''}")

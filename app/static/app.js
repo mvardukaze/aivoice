@@ -136,7 +136,8 @@ function voiceCard(v) {
       <div class="meta">${esc(v.source)}${v.size_mb ? ` · ${v.sample_rate} Hz, ${v.size_mb} MB` : ""}</div>
       ${d ? `<div class="meta small">ნორმა: ტემპი ${d.length_scale} · ინტონაცია ${d.noise_scale} · რიტმი ${d.noise_w_scale} · ხმამაღლობა ${d.volume}</div>` : ""}
       ${v.model && !v.available ? `<div class="meta err">მოდელი ამ კომპიუტერზე არ არის — „პარამეტრები → მოდელები“</div>` : ""}
-      <div class="actions"><button class="ghost small" data-edit>რედაქტირება</button></div>
+      <div class="actions"><button class="ghost small" data-edit>რედაქტირება</button>
+        ${v.available ? `<button class="ghost small" data-check>შემოწმება</button>` : ""}</div>
     </div>`;
 }
 
@@ -178,6 +179,7 @@ function bindVoiceCards() {
   $("#voice-list").querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => {
     editing = b.closest("[data-id]").dataset.id; renderVoices();
   }));
+  $("#voice-list").querySelectorAll("[data-check]").forEach((b) => b.addEventListener("click", () => openCheck(b.closest("[data-id]").dataset.id)));
   const f = $("#voice-list").querySelector("form.editing");
   if (!f) return;
   const id = f.dataset.id;
@@ -197,6 +199,54 @@ function bindVoiceCards() {
 const postJSON = (url, data) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
 async function reloadVoices() { voices = await api("/api/voices"); renderVoices(); }
 window.reloadVoices = reloadVoices;
+
+// ---------- შემოწმება: ხმა ↔ ნარევი, ერთი და იგივე ფრაზები + MMS (tools/voice_check.py) ----------
+let checkId = null, checkTimer = null;
+const VERDICT = { good: ["კარგია — ნარევს არ ჩამოუვარდება", "good"], fair: ["საშუალო — მოუსმინეთ ყურადღებით", "maybe"], bad: ["ცუდი — ნარევზე ბევრად უარესია", "bad"] };
+const cerCls = (c) => c == null ? "" : c <= 0.08 ? "good" : c <= 0.15 ? "maybe" : "bad";
+
+async function openCheck(id) {
+  checkId = id;
+  $("#check-card").hidden = false;
+  await renderCheck();
+  $("#check-card").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function renderCheck() {
+  clearTimeout(checkTimer);
+  const id = checkId, v = voices.find((x) => x.id === id);
+  if (!id || !v) { $("#check-card").hidden = true; return; }
+  const c = await api(`/api/voices/${id}/check`);
+  const r = c.report;
+  const au = (f) => `<audio controls preload="none" src="/api/voices/${id}/check/${f}"></audio>`;
+  const cer = (x) => x?.cer != null ? `<span class="verdict ${cerCls(x.cer)}" title="MMS-მა გაიგონა: ${esc(x.heard)}">${Math.round(x.cer * 100)}%</span>` : "";
+  const fresh = r && !c.busy && r.stage === "done";
+  $("#check-card").innerHTML = `
+    <div class="card-head"><h2>შემოწმება: ${esc(v.name)}</h2>
+      ${r?.verdict ? `<span class="verdict ${VERDICT[r.verdict][1]}">${VERDICT[r.verdict][0]}</span>` : ""}</div>
+    <p class="muted small">ხმა და მისი ნარევი${r?.design ? ` („${esc(r.design)}“)` : ""} ერთსა და იმავე ფრაზებს კითხულობენ. პროცენტი — ავტომატური მსმენელის (MMS)
+      შეცდომა: რაც ნაკლებია, მით სუფთად ისმის (შიშინი, კანკალი, დაკარგული ბგერები). „ღ“-ს MMS ვერ აფასებს — ყურით მოუსმინეთ.
+      მაუსი პროცენტზე — რა გაიგონა.</p>
+    ${r ? `<div class="check-sum">${r.summary ? `საშუალო: ხმა <b>${Math.round(r.summary.voice_cer * 100)}%</b>${r.summary.mix_cer != null ? ` · ნარევი <b>${Math.round(r.summary.mix_cer * 100)}%</b>` : ""}` : ""}
+        ${r.started ? `<span class="muted small"> · ${esc(r.started.replace("T", " "))}</span>` : ""}</div>
+      <table class="check-table"><thead><tr><th>ფრაზა</th><th>ხმა</th>${r.design ? "<th>ნარევი</th>" : ""}</tr></thead><tbody>
+        ${r.rows.map((row) => `<tr><td>${esc(row.text)}</td><td>${au(row.voice.file)} ${cer(row.voice)}</td>${r.design ? `<td>${row.mix ? au(row.mix.file) + " " + cer(row.mix) : ""}</td>` : ""}</tr>`).join("")}
+      </tbody></table>` : `<div class="empty">ჯერ არ შემოწმებულა.</div>`}
+    ${c.busy ? `<pre class="tr-log">${esc(c.log.split("\n").slice(-6).join("\n"))}\n… მიმდინარეობს</pre>` : ""}
+    <div class="actions">
+      <button class="primary small" id="chk-run" ${c.busy ? "disabled" : ""}>${r ? "თავიდან შემოწმება" : "შემოწმების დაწყება"}</button>
+      ${fresh && v.status !== "ready" ? `<button class="primary small" id="chk-ready">✓ მზადაა — ბიბლიოთეკაში</button>` : ""}
+      ${fresh && v.status !== "hidden" ? `<button class="ghost small" id="chk-hide">დამალვა</button>` : ""}
+      <button class="ghost small" id="chk-close">დახურვა</button>
+      <span class="muted small">სტატუსი: ${STATUS[v.status] || v.status}</span>
+    </div>`;
+  $("#chk-run").onclick = async () => { try { await api(`/api/voices/${id}/check`, { method: "POST" }); renderCheck(); } catch (e) { alert(e.message); } };
+  $("#chk-close").onclick = () => { checkId = null; $("#check-card").hidden = true; };
+  const setStatus = async (status) => { await postJSON(`/api/voices/${id}`, { status }); await reloadVoices(); renderCheck(); };
+  $("#chk-ready")?.addEventListener("click", () => setStatus("ready"));
+  $("#chk-hide")?.addEventListener("click", () => setStatus("hidden"));
+  if (c.busy) checkTimer = setTimeout(() => { if (checkId === id) renderCheck(); }, 4000);
+}
 
 function renderEmotions() {
   $("#emotions").innerHTML = Object.entries(emotions.presets).map(([k, p]) =>

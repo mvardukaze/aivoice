@@ -91,7 +91,7 @@ def jobs():
             "kaggle_state": st.get("kaggle_state"), "local": {k: loc.get(k) for k in ("running", "step_in_epoch", "steps_per_epoch", "epoch_hours")},
             "clips": sum(1 for _ in (ds / "metadata.csv").open(encoding="utf-8")) if (ds / "metadata.csv").exists() else 0,
             "init": (Path(j["init_dir"]) / j.get("warmstart", "init.ckpt")).exists() if j.get("init_dir") else None,
-            "ready": cat.get(slot, {}).get("status") == "ready", "updated": c.get("updated") or st.get("updated"),
+            "ready": cat.get(slot, {}).get("status") in ("ready", "testing"), "voice_status": cat.get(slot, {}).get("status"), "updated": c.get("updated") or st.get("updated"),
         })
     return {"jobs": out}
 

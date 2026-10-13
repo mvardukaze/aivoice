@@ -42,7 +42,7 @@ def synth(weights, text):
             req = urllib.request.Request(f"{API}/synth", method="POST", headers={"Content-Type": "application/json"},
                                          data=json.dumps({"weights": weights, "text": text}).encode())
             url = json.loads(urllib.request.urlopen(req, timeout=180).read())["url"]
-            return ROOT / "data" / "cache" / "designer" / url.rsplit("/", 1)[-1]
+            return cpath("cache") / "designer" / url.rsplit("/", 1)[-1]
         except OSError:
             time.sleep(15)
     raise RuntimeError("synth")

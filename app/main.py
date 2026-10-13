@@ -221,6 +221,49 @@ def api_voice_delete(voice_id: str):
     return {"ok": True, "moved_to": moved}
 
 
+# ---------- შემოწმება (tools/voice_check.py): სატესტო ფრაზები ხმით და ნარევით + MMS ----------
+_check_procs: dict[str, subprocess.Popen] = {}
+
+
+def _check_dir(voice_id: str) -> Path:
+    if not voice_id.replace("_", "").isalnum():
+        raise HTTPException(404)
+    return cpath("runs") / voice_id / "check"
+
+
+@app.post("/api/voices/{voice_id}/check")
+def api_check_start(voice_id: str):
+    find_voice(voice_id)
+    d = _check_dir(voice_id)
+    p = _check_procs.get(voice_id)
+    if p and p.poll() is None:
+        raise HTTPException(409, "შემოწმება უკვე მიმდინარეობს")
+    d.parent.mkdir(parents=True, exist_ok=True)
+    log = (d.parent / "check.log").open("w", encoding="utf-8")
+    _check_procs[voice_id] = subprocess.Popen([str(ROOT / "aivoice"), "check", voice_id], cwd=ROOT, stdout=log,
+                                              stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True,
+                                              env={**__import__("os").environ, "PYTHONUNBUFFERED": "1"})
+    return {"ok": True}
+
+
+@app.get("/api/voices/{voice_id}/check")
+def api_check(voice_id: str):
+    d = _check_dir(voice_id)
+    p = _check_procs.get(voice_id)
+    busy = bool(p and p.poll() is None)
+    log = (d.parent / "check.log")
+    return {"busy": busy, "report": read_json(d / "report.json"),
+            "log": log.read_text(encoding="utf-8", errors="replace")[-1500:] if log.exists() else ""}
+
+
+@app.get("/api/voices/{voice_id}/check/{name}")
+def api_check_audio(voice_id: str, name: str):
+    f = _check_dir(voice_id) / name
+    if "/" in name or not name.endswith(".wav") or not f.exists():
+        raise HTTPException(404)
+    return FileResponse(f, media_type="audio/wav")
+
+
 @app.get("/api/emotions")
 def api_emotions():
     return {"presets": EMOTIONS, "limits": EMOTION_LIMITS}

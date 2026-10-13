@@ -370,3 +370,8 @@ button.danger { color: #c0392b; border-color: currentColor; }
 .badge.hidden { background: var(--surface-2); color: var(--muted); }
 @media (prefers-color-scheme: dark) { .badge.testing { background: #4a3d10; color: #f3d77a; } button.danger { color: #ff8a7a; } }
 #hidden-toggle { margin-top: 10px; }
+.check-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+.check-table th, .check-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.check-table audio { height: 32px; max-width: 220px; vertical-align: middle; }
+.check-sum { margin-top: 6px; }
+@media (max-width: 700px) { .check-table thead { display: none; } .check-table td { display: block; border: 0; } .check-table tr { display: block; border-bottom: 1px solid var(--border); } }

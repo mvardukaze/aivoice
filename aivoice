@@ -36,6 +36,8 @@ case "$cmd" in
       *) echo "./aivoice voice texts|dataset|init|previews ..."; exit 1 ;;
     esac ;;
 
+  check)   # გაწვრთნილი ხმის შემოწმება: სატესტო ფრაზები, ნარევთან შედარება, MMS
+    if [ -x "$TPY" ]; then $TPY tools/voice_check.py "$@"; else $PY tools/voice_check.py --no-mms "$@"; fi ;;
   designer) need_training; $TPY tools/export_designer.py "$@" ;;       # საბაზო checkpoint → ხმის შემქმნელის მოდელი
   rank)     need_training; $TPY tools/mms_rank.py "$@" ;;              # ყველა ხმის/ნარევის რეიტინგი (MMS)
   kaggle)   $PY tools/kaggle_train.py "$@" ;;                          # base | push <slot> | status | fetch | watch
@@ -47,8 +49,9 @@ case "$cmd" in
 aivoice — ქართული სინთეზური ხმები
 
   ./aivoice serve                     პანელი (http://127.0.0.1:8200)
-  ./aivoice models pull               საბაზო მოდელი + ხმები Hugging Face-იდან
-  ./aivoice models push               (მხოლოდ ავტორი) ატვირთვა Hugging Face-ზე
+  ./aivoice models pull [--base]      ხმები, ნარევები, შემქმნელი Hugging Face-იდან (+ საბაზო)
+  ./aivoice models push               ახალი ხმები და ნარევები → Hugging Face (Write token)
+  ./aivoice models status             რა განსხვავდება რეპოზიტორიასა და ამ კომპიუტერს შორის
 
   ახალი ხმა შენახული ნარევიდან (ხმის შემქმნელი → „შენახვა“) — ან პანელიდან: „წვრთნა“:
   ./aivoice train new f_mix_02 --design "ქალი 2"     ხმის შექმნა ნარევიდან
@@ -58,6 +61,7 @@ aivoice — ქართული სინთეზური ხმები
   ./aivoice train wait f_mix_02                      ლოდინი → შედეგი „ხმებში“
   ./aivoice train stop f_mix_02                      გაჩერება
   ./aivoice train list                               ყველა ხმა
+  ./aivoice check f_mix_02                           ხმის შემოწმება (ნარევთან შედარება, MMS)
 
   სხვა: designer | rank | kaggle ... | gcp ... | local
   დაყენება: ./install.sh [--training]  ·  დოკუმენტაცია: README.md

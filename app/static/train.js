@@ -84,7 +84,7 @@ window.Train = (() => {
           <button class="primary small" data-act="start">2. წვრთნის გაშვება</button>` : ""}
         ${running || j.busy ? `<button class="ghost small" data-act="stop">გაჩერება</button>` : ""}
         ${j.stage === "partial" || (running && j.target === "kaggle") ? `<button class="ghost small" data-act="fetch">შედეგის ჩამოტვირთვა</button>` : ""}
-        ${j.ready ? `<button class="ghost small" data-goto="voices">მოსმენა „ხმებში“ →</button>` : ""}
+        ${j.ready ? `<button class="ghost small" data-goto="voices">${j.voice_status === "testing" ? "შემოწმება და დამტკიცება „ხმებში“ →" : "მოსმენა „ხმებში“ →"}</button>` : ""}
         <button class="ghost small" data-log>ლოგი</button>
       </div>
       <pre class="tr-log" ${openLog === j.slot ? "" : "hidden"}></pre>
