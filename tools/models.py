@@ -9,6 +9,7 @@
 რეპოზიტორიის სტრუქტურა:
     designer/      designer.onnx, embeddings.npy, config.json, meta.json, speakers.json   (ხმის შემქმნელი)
     designs/       <id>.json                                                              (შენახული ნარევები)
+    lexicon/       lexicon.json                                                           (წარმოთქმის ლექსიკონი)
     voices/<id>/   <id>.onnx, <id>.onnx.json, voice.json (კატალოგის ჩანაწერი)             (ხმები)
     base_ka/       final.ckpt, config.json                                                (--base)
     ljspeech/      ljspeech-medium.clean.ckpt                                             (--base)
@@ -56,6 +57,7 @@ def repo() -> str:
 
 DESIGNS = ROOT / "data" / "designs"
 CATALOG = ROOT / "voices" / "catalog.json"
+LEXICON = ROOT / "data" / "lexicon.json"  # ლექსიკონის დამატებები (pull: აერთიანებს, ადგილობრივი უპირატესია)
 SHARED_STATUS = ("ready", "testing")  # ეს ხმები იტვირთება; „დამალული“/„იქმნება“ — არა
 
 
@@ -79,6 +81,8 @@ def local_files(base: bool) -> list[tuple[Path, str]]:
     out = [(des / f, f"designer/{f}") for f in ("designer.onnx", "embeddings.npy", "config.json", "meta.json")]
     out.append((cpath("datasets") / "base_ka_v1" / "speakers.json", "designer/speakers.json"))
     out += [(p, f"designs/{p.name}") for p in sorted(DESIGNS.glob("*.json"))] if DESIGNS.exists() else []
+    if LEXICON.exists():
+        out.append((LEXICON, "lexicon/lexicon.json"))
     for v in catalog()["voices"]:
         if v.get("status") in SHARED_STATUS and v.get("model"):
             m = ROOT / "voices" / v["model"]
@@ -219,6 +223,8 @@ def target_for(f: str, base: bool) -> Path | None:
         return cpath("datasets") / "base_ka_v1" / "speakers.json" if rest == "speakers.json" else cpath("designer") / rest
     if top == "designs":
         return DESIGNS / rest
+    if top == "lexicon":
+        return LEXICON
     if top == "voices":
         return ROOT / f
     if base and top == "base_ka":
@@ -241,6 +247,14 @@ def cmd_pull(a):
     for f, r in sorted(rem.items()):
         dst = target_for(f, a.base)
         if dst is None or f.endswith("/voice.json"):
+            continue
+        if f == "lexicon/lexicon.json":  # გაერთიანება: ახალი სიტყვები ემატება, აქაური არ იცვლება
+            remote = json.loads(Path(hf_hub_download(repo(), f, token=t)).read_text(encoding="utf-8"))
+            local = json.loads(LEXICON.read_text(encoding="utf-8")) if LEXICON.exists() else {}
+            new = {k: v for k, v in remote.items() if k not in local}
+            if new:
+                LEXICON.write_text(json.dumps({**remote, **local}, ensure_ascii=False, indent=1), encoding="utf-8")
+                print(f"  + ლექსიკონი: {len(new)} ახალი სიტყვა")
             continue
         # ამ კომპიუტერზე შეცვლილი პარამეტრები/ნარევები არ გადაიწერება (--force-ის გარდა)
         keep_local = f.endswith(".onnx.json") or f.startswith("designs/")

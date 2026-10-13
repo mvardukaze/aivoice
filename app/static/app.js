@@ -19,6 +19,7 @@ const PHRASES = [
   "ჩვენ მოვიგეთ! წარმოგიდგენია? მოვიგეთ!",
   "ჩუმად, ვიღაც მოდის. არ გაინძრე.",
   "ოდესღაც, ძალიან დიდი ხნის წინ, ერთ პატარა სოფელში ცხოვრობდა მოხუცი მეთევზე.",
+  "13.10.2026-დან iPhone 15 ღირს 2 499.99 ₾ — 15%-ით იაფად, ვიდრე მე-3 კვარტალში.",
 ];
 const STATUS = { ready: "მზადაა", testing: "სატესტო", hidden: "დამალული", training: "იწვრთნება", selected: "არჩეულია", planned: "იქმნება" };
 
@@ -310,8 +311,53 @@ $("#reset-default").addEventListener("click", async () => {
 });
 $("#hidden-toggle").addEventListener("click", () => { showHidden = !showHidden; renderVoices(); });
 
+// ---------- როგორ წაიკითხავს (ტექსტის გასწორება: app/textnorm.py) ----------
+let normTimer = null;
+async function updateNorm() {
+  const text = $("#text").value;
+  const r = await postJSON("/api/textnorm", { text }).catch(() => null);
+  if (!r) return;
+  const same = r.text.replace(/-ღ/g, "ღ") === text.trim();
+  $("#norm-preview").hidden = same;
+  $("#norm-text").textContent = r.text;
+}
+$("#text").addEventListener("input", () => { clearTimeout(normTimer); normTimer = setTimeout(updateNorm, 400); });
+
+// ---------- ლექსიკონი ----------
+async function renderLexicon() {
+  const d = await api("/api/lexicon");
+  const q = $("#lex-filter").value.trim().toLowerCase();
+  const rows = d.entries.filter((e) => !q || e.word.toLowerCase().includes(q) || e.say.includes(q));
+  $("#lex-list").innerHTML = rows.map((e) => `
+    <div class="lex-row"><span class="mono">${esc(e.word)}</span><span>→ ${esc(e.say)}</span>
+      <span class="muted small">${e.local ? "დამატებული" : "ნაგულისხმევი"}</span>
+      <button class="ghost small" data-say="${esc(e.say)}" title="მოსმენა">▶</button>
+      <button class="ghost small" data-del="${esc(e.word)}" title="${e.local ? "წაშლა" : "გაუქმება"}">✕</button></div>`).join("")
+    || `<div class="empty">ვერ მოიძებნა.</div>`;
+  $("#lex-list").querySelectorAll("[data-say]").forEach((b) => b.addEventListener("click", () => sayWord(b.dataset.say)));
+  $("#lex-list").querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
+    await api(`/api/lexicon/${encodeURIComponent(b.dataset.del)}`, { method: "DELETE" }); renderLexicon(); updateNorm();
+  }));
+}
+const lexAudio = new Audio();
+async function sayWord(text) {
+  try {
+    const r = await api("/api/synthesize", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voice: $("#voice-select").value, text }) });
+    lexAudio.src = r.url; lexAudio.play();
+  } catch (e) { alert(e.message); }
+}
+$("#lex-box").addEventListener("toggle", (e) => { if (e.target.open) renderLexicon(); });
+$("#lex-filter").addEventListener("input", renderLexicon);
+$("#lex-try").addEventListener("click", () => { const v = $("#lex-form").say.value.trim(); if (v) sayWord(v); });
+$("#lex-form").onsubmit = async (e) => {
+  e.preventDefault();
+  try { await postJSON("/api/lexicon", Object.fromEntries(new FormData(e.target))); e.target.reset(); renderLexicon(); updateNorm(); }
+  catch (err) { alert(err.message); }
+};
+
 $("#phrases").innerHTML = PHRASES.map((p, i) => `<button class="chip" data-i="${i}">${esc(p.slice(0, 28))}…</button>`).join("");
-$("#phrases").querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => ($("#text").value = PHRASES[c.dataset.i])));
+$("#phrases").querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => { $("#text").value = PHRASES[c.dataset.i]; updateNorm(); }));
 
 $("#speak").addEventListener("click", async () => {
   const btn = $("#speak");
@@ -675,6 +721,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   [voices, emotions] = await Promise.all([api("/api/voices"), api("/api/emotions")]);
   renderVoices();
   renderEmotions();
+  updateNorm();
   loadRoadmap();
   await refresh(true);
   const [runs, sources, data] = await Promise.all([api("/api/training"), api("/api/sources"), api("/api/data")]);

@@ -72,6 +72,7 @@
           <label class="lbl" for="text">ტექსტი</label>
           <textarea id="text" rows="4">გამარჯობა! მე ვარ ქართული ხმა, რომელიც ლოკალურად, თქვენს კომპიუტერზე მუშაობს. დღეს ამინდი მშვენიერია, არა?</textarea>
           <div class="chips" id="phrases"></div>
+          <div class="norm-preview small" id="norm-preview" hidden><span class="muted">როგორ წაიკითხავს:</span> <span id="norm-text"></span></div>
         </div>
         <div>
           <span class="lbl">ემოცია</span>
@@ -95,6 +96,21 @@
       <button class="ghost small" id="hidden-toggle" hidden></button>
     </div>
     <div class="card" id="check-card" hidden></div>
+    <div class="card">
+      <details id="lex-box">
+        <summary><h2 style="display:inline">ლექსიკონი</h2> <span class="muted small">— სიტყვები, რომლებსაც სხვანაირად კითხულობს (ბრენდები, უცხო სიტყვები, შემოკლებები)</span></summary>
+        <p class="muted small">რიცხვებს, თარიღებს, ფასებს (₾ $ €), პროცენტებს, დროს, „მე-5“, „XX საუკუნე“, „ქ.“, „ა.შ.“ ავტომატურად კითხულობს.
+          ლათინურ სიტყვას, რომელიც აქ არ არის, ქართული ასოებით გადაწერს („Hello“ → „ჰელო“). აქ დაამატეთ, თუ სხვანაირად უნდა.</p>
+        <form id="lex-form" class="lex-form">
+          <input name="word" placeholder="როგორ წერია (მაგ. Spotify)" required maxlength="60">
+          <input name="say" placeholder="როგორ წაიკითხოს (მაგ. სპოტიფაი)" required maxlength="120">
+          <button class="ghost small" type="button" id="lex-try">▶ მოსმენა</button>
+          <button class="primary small" type="submit">დამატება</button>
+        </form>
+        <input id="lex-filter" placeholder="ძებნა…" class="lex-filter">
+        <div id="lex-list" class="lex-list"></div>
+      </details>
+    </div>
   </section>
 
   <!-- საბაზო მოდელი -->

@@ -376,3 +376,9 @@ button.danger { color: #c0392b; border-color: currentColor; }
 .check-sum { margin-top: 6px; }
 @media (max-width: 700px) { .check-table thead { display: none; } .check-table td { display: block; border: 0; } .check-table tr { display: block; border-bottom: 1px solid var(--border); } }
 .upd-list { margin: 6px 0; padding-left: 18px; }
+.norm-preview { margin-top: 6px; padding: 6px 8px; border-radius: 6px; background: var(--surface-2); }
+.lex-form { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.lex-form input { flex: 1 1 180px; }
+.lex-filter { width: 100%; max-width: 320px; margin-bottom: 6px; }
+.lex-list { display: grid; gap: 2px; max-height: 360px; overflow: auto; }
+.lex-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(90px, 1.4fr) auto auto auto; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--border); }

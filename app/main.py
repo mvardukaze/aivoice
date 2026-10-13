@@ -26,7 +26,7 @@ from app.models_api import router as models_router
 from app.recorder import router as rec_router
 from app.settings import router as settings_router
 from app.train_api import router as train_router
-from app.textnorm import ka_text
+from app.textnorm import LEXICON, LEXICON_DEFAULT, ka_text, lexicon
 
 from app.config import ROOT, path as cpath  # noqa: E402
 
@@ -300,6 +300,48 @@ def api_synthesize(req: SynthRequest):
             voice.synthesize_wav(text, w, syn_config=SynthesisConfig(**params))
         tmp.rename(out)
     return {"url": f"/api/audio/{out.name}", "seconds": round(wav_seconds(out), 2), "params": params}
+
+
+# ---------- ტექსტი: როგორ წაიკითხავს + ლექსიკონი (app/textnorm.py) ----------
+class TextIn(BaseModel):
+    text: str = Field(max_length=5000)
+
+
+@app.post("/api/textnorm")
+def api_textnorm(t: TextIn):
+    return {"text": ka_text(t.text)}
+
+
+@app.get("/api/lexicon")
+def api_lexicon():
+    d = {k: v for k, v in read_json(LEXICON_DEFAULT, {}).items() if not k.startswith("_")}
+    local = read_json(LEXICON, {})
+    return {"entries": [{"word": k, "say": v, "local": k in local} for k, v in sorted(lexicon().items(), key=lambda x: x[0].lower())],
+            "default_count": len(d), "local_count": len(local)}
+
+
+class LexIn(BaseModel):
+    word: str = Field(min_length=1, max_length=60)
+    say: str = Field(min_length=1, max_length=120)
+
+
+@app.post("/api/lexicon")
+def api_lexicon_add(e: LexIn):
+    local = read_json(LEXICON, {})
+    local[e.word.strip()] = e.say.strip()
+    write_json(LEXICON, local)
+    return {"ok": True}
+
+
+@app.delete("/api/lexicon/{word}")
+def api_lexicon_del(word: str):
+    local = read_json(LEXICON, {})
+    if word in local:
+        del local[word]
+    elif word in read_json(LEXICON_DEFAULT, {}):
+        local[word] = word  # ნაგულისხმევის გაუქმება: სიტყვა როგორც წერია (ლათინური → ავტომატური გადაწერა)
+    write_json(LEXICON, local)
+    return {"ok": True}
 
 
 @app.get("/api/audio/{name}")
