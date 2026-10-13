@@ -288,6 +288,8 @@ main { width: 100%; max-width: 1240px; margin: 0 auto; padding: 24px 32px 64px; 
 [data-sub-active="mix"] [data-pane]:not([data-pane~="mix"]),
 [data-sub-active="audition"] [data-pane]:not([data-pane~="audition"]),
 [data-sub-active="rank"] [data-pane]:not([data-pane~="rank"]),
+[data-sub-active="quality"] [data-pane]:not([data-pane~="quality"]),
+[data-sub-active="sources"] [data-pane]:not([data-pane~="sources"]),
 [data-sub-active="checks"] [data-pane]:not([data-pane~="checks"]),
 [data-sub-active="config"] [data-pane]:not([data-pane~="config"]),
 [data-sub-active="models"] [data-pane]:not([data-pane~="models"]),
@@ -898,3 +900,15 @@ label.check input { width: auto; margin: 0; }
 .q-table .seg button.on { background: var(--accent, #4f46e5); color: #fff; }
 .q-clip { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .q-clips td { background: var(--surface-2); }
+.q-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); background: var(--surface); border-left: 1px solid var(--border);
+  box-shadow: -8px 0 24px rgba(0,0,0,.12); transform: translateX(100%); transition: transform .2s ease; z-index: 60; display: flex; flex-direction: column; }
+.q-drawer.open { transform: none; }
+.q-drawer-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; padding: 16px; border-bottom: 1px solid var(--border); }
+.q-drawer-dec { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.q-drawer-body { overflow: auto; padding: 0 16px 16px; flex: 1; }
+.q-drawer .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.q-drawer .seg button { border: 0; background: transparent; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; color: var(--muted); }
+.q-drawer .seg button.on, .q-table .seg button.on { background: var(--accent, #4f46e5); color: #fff; }
+tr[data-spk] [data-open].on { border-color: var(--accent, #4f46e5); color: var(--accent, #4f46e5); }
+.table-wrap:has(.q-table) { max-height: none; overflow: visible; }
+.table-wrap:has(.q-table) th { top: 64px; }

@@ -46,7 +46,7 @@
       ${t.clips ? speakersCard() : ""}`;
     bind(box);
     clearTimeout(timer);
-    if (running) timer = setTimeout(() => { if (!$("#tab-data").hidden) render(); }, 15000);
+    if (running) timer = setTimeout(() => { if (!$("#tab-data").hidden && !st.open) { const y = window.scrollY; render().then(() => window.scrollTo(0, y)); } }, 30000);
   }
 
   function filtered() {
@@ -90,24 +90,74 @@
       <td class="num ${r.bad_share > 0.4 ? "err" : ""}">${pct(r.bad_share)}</td>
       <td class="num">${pct(r.cer)}</td><td class="num">${r.snr ?? "—"}</td><td class="num">${r.hiss ?? "—"}</td>
       <td class="small muted">${top}</td>
-      <td><div class="seg small">${["auto", "include", "exclude"].map((d) =>
-        `<button data-dec="${d}" class="${r.decision === d ? "on" : ""}" title="${d === "auto" ? "ავტომატურად: " + (r.suggest === "include" ? "შევიდეს" : "ამოვრიცხოთ") : ""}">${DEC[d]}${d === "auto" ? (r.suggest === "include" ? " ✓" : " ✗") : ""}</button>`).join("")}</div></td>
-      <td><button class="ghost small" data-open>${st.open === r.spk ? "დამალვა" : "მოსმენა"}</button></td>
-    </tr>${st.open === r.spk ? `<tr class="q-clips"><td colspan="10"><div id="q-clips-${r.spk}" class="small muted">იტვირთება…</div></td></tr>` : ""}`;
+      <td>${decSeg(r)}</td>
+      <td><button class="ghost small ${st.open === r.spk ? "on" : ""}" data-open>მოსმენა</button></td>
+    </tr>`;
+  }
+
+  const decSeg = (r) => `<div class="seg small" data-seg="${r.spk}">${["auto", "include", "exclude"].map((d) =>
+    `<button data-dec="${d}" class="${r.decision === d ? "on" : ""}" title="${d === "auto" ? "ავტომატურად: " + (r.suggest === "include" ? "შევიდეს" : "ამოვრიცხოთ") : ""}">${DEC[d]}${d === "auto" ? (r.suggest === "include" ? " ✓" : " ✗") : ""}</button>`).join("")}</div>`;
+
+  // გადაწყვეტილება — ადგილზე (გვერდი თავიდან არ იხატება → სქროლი არ ირევა)
+  async function setDecision(spk, decision) {
+    try { await post("/api/quality/decision", { spk, decision }); }
+    catch (e) { window.UI?.toast(e.message, "error"); return; }
+    const r = data.speakers.find((x) => x.spk === spk);
+    if (!r) return;
+    r.decision = decision;
+    r.final = decision === "auto" ? r.suggest : decision;
+    document.querySelectorAll(`[data-seg="${spk}"]`).forEach((seg) => {
+      seg.outerHTML = decSeg(r);
+    });
+    document.querySelectorAll(`tr[data-spk="${spk}"]`).forEach((tr) => tr.classList.toggle("q-ex", r.final === "exclude"));
+    bindSeg(spk);
+  }
+  function bindSeg(spk) {
+    document.querySelectorAll(`[data-seg="${spk}"] [data-dec]`).forEach((b) =>
+      b.addEventListener("click", () => setDecision(spk, b.dataset.dec)));
+  }
+
+  // გვერდითი პანელი: დინამიკის ჩანაწერები
+  function drawer() {
+    let d = document.getElementById("q-drawer");
+    if (!d) {
+      d = document.createElement("aside");
+      d.id = "q-drawer";
+      d.className = "q-drawer";
+      d.setAttribute("aria-label", "დინამიკის ჩანაწერები");
+      document.body.appendChild(d);
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && d.classList.contains("open")) closeDrawer(); });
+    }
+    return d;
+  }
+  function closeDrawer() {
+    drawer().classList.remove("open");
+    audio.pause();
+    st.open = null;
+    document.querySelectorAll("tr[data-spk] [data-open].on").forEach((b) => b.classList.remove("on"));
   }
 
   async function loadClips(spk) {
+    const d0 = drawer();
+    const r = data.speakers.find((x) => x.spk === spk) || {};
+    d0.innerHTML = `<div class="q-drawer-head"><div><b class="mono">${spk}</b> ${r.current ? "" : `<span class="badge testing">ახალი</span>`}
+        <div class="muted small">${r.f0 ? Math.round(r.f0) + " Hz · " : ""}კარგი ${r.good_min ?? "—"} / ${r.min ?? "—"} წთ · ცუდი ${pct(r.bad_share)}</div></div>
+        <button class="ghost small" data-close aria-label="დახურვა">✕</button></div>
+      <div class="q-drawer-dec">${decSeg(r)}</div>
+      <div id="q-clips-${spk}" class="q-drawer-body small muted">იტვირთება…</div>`;
+    d0.classList.add("open");
+    d0.querySelector("[data-close]").onclick = closeDrawer;
+    bindSeg(spk);
     const el = document.getElementById(`q-clips-${spk}`);
-    if (!el) return;
     const d = await api(`/api/quality/speaker/${spk}`);
     const show = d.clips.slice(0, 12).concat(d.clips.length > 12 ? d.clips.slice(-3) : []);
     el.innerHTML = `<div class="muted small">ყველაზე ცუდი 12 და საუკეთესო 3 (სულ ${d.clips.length})</div>` + show.map((c) => `
       <div class="q-clip">
         <button class="play" data-src="/api/quality/clip/${encodeURIComponent(c.id)}" aria-label="მოსმენა">${window.UI ? UI.icon("play", 12) : "▶"}</button>
         <div><div>${esc(c.text)}</div>
-          <div class="muted">MMS: ${esc(c.heard || "—")}</div>
+          ${c.heard ? `<div class="muted">MMS-მა გაიგონა: ${esc(c.heard)}</div>` : ""}
           <div class="small">${c.bad?.length ? `<span class="err">${c.bad.map((k) => esc(data.rules[k] || k)).join(", ")}</span> · ` : `<span class="ok">კარგი</span> · `}
-            MMS ${pct(c.cer)} · SNR ${c.snr ?? "—"} · შიშინი ${c.hiss ?? "—"} · ${c.dur ?? "—"} წმ${c.kind === "other" ? " · შეუმოწმებელი CV-ში" : ""}</div></div>
+            ${c.cer != null ? `MMS ${pct(c.cer)} · ` : ""}SNR ${c.snr ?? "—"} · შიშინი ${c.hiss ?? "—"} · ${c.dur ?? "—"} წმ${c.kind === "other" ? " · შეუმოწმებელი CV-ში" : ""}</div></div>
       </div>`).join("");
     el.querySelectorAll("[data-src]").forEach((b) => b.addEventListener("click", () => {
       el.querySelectorAll(".play.on").forEach((x) => x.classList.remove("on"));
@@ -131,13 +181,13 @@
     $("#q-more")?.addEventListener("click", () => { st.limit += 60; render(); });
     box.querySelectorAll("tr[data-spk]").forEach((tr) => {
       const spk = tr.dataset.spk;
-      tr.querySelectorAll("[data-dec]").forEach((b) => b.addEventListener("click", async () => {
-        try { await post("/api/quality/decision", { spk, decision: b.dataset.dec }); render(); }
-        catch (e) { window.UI?.toast(e.message, "error"); }
-      }));
-      tr.querySelector("[data-open]").addEventListener("click", () => { st.open = st.open === spk ? null : spk; render(); });
+      tr.querySelectorAll("[data-dec]").forEach((b) => b.addEventListener("click", () => setDecision(spk, b.dataset.dec)));
+      tr.querySelector("[data-open]").addEventListener("click", (e) => {
+        document.querySelectorAll("tr[data-spk] [data-open].on").forEach((x) => x.classList.remove("on"));
+        if (st.open === spk) { closeDrawer(); return; }
+        st.open = spk; e.currentTarget.classList.add("on"); loadClips(spk);
+      });
     });
-    if (st.open) loadClips(st.open);
   }
 
   // ჩანართის გახსნისას
