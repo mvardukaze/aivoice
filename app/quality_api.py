@@ -73,15 +73,15 @@ def cer_med(C: list) -> float | None:
 
 
 def load() -> dict:
-    f, fm = DIR / "clips.jsonl", DIR / "mms.jsonl"
-    key = tuple((x.stat().st_mtime, x.stat().st_size) if x.exists() else None for x in (f, fm))
+    f, fms = DIR / "clips.jsonl", [DIR / "mms.jsonl", DIR / "mms.cpu.jsonl"]
+    key = tuple((x.stat().st_mtime, x.stat().st_size) if x.exists() else None for x in (f, *fms))
     if key[0] is None:
         key = None
     if key and _cache["key"] == key:
         return _cache["data"]
     corpus = {f"cv_{s['client_id'][:10]}": s for s in (read_json(CORPUS, {}) or {}).get("speakers", [])}
     mms = {}
-    for line in (fm.read_text(encoding="utf-8").splitlines() if fm.exists() else []):
+    for line in (l for fm in fms if fm.exists() for l in fm.read_text(encoding="utf-8").splitlines()):
         try:
             x = json.loads(line)
             mms[x["id"]] = x

@@ -200,11 +200,21 @@ def stage_measure(a):
                 print(f"  {len(done) + n}/{total} · {rate:.0f}/წმ", flush=True)
 
 
+MMS_FILES = {"cuda": "mms.jsonl", "cpu": "mms.cpu.jsonl"}  # ვიდეობარათი და პროცესორი პარალელურად — ცალ-ცალკე ფაილი
+
+
+def mms_done() -> set:
+    return set().union(*(load_ids(OUT / f) for f in MMS_FILES.values()))
+
+
 def stage_mms(a):
-    """2) ტექსტის დამთხვევა (MMS) შენახულ mp3-ებზე → mms.jsonl. ვიდეობარათით ან პროცესორით; Kaggle-ზეც იგივე."""
+    """2) ტექსტის დამთხვევა (MMS) შენახულ mp3-ებზე. ვიდეობარათი რიგს თავიდან მიჰყვება, პროცესორი (--cpu) — ბოლოდან;
+    ერთმანეთის შედეგებს 200 ჩანაწერში ერთხელ კითხულობენ და გაკეთებულს ტოვებენ — შუაში ხვდებიან."""
     rows = [json.loads(l) for l in (OUT / "clips.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
-    out_f = OUT / "mms.jsonl"
-    done = load_ids(out_f)
+    import torch
+    dev = "cuda" if torch.cuda.is_available() and not a.cpu else "cpu"
+    out_f = OUT / MMS_FILES[dev]
+    done = mms_done()
     todo = [r for r in rows if not r.get("err") and r["id"] not in done]
     # რიგი: ჯერ CV-ში შეუმოწმებელი (other) + თითო დინამიკზე 30 ნიმუში — ამით დინამიკების შეფასება უკვე შესაძლებელია;
     # მერე დანარჩენი დადასტურებული (მათ ტექსტი ისედაც ემთხვევა — ეს მხოლოდ ზუსტი ჩანაწერ-დონის ფილტრისთვისაა)
@@ -221,30 +231,46 @@ def stage_mms(a):
         else:
             rest.append(r)
     todo = first + rest
-    print(f"MMS რიგი: პირველი {len(first)}, შემდეგ {len(rest)}", flush=True)
+    if dev == "cpu":
+        todo.reverse()
     if a.limit:
         todo = todo[: a.limit]
     total = sum(1 for r in rows if not r.get("err"))
-    print(f"MMS: {len(todo)} (სულ {total}, გაკეთებული {len(done)})", flush=True)
-    progress(stage="mms_load", total=total, done=len(done))
+    print(f"MMS ({dev}): {len(todo)} (სულ {total}, გაკეთებული {len(done)}; რიგის პირველი ნაწილი {len(first)})", flush=True)
     if not todo:
         return
-    import torch
     from transformers import AutoProcessor, Wav2Vec2ForCTC
     from transformers.utils import logging as tlog
     tlog.set_verbosity_error()
-    dev = "cuda" if torch.cuda.is_available() and not a.cpu else "cpu"
-    torch.set_num_threads(max(1, min(8, int(cfg()["training"]["local_threads"]) * 2 // 3)))
+    torch.set_num_threads(a.threads or max(1, min(8, int(cfg()["training"]["local_threads"]) * 2 // 3)))
     proc = AutoProcessor.from_pretrained("facebook/mms-1b-all", target_lang="kat")
     model = Wav2Vec2ForCTC.from_pretrained("facebook/mms-1b-all", target_lang="kat", ignore_mismatched_sizes=True).eval()
     if dev == "cuda":
         model = model.half().to(dev)
-    print("MMS:", dev, flush=True)
-    t0 = time.time()
+    print("MMS:", dev, torch.get_num_threads(), "ნაკადი", flush=True)
+    t0, n = time.time(), 0
+    other = done
+
+    def gen():
+        for r in todo:
+            if r["id"] not in other:
+                yield r
+
+    def src():
+        for r in gen():
+            yield r, (r["id"], (OUT / "clips" / r["id"]).read_bytes(), r["text"])
+
     with out_f.open("a", encoding="utf-8") as fout, ProcessPoolExecutor(2) as ex:
-        audio = bounded_map(ex, measure, ((r["id"], (OUT / "clips" / r["id"]).read_bytes(), r["text"]) for r in todo), 16)
-        for i, (r, (_, _, y16)) in enumerate(zip(todo, audio), 1):
-            if y16 is None:
+        pending = src()
+        rows_q = []
+
+        def jobs():
+            for r, job in pending:
+                rows_q.append(r)
+                yield job
+        for (cid, _, y16) in bounded_map(ex, measure, jobs(), 16):
+            r = rows_q.pop(0)
+            if y16 is None or r["id"] in other:
                 continue
             feats = proc(y16, sampling_rate=16000, return_tensors="pt")
             iv = feats.input_values.to(dev)
@@ -253,12 +279,16 @@ def stage_mms(a):
             ref = r["text"].translate(STRIP)
             fout.write(json.dumps({"id": r["id"], "cer": round(lev(ref, hyp.translate(STRIP)) / max(1, len(ref)), 3),
                                    "heard": hyp}, ensure_ascii=False) + "\n")
-            if i % 100 == 0:
+            n += 1
+            if n % 100 == 0:
                 fout.flush()
-                rate = i / (time.time() - t0)
-                progress(stage="mms", total=total, done=len(done) + i, rate=round(rate, 2),
-                         eta_h=round((len(todo) - i) / rate / 3600, 1))
-                print(f"  MMS {len(done) + i}/{total} · {rate:.2f}/წმ", flush=True)
+                rate = n / (time.time() - t0)
+                if n % 200 == 0:
+                    other = mms_done()  # მეორე მუშის შედეგები — გაკეთებულს აღარ ვიმეორებთ
+                left = sum(1 for x in todo if x["id"] not in other)
+                progress(stage="mms", total=total, done=len(other), rate=round(rate, 2), device=dev,
+                         eta_h=round(left / rate / 3600, 1))
+                print(f"  MMS ({dev}) {len(other)}/{total} · {rate:.2f}/წმ", flush=True)
 
 
 def main():
@@ -267,7 +297,8 @@ def main():
                     help="measure — ხმის ზომები (სწრაფი); mms — ტექსტის დამთხვევა (ნელი); all — ორივე")
     ap.add_argument("--cap-hours", type=float, default=4)
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--cpu", action="store_true", help="MMS პროცესორზე")
+    ap.add_argument("--cpu", action="store_true", help="MMS პროცესორზე (რიგს ბოლოდან იწყებს — ვიდეობარათთან ერთად)")
+    ap.add_argument("--threads", type=int, default=0, help="პროცესორის ნაკადები (--cpu)")
     ap.add_argument("--limit", type=int, default=0, help="მხოლოდ N ჩანაწერი (სატესტოდ)")
     a = ap.parse_args()
     (OUT / "clips").mkdir(parents=True, exist_ok=True)
