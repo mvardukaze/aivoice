@@ -6,7 +6,7 @@
 <title>AI ხმები</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 <header class="top">
@@ -26,6 +26,7 @@
     <button role="tab" data-tab="designer">ხმის შემქმნელი</button>
     <button role="tab" data-tab="record">ჩაწერა</button>
     <button role="tab" data-tab="data">მონაცემები</button>
+    <button role="tab" data-tab="settings">⚙ პარამეტრები</button>
   </nav>
 </header>
 
@@ -109,6 +110,11 @@
     <div id="rec"></div>
   </section>
 
+  <!-- პარამეტრები + პირველი დაყენება (settings.js) -->
+  <section id="tab-settings" class="tab" hidden>
+    <div id="settings"></div>
+  </section>
+
   <!-- მონაცემები -->
   <section id="tab-data" class="tab" hidden>
     <div id="data"></div>
@@ -121,8 +127,9 @@
   </section>
 </main>
 
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 <script src="rec.js?v=3"></script>
 <script src="designer.js?v=15"></script>
+<script src="settings.js?v=1"></script>
 </body>
 </html>

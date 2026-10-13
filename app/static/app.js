@@ -532,6 +532,7 @@ async function refresh() {
     renderJobs(ov);
     if (!$("#tab-base").hidden || !$("#base").innerHTML) renderBase(base);
     renderDesigner();
+    if (!$("#tab-settings").hidden) window.Settings?.render();
     if ($("#runs").closest("details").open) renderRuns(await api("/api/training"));
   } catch (e) { console.warn(e); }
 }
@@ -549,5 +550,6 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   renderRuns(runs);
   renderSources(sources);
   renderData(data);
+  window.Settings?.maybeFirstRun();
   $("#env-box").addEventListener("toggle", (e) => { if (e.target.open && !$("#env").innerHTML) loadEnv(); }, { once: false });
 })();
