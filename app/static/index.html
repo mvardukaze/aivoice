@@ -90,6 +90,28 @@
       <audio id="player" controls hidden></audio>
       <div id="compare-list" class="compare"></div>
     </div>
+    <div class="card" id="long-card">
+      <h2>გრძელი ტექსტი → ფაილი</h2>
+      <p class="muted small">ჩასვით ტექსტი ან გახსენით .txt ფაილი. აბზაცები ცალ-ცალკე ჩანს — თითოს შეგიძლიათ მისცეთ თავისი ხმა და ემოცია
+        (ან ტექსტშივე: აბზაცის დასაწყისში <code>[სევდიანი]</code>, <code>[ქალი 1]</code>, <code>[ქალი 1, მხიარული]</code>).
+        შედეგი: MP3/WAV + SRT სუბტიტრები.</p>
+      <textarea id="long-text" rows="8" placeholder="ტექსტი… (აბზაცები ცარიელი ხაზით ან ახალი ხაზით)"></textarea>
+      <div class="actions">
+        <label class="ghost small file-btn">📄 .txt ფაილი<input type="file" id="long-file" accept=".txt,.md,.srt,text/plain" hidden></label>
+        <button class="ghost small" id="long-split">აბზაცების ნახვა ▾</button>
+        <span class="muted small" id="long-count"></span>
+      </div>
+      <div id="long-blocks" class="long-blocks" hidden></div>
+      <div class="actions">
+        <label class="small">პაუზა აბზაცებს შორის <input type="number" id="long-pause" value="0.7" min="0" max="5" step="0.1" style="width:64px"> წმ</label>
+        <label class="small">წინადადებებს შორის <input type="number" id="long-spause" value="0.25" min="0" max="3" step="0.05" style="width:64px"> წმ</label>
+        <label class="small"><input type="checkbox" id="long-mp3" checked> MP3</label>
+        <button class="primary" id="long-go">▶ მთლიანი ტექსტის გახმოვანება</button>
+        <button class="ghost small" id="long-cancel" hidden>გაუქმება</button>
+      </div>
+      <div id="long-status" class="small"></div>
+    </div>
+
     <div class="card">
       <h2>ბიბლიოთეკა</h2>
       <div class="voice-list" id="voice-list"></div>
@@ -155,5 +177,6 @@
 <script src="designer.js?v=15"></script>
 <script src="settings.js?v=1"></script>
 <script src="train.js?v=1"></script>
+<script src="longform.js?v=1"></script>
 </body>
 </html>

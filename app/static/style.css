@@ -382,3 +382,10 @@ button.danger { color: #c0392b; border-color: currentColor; }
 .lex-filter { width: 100%; max-width: 320px; margin-bottom: 6px; }
 .lex-list { display: grid; gap: 2px; max-height: 360px; overflow: auto; }
 .lex-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(90px, 1.4fr) auto auto auto; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--border); }
+.long-blocks { display: grid; gap: 6px; margin: 8px 0; max-height: 480px; overflow: auto; }
+.long-block { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
+.long-ctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+.long-text { white-space: pre-wrap; color: var(--muted); }
+.file-btn { cursor: pointer; }
+a.btn { text-decoration: none; display: inline-block; }
+#long-text { width: 100%; }
