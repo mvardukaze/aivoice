@@ -32,7 +32,7 @@
         <p class="muted small">თითო ჩანაწერი მოწმდება: ემთხვევა თუ არა ტექსტს (MMS), შიშინი, ხმაური, ჩუმი ხმა, გადატვირთვა, სიჩქარე.
           ცუდი ჩანაწერები ამოვარდება, დინამიკი — თუ მისი ჩანაწერების დიდი ნაწილი ცუდია. ბოლო სიტყვა თქვენია.</p>
         ${p.total ? `<div class="small">${running ? `<b>მიმდინარეობს:</b> ` : ""}${(p.done || t.clips).toLocaleString()} / ${p.total.toLocaleString()} ჩანაწერი
-          ${p.rate ? ` · ${p.rate}/წმ` : ""}${running && p.eta_h != null ? ` · დარჩა ~${p.eta_h} სთ` : ""}${p.stage === "load" ? " · მზადდება (არქივის კითხვა)…" : ""}</div>
+          ${p.rate ? ` · ${p.rate}/წმ` : ""}${running && p.eta_h != null ? ` · დარჩა ~${p.eta_h} სთ` : ""}${p.stage === "load" ? " · მზადდება (არქივის კითხვა)…" : ""}${p.stage === "cooling" ? ` · <span class="warn-text">ვიდეობარათი ცივდება (${p.temp}°C) — 70°C-ზე გააგრძელებს</span>` : p.temp ? ` · ვიდეობარათი ${p.temp}°C` : ""}</div>
           <div class="bar"><span style="width:${done}%"></span></div>` : ""}
         ${t.clips ? `<div class="kv">
           <div><span>შემოწმებული</span><b>${t.clips.toLocaleString()} · ${t.hours} სთ</b></div>

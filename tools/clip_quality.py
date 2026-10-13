@@ -203,6 +203,31 @@ def stage_measure(a):
 MMS_FILES = {"cuda": "mms.jsonl", "cpu": "mms.cpu.jsonl"}  # ვიდეობარათი და პროცესორი პარალელურად — ცალ-ცალკე ფაილი
 
 
+GPU_HOT, GPU_COOL = 80, 70  # °C: ამის ზემოთ ვჩერდებით, ამის ქვემოთ ვაგრძელებთ
+
+
+def gpu_temp() -> int | None:
+    try:
+        out = subprocess.run(["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
+                             capture_output=True, text=True, timeout=10).stdout
+        return int(out.split()[0])
+    except (OSError, ValueError, IndexError, subprocess.TimeoutExpired):
+        return None
+
+
+def cool_down(total, done_n):
+    """ვიდეობარათი ცხელია → ვჩერდებით, სანამ არ გაცივდება (ტემპერატურა ყოველ 30 წამში)."""
+    t = gpu_temp()
+    if t is None or t < GPU_HOT:
+        return
+    print(f"  ვიდეობარათი {t}°C — ვჩერდებით, სანამ {GPU_COOL}°C-მდე არ გაცივდება", flush=True)
+    t0 = time.time()
+    while (t := gpu_temp()) is not None and t > GPU_COOL:
+        progress(stage="cooling", total=total, done=done_n, device="cuda", temp=t)
+        time.sleep(30)
+    print(f"  გაცივდა ({t}°C, {time.time() - t0:.0f} წმ) — ვაგრძელებთ", flush=True)
+
+
 def mms_done() -> set:
     return set().union(*(load_ids(OUT / f) for f in MMS_FILES.values()))
 
@@ -282,11 +307,13 @@ def stage_mms(a):
             n += 1
             if n % 100 == 0:
                 fout.flush()
+                if dev == "cuda":
+                    cool_down(total, len(other))
                 rate = n / (time.time() - t0)
                 if n % 200 == 0:
                     other = mms_done()  # მეორე მუშის შედეგები — გაკეთებულს აღარ ვიმეორებთ
                 left = sum(1 for x in todo if x["id"] not in other)
-                progress(stage="mms", total=total, done=len(other), rate=round(rate, 2), device=dev,
+                progress(stage="mms", total=total, done=len(other), rate=round(rate, 2), device=dev, temp=gpu_temp() if dev == "cuda" else None,
                          eta_h=round(left / rate / 3600, 1))
                 print(f"  MMS ({dev}) {len(other)}/{total} · {rate:.2f}/წმ", flush=True)
 
