@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ka">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI ხმები</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=13">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+    </span>
+    <div>
+      <h1>AI ხმები</h1>
+      <p class="sub">ქართული ხმები Piper-ისთვის</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="overview" aria-selected="true">მიმოხილვა</button>
+    <button role="tab" data-tab="voices">ხმები</button>
+    <button role="tab" data-tab="base">საბაზო მოდელი</button>
+    <button role="tab" data-tab="designer">ხმის შემქმნელი</button>
+    <button role="tab" data-tab="record">ჩაწერა</button>
+    <button role="tab" data-tab="data">მონაცემები</button>
+  </nav>
+</header>
+
+<main>
+  <!-- მიმოხილვა -->
+  <section id="tab-overview" class="tab">
+    <div class="stats" id="stats"></div>
+    <div class="card">
+      <h2>აქტიური სამუშაოები</h2>
+      <div id="jobs"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>გეგმა</h2>
+        <ol class="roadmap" id="roadmap"></ol>
+        <p class="muted small" id="roadmap-updated"></p>
+      </div>
+      <div class="card">
+        <details id="env-box">
+          <summary><h2 class="inline">გარემო</h2> <span class="muted small">ხელსაწყოები და აპარატურა</span></summary>
+          <div class="card-head"><span></span><button class="ghost small" id="env-refresh">განახლება</button></div>
+          <div id="env"></div>
+        </details>
+        <details>
+          <summary><h2 class="inline">ყველა წვრთნა</h2> <span class="muted small">ნიმუშებით</span></summary>
+          <div id="runs"></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ხმები -->
+  <section id="tab-voices" class="tab" hidden>
+    <div class="card">
+      <h2>მოსმენა</h2>
+      <p class="muted">ტემბრი ფიქსირებულია — ემოცია მხოლოდ ტემპს, ინტონაციას და ხმამაღლობას ცვლის, შეზღუდულ ფარგლებში.</p>
+      <div class="play-grid">
+        <div>
+          <label class="lbl" for="voice-select">ხმა</label>
+          <select id="voice-select"></select>
+          <label class="lbl" for="text">ტექსტი</label>
+          <textarea id="text" rows="4">გამარჯობა! მე ვარ ქართული ხმა, რომელიც ლოკალურად, თქვენს კომპიუტერზე მუშაობს. დღეს ამინდი მშვენიერია, არა?</textarea>
+          <div class="chips" id="phrases"></div>
+        </div>
+        <div>
+          <span class="lbl">ემოცია</span>
+          <div class="chips" id="emotions"></div>
+          <div class="sliders" id="sliders"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="speak">▶ გახმოვანება</button>
+        <button class="ghost" id="compare">ყველა ემოციის შედარება</button>
+        <span class="muted small" id="speak-info"></span>
+      </div>
+      <audio id="player" controls hidden></audio>
+      <div id="compare-list" class="compare"></div>
+    </div>
+    <div class="card">
+      <h2>ბიბლიოთეკა</h2>
+      <div class="voice-list" id="voice-list"></div>
+      <details class="planned-box">
+        <summary class="muted">დაგეგმილი ხმები (<span id="planned-count">0</span>)</summary>
+        <div class="voice-list" id="planned-list"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- საბაზო მოდელი -->
+  <section id="tab-base" class="tab" hidden>
+    <div id="base"></div>
+  </section>
+
+  <!-- ხმის შემქმნელი -->
+  <section id="tab-designer" class="tab" hidden>
+    <div id="designer"></div>
+  </section>
+
+  <!-- ჩაწერა -->
+  <section id="tab-record" class="tab" hidden>
+    <div id="rec"></div>
+  </section>
+
+  <!-- მონაცემები -->
+  <section id="tab-data" class="tab" hidden>
+    <div id="data"></div>
+    <div class="card">
+      <details>
+        <summary><h2 class="inline">Common Voice 17 — მოსმენილი კანდიდატები</h2> <span class="muted small">ძველი შერჩევა, თქვენი შეფასებებით</span></summary>
+        <div id="sources"></div>
+      </details>
+    </div>
+  </section>
+</main>
+
+<script src="app.js?v=11"></script>
+<script src="rec.js?v=3"></script>
+<script src="designer.js?v=15"></script>
+</body>
+</html>

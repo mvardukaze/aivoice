@@ -1,0 +1,31 @@
+{
+ "id": "a_4_150_175_hz_1791815733",
+ "name": "ნეიტრალური A (4 სუფთა, 150–175 Hz)",
+ "weights": {
+  "cv_350ed8a123": 0.25,
+  "cv_f2db92181f": 0.25,
+  "cv_592a5d5b7d": 0.25,
+  "cv_4e78683b9d": 0.25
+ },
+ "length_scale": 1.0,
+ "noise_scale": 0.667,
+ "noise_w_scale": 0.8,
+ "note": "MMS-ის სისუფთავის რეიტინგიდან (data/ghtest/scan.json)",
+ "nearest": [
+  {
+   "name": "cv_4e78683b9d",
+   "sim": 0.536
+  },
+  {
+   "name": "cv_592a5d5b7d",
+   "sim": 0.534
+  },
+  {
+   "name": "cv_f2db92181f",
+   "sim": 0.518
+  }
+ ],
+ "f0_estimate": 169,
+ "model_epoch": 71,
+ "created": "2026-10-12T18:35:33"
+}

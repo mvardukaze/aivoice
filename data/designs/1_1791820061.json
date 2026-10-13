@@ -1,0 +1,30 @@
+{
+ "id": "1_1791820061",
+ "name": "ქალი 1",
+ "weights": {
+  "cv_f99e8baace": 0.333,
+  "cv_3d20bbdb15": 0.333,
+  "cv_3caf116d27": 0.333
+ },
+ "length_scale": 1.0,
+ "noise_scale": 0.31,
+ "noise_w_scale": 0.8,
+ "note": "",
+ "nearest": [
+  {
+   "name": "cv_3caf116d27",
+   "sim": 0.621
+  },
+  {
+   "name": "cv_3d20bbdb15",
+   "sim": 0.598
+  },
+  {
+   "name": "cv_f99e8baace",
+   "sim": 0.584
+  }
+ ],
+ "f0_estimate": 211,
+ "model_epoch": 71,
+ "created": "2026-10-12T19:47:41"
+}

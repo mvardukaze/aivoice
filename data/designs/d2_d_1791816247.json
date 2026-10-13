@@ -1,0 +1,32 @@
+{
+ "id": "d2_d_1791816247",
+ "name": "ნეიტრალური D2 (D „რჯ“-ს მკარგავების გარეშე)",
+ "weights": {
+  "cv_350ed8a123": 0.2,
+  "cv_c03531e90b": 0.2,
+  "cv_f2db92181f": 0.2,
+  "cv_829081a9a4": 0.2,
+  "cv_592a5d5b7d": 0.2
+ },
+ "length_scale": 1.0,
+ "noise_scale": 0.667,
+ "noise_w_scale": 0.8,
+ "note": "D-ს გარეშე: cv_a9d7d61ead (გამაჯობა), cv_a1087effce, cv_a268dda008",
+ "nearest": [
+  {
+   "name": "cv_350ed8a123",
+   "sim": 0.468
+  },
+  {
+   "name": "cv_c03531e90b",
+   "sim": 0.468
+  },
+  {
+   "name": "cv_592a5d5b7d",
+   "sim": 0.467
+  }
+ ],
+ "f0_estimate": 177,
+ "model_epoch": 71,
+ "created": "2026-10-12T18:44:07"
+}

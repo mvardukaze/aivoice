@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+training/.venv/
+
+# მონაცემები, მოდელები, ჩანაწერები — რეპოზიტორიაში არ ინახება (იხ. README: „მონაცემები და მოდელები“)
+datasets/*
+!datasets/.gitkeep
+voices/**/*.onnx
+voices/**/*.onnx.json
+recordings
+sources/
+training/runs
+training/checkpoints/
+# setup.sh კლონავს piper1-gpl-ს და ადებს patches/piper1-gpl.patch-ს
+training/piper1-gpl/
+data/cache/
+data/bench/
+data/ghtest/clips/
+data/ghtest/old_odesgac/
+data/ghtest/*.wav
+data/designer/
+*.ckpt
+*.onnx
+*.tmp
+*.part
+logs/
+
+# პირადი / ლოკალური
+.idea/
+.junie/
+.claude/
+data/local_train.json
+data/designer_ratings.json
+*.env
+.kaggle/
+
+# Piper-ის wheel (Kaggle/Google Cloud-ისთვის) — აიწყობა setup-ით
+kaggle/base/*.whl

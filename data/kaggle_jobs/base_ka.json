@@ -1,0 +1,18 @@
+{
+ "dataset_dir": "/mnt/d/aivoice/datasets/base_ka_v1",
+ "num_speakers": 296,
+ "batch": 24,
+ "devices": 2,
+ "max_epochs": 72,
+ "_warmstart_reset": [{"session_epoch": 25, "added": 12, "note": "სესია 2 (2026-10-07): resume-ზე warmstart-მა წონები LJSpeech-ით გადაწერა"}],
+ "warmstart": "ljspeech-medium.clean.ckpt",
+ "audio_from_source": true,
+ "trim_silence": false,
+ "preview_speakers": [
+  "cv_ec2611c88b",
+  "cv_472804bea2",
+  "cv_1e6e481633",
+  "cv_4dc613ce35"
+ ],
+ "_note": "ქართული საბაზო მოდელი: LJSpeech (public domain) → Common Voice 27 validated (CC0), 296 დინამიკი"
+}

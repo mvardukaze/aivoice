@@ -1,0 +1,53 @@
+{
+  "updated": "2026-10-06",
+  "stages": [
+    {
+      "id": "setup",
+      "title": "პროექტი და ვებ-პანელი",
+      "status": "done",
+      "note": "aivoice.nikora.dev, ხმების ბიბლიოთეკა, ემოციების სატესტო პანელი."
+    },
+    {
+      "id": "sources",
+      "title": "ხმის წყაროების შერჩევა",
+      "status": "done",
+      "note": "Common Voice 17-დან 8 დინამიკი შეირჩა მოსმენით: 2 ახალგაზრდა/ზრდასრული ქალი, მოხუცი ქალი, გოგონა, ახალგაზრდა კაცი, 2 ზრდასრული კაცი, 10 წლის ბიჭი. ღიაა: მოხუცი კაცი."
+    },
+    {
+      "id": "pipeline",
+      "title": "Dataset-ის pipeline",
+      "status": "done",
+      "note": "tools/build_dataset.py: validated კლიპები → 22050 Hz wav, ფილტრი (1.5–15 წმ, SNR ≥ 20, clipping), ხმამაღლობის გასწორება. შეუმოწმებელი კლიპები — whisper large-v3-ით გადამოწმებით (CER ≤ 0.3). 14 dataset, ჯამში ~38 სთ."
+    },
+    {
+      "id": "train-env",
+      "title": "წვრთნის გარემო",
+      "status": "done",
+      "note": "training/.venv: torch 2.14 CUDA 12.6 GTX 1050 Ti-ზე, piper1-gpl."
+    },
+    {
+      "id": "cv27",
+      "title": "Common Voice 27 (ქართული)",
+      "status": "active",
+      "note": "Mozilla Data Collective, CC0, 10.4 GB. ანალიზი: დინამიკები, საათები, ხარისხი. CV17-ში: 198 სუფთა დინამიკი, ~85 სთ (≤3 სთ/დინამიკი)."
+    },
+    {
+      "id": "base",
+      "title": "ქართული საბაზო მოდელი",
+      "status": "todo",
+      "note": "LJSpeech-იდან (public domain), ყველა სუფთა დინამიკზე ერთად (multi-speaker), Kaggle T4×2. ლიცენზიისგან თავისუფალი."
+    },
+    {
+      "id": "neutral",
+      "title": "საბაზისო სინთეზური ხმა",
+      "status": "todo",
+      "note": "რამდენიმე დინამიკის ნარევი — არავის ხმა, ნეიტრალური სიმაღლე, კარგი გამოთქმა. შემოწმება: whisper (გასაგებობა) + ECAPA (არავის ჰგავს)."
+    },
+    {
+      "id": "library",
+      "title": "ქალისა და კაცის ხმები",
+      "status": "todo",
+      "note": "საბაზო მოდელიდან: ხმების შერევით ერთი ქალის და ერთი კაცის ხმა, შემდეგ — ბიბლიოთეკა."
+    }
+  ]
+}

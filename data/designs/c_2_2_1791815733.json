@@ -1,0 +1,31 @@
+{
+ "id": "c_2_2_1791815733",
+ "name": "ნეიტრალური C (2 დაბალი + 2 მაღალი)",
+ "weights": {
+  "cv_90259a9631": 0.25,
+  "cv_2a17c8f417": 0.25,
+  "cv_a1087effce": 0.25,
+  "cv_d7849e8503": 0.25
+ },
+ "length_scale": 1.0,
+ "noise_scale": 0.667,
+ "noise_w_scale": 0.8,
+ "note": "MMS-ის სისუფთავის რეიტინგიდან (data/ghtest/scan.json)",
+ "nearest": [
+  {
+   "name": "cv_90259a9631",
+   "sim": 0.532
+  },
+  {
+   "name": "cv_2a17c8f417",
+   "sim": 0.516
+  },
+  {
+   "name": "cv_a1087effce",
+   "sim": 0.506
+  }
+ ],
+ "f0_estimate": 171,
+ "model_epoch": 71,
+ "created": "2026-10-12T18:35:33"
+}
