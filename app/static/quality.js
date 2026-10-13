@@ -11,7 +11,7 @@
   const post = (url, data = {}) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
   const pct = (x) => (x == null ? "—" : Math.round(x * 100) + "%");
   const DEC = { auto: "ავტო", include: "შევიდეს", exclude: "ამოვრიცხოთ" };
-  let st = { show: "all", pitch: "all", sort: "bad", limit: 60, open: null };
+  let st = { show: "all", pitch: "all", sort: "bad", dir: 1, limit: 60, open: null };  // dir: 1 — ცუდიდან, -1 — კარგიდან
   let data = null, timer = null;
   const audio = new Audio();
 
@@ -59,8 +59,11 @@
     if (st.pitch === "high") r = r.filter((x) => (x.f0 || 0) >= 165);
     const key = { bad: (x) => -x.bad_share, cer: (x) => -(x.cer || 0), hiss: (x) => -(x.hiss || -99), snr: (x) => x.snr || 0,
       min: (x) => -x.good_min, f0: (x) => x.f0 || 0 }[st.sort];
-    return r.sort((a, b) => key(a) - key(b));
+    return r.sort((a, b) => (key(a) - key(b)) * st.dir);
   }
+
+  // სვეტის სათაური — დაჭერით დალაგება; იგივეზე მეორედ — მიმართულება
+  const th = (k, t, title = "") => `<th class="num q-sortable ${st.sort === k ? "on" : ""}" data-sort="${k}" title="${esc(title || "დალაგება")}">${t}${st.sort === k ? (st.dir === 1 ? " ↓" : " ↑") : ""}</th>`;
 
   function speakersCard() {
     const rows = filtered();
@@ -71,10 +74,11 @@
         <label>ჩვენება <select id="q-show">${opt("all", st.show, "ყველა")}${opt("exclude", st.show, "ამოსარიცხი")}${opt("new", st.show, "ახალი კანდიდატები")}${opt("current", st.show, "ახლანდელი 296")}${opt("manual", st.show, "ჩემი გადაწყვეტილებები")}</select></label>
         <label>ხმა <select id="q-pitch">${opt("all", st.pitch, "ყველა")}${opt("low", st.pitch, "დაბალი (კაცის ტიპის)")}${opt("high", st.pitch, "მაღალი")}</select></label>
         <label>დალაგება <select id="q-sort">${opt("bad", st.sort, "ცუდი ჩანაწერების წილით")}${opt("cer", st.sort, "MMS შეცდომით")}${opt("hiss", st.sort, "შიშინით")}${opt("snr", st.sort, "ხმაურით")}${opt("min", st.sort, "კარგი წუთებით")}${opt("f0", st.sort, "სიმაღლით")}</select></label>
+        <button class="ghost small" id="q-dir" title="მიმართულების შეცვლა">${st.dir === 1 ? "↓ ცუდიდან" : "↑ კარგიდან"}</button>
       </div>
       <div class="table-wrap"><table class="q-table">
-        <thead><tr><th>დინამიკი</th><th class="num">Hz</th><th class="num">კარგი წთ</th><th class="num">ცუდი</th><th class="num">MMS</th>
-          <th class="num" title="მეტყველება − ფონი, dB (მეტი = უკეთესი)">SNR</th><th class="num" title="შიშინი, dB (ნაკლები = უკეთესი)">შიშინი</th>
+        <thead><tr><th>დინამიკი</th>${th("f0", "Hz")}${th("min", "კარგი წთ")}${th("bad", "ცუდი")}${th("cer", "MMS")}
+          ${th("snr", "SNR", "მეტყველება − ფონი, dB (მეტი = უკეთესი)")}${th("hiss", "შიშინი", "შიშინი, dB (ნაკლები = უკეთესი)")}
           <th>რატომ</th><th>გადაწყვეტილება</th><th></th></tr></thead>
         <tbody>${rows.slice(0, st.limit).map(row).join("")}</tbody></table></div>
       ${rows.length > st.limit ? `<div class="actions"><button class="ghost small" id="q-more">კიდევ 60 (${rows.length - st.limit})</button></div>` : ""}
@@ -178,6 +182,11 @@
     $("#q-show")?.addEventListener("change", (e) => { st.show = e.target.value; re(); });
     $("#q-pitch")?.addEventListener("change", (e) => { st.pitch = e.target.value; re(); });
     $("#q-sort")?.addEventListener("change", (e) => { st.sort = e.target.value; re(); });
+    $("#q-dir")?.addEventListener("click", () => { st.dir = -st.dir; re(); });
+    box.querySelectorAll("th[data-sort]").forEach((h) => h.addEventListener("click", () => {
+      if (st.sort === h.dataset.sort) st.dir = -st.dir; else { st.sort = h.dataset.sort; st.dir = 1; }
+      re();
+    }));
     $("#q-more")?.addEventListener("click", () => { st.limit += 60; render(); });
     box.querySelectorAll("tr[data-spk]").forEach((tr) => {
       const spk = tr.dataset.spk;

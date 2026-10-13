@@ -912,3 +912,5 @@ label.check input { width: auto; margin: 0; }
 tr[data-spk] [data-open].on { border-color: var(--accent, #4f46e5); color: var(--accent, #4f46e5); }
 .table-wrap:has(.q-table) { max-height: none; overflow: visible; }
 .table-wrap:has(.q-table) th { top: 64px; }
+.q-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.q-sortable:hover, .q-sortable.on { color: var(--accent, #4f46e5); }
