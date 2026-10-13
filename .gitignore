@@ -49,3 +49,5 @@ data/kaggle_jobs/*
 !data/kaggle_jobs/base_ka.json
 data/ghtest/answers.json
 data/lexicon.json
+data/mms_rank.progress.json
+data/mms_rank.json

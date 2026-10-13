@@ -4,167 +4,262 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI ხმები</title>
+<script>try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; if (localStorage.getItem("sidebar-collapsed") === "1") document.documentElement.classList.add("sb-collapsed"); } catch {}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=30">
 </head>
 <body>
-<header class="top">
-  <div class="brand">
-    <span class="logo" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
-    </span>
-    <div>
-      <h1>AI ხმები</h1>
-      <p class="sub">ქართული ხმები Piper-ისთვის</p>
+<div class="shell">
+  <!-- გვერდითი მენიუ -->
+  <aside class="sidebar" id="sidebar" aria-label="მთავარი მენიუ">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>
+      </span>
+      <div class="brand-text">
+        <div class="brand-name">AI ხმები</div>
+        <div class="brand-sub">ქართული ხმები Piper-ისთვის</div>
+      </div>
     </div>
+
+    <nav class="tabs" aria-label="გვერდები">
+      <div class="nav-group">მთავარი</div>
+      <button data-tab="overview" data-group="მთავარი" aria-current="page" title="მიმოხილვა">
+        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span class="nav-label">მიმოხილვა</span>
+      </button>
+
+      <div class="nav-group">ხმები</div>
+      <button data-tab="voices" data-group="ხმები" title="ხმები">
+        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4M7 6v12M11 3v18M15 7v10M19 10v4"/></svg>
+        <span class="nav-label">ხმები</span>
+      </button>
+      <button data-tab="designer" data-group="ხმები" title="ხმის შემქმნელი">
+        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+        <span class="nav-label">ხმის შემქმნელი</span>
+      </button>
+
+      <div class="nav-group">წვრთნა</div>
+      <button data-tab="train" data-group="წვრთნა" title="წვრთნა">
+        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span class="nav-label">წვრთნა</span>
+      </button>
+      <button data-tab="base" data-group="წვრთნა" title="საბაზო მოდელი">
+        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <span class="nav-label">საბაზო მოდელი</span>
+      </button>
+      <button data-tab="data" data-group="წვრთნა" title="მონაცემები">
+        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>
+        <span class="nav-label">მონაცემები</span>
+      </button>
+      <button data-tab="record" data-group="წვრთნა" title="ჩაწერა">
+        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4M8 22h8"/></svg>
+        <span class="nav-label">ჩაწერა</span>
+      </button>
+
+      <div class="nav-group">სისტემა</div>
+      <button data-tab="settings" data-group="სისტემა" title="პარამეტრები">
+        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="nav-label">პარამეტრები</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <button class="sb-collapse" id="sb-collapse" type="button" aria-pressed="false" title="მენიუს ჩაკეცვა">
+        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="M15 10l-2 2 2 2"/></svg>
+        <span class="nav-label">ჩაკეცვა</span>
+      </button>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+  <div class="main-col">
+    <!-- ზედა ზოლი -->
+    <header class="topbar">
+      <button class="icon-btn nav-open" id="nav-open" type="button" aria-label="მენიუ" aria-controls="sidebar" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div class="titles">
+        <nav class="crumbs" id="crumbs" aria-label="მდებარეობა"></nav>
+        <h1 id="page-title">მიმოხილვა</h1>
+      </div>
+      <div class="top-status">
+        <button class="status-pill" id="st-jobs" type="button" hidden><span class="pulse" aria-hidden="true"></span><span class="pill-text"></span></button>
+        <button class="status-pill" id="st-setup" type="button" hidden><span class="pill-dot" aria-hidden="true"></span><span class="pill-text"></span></button>
+        <button class="status-pill" id="st-update" type="button" hidden><span class="pill-dot" aria-hidden="true"></span><span class="pill-text"></span></button>
+        <button class="icon-btn" id="theme-toggle" type="button" aria-label="თემა">
+          <svg class="i-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="i-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- მიმოხილვა -->
+      <section id="tab-overview" class="tab">
+        <div class="stats slot" id="stats"></div>
+        <div class="grid-main">
+          <div class="card">
+            <div class="card-head"><h2>აქტიური სამუშაოები</h2></div>
+            <div id="jobs" class="slot"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>ბიბლიოთეკა</h2>
+              <button class="ghost small" onclick="document.querySelector('.tabs button[data-tab=voices]').click()">„ხმები“ →</button></div>
+            <div id="ov-voices" class="checks slot"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>გეგმა</h2><span class="muted small" id="roadmap-updated"></span></div>
+          <ol class="roadmap slot" id="roadmap"></ol>
+        </div>
+      </section>
+
+      <!-- ხმები -->
+      <section id="tab-voices" class="tab" hidden>
+        <div class="subtabs" data-subtabs="voices" aria-label="ხმები">
+          <button data-subtab="listen">მოსმენა</button>
+          <button data-subtab="long">გრძელი ტექსტი</button>
+          <button data-subtab="library">ბიბლიოთეკა</button>
+          <button data-subtab="lexicon">ლექსიკონი</button>
+        </div>
+
+        <div class="card" data-pane="listen">
+          <div class="card-head"><h2>მოსმენა</h2></div>
+          <p class="muted small help">აირჩიეთ ხმა და ემოცია, ჩაწერეთ ტექსტი და დააჭირეთ „გახმოვანებას“.</p>
+          <details class="hint"><summary><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2.2-2.4 3.7M12 17h.01"/></svg> დაწვრილებით</summary><p class="muted small">ტემბრი ფიქსირებულია — ემოცია მხოლოდ ტემპს, ინტონაციას და ხმამაღლობას ცვლის, შეზღუდულ ფარგლებში. თითო ხმას თავისი <b>ნორმა</b> აქვს („ნეიტრალური“); სხვა ემოციები მისგან ითვლება. სლაიდერებით მოარგეთ და დააჭირეთ „ნორმად შენახვა“.</p></details>
+          <div class="play-grid">
+            <div>
+              <label class="lbl" for="voice-select">ხმა</label>
+              <select id="voice-select"></select>
+              <label class="lbl" for="text">ტექსტი</label>
+              <textarea id="text" rows="5">გამარჯობა! მე ვარ ქართული ხმა, რომელიც ლოკალურად, თქვენს კომპიუტერზე მუშაობს. დღეს ამინდი მშვენიერია, არა?</textarea>
+              <div class="chips" id="phrases"></div>
+              <div class="norm-preview small" id="norm-preview" hidden><span class="muted">როგორ წაიკითხავს:</span> <span id="norm-text"></span></div>
+            </div>
+            <div class="panel-soft">
+              <span class="lbl">ემოცია</span>
+              <div class="chips" id="emotions"></div>
+              <div class="sliders" id="sliders"></div>
+              <div class="actions tight">
+                <button class="ghost small" id="save-default" title="ამჟამინდელი სლაიდერები → ამ ხმის „ნეიტრალური“"><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> ნორმად შენახვა</button>
+                <button class="ghost small" id="reset-default" title="წვრთნისას დაყენებულ მნიშვნელობებზე დაბრუნება" aria-label="ნორმის დაბრუნება">↺</button>
+              </div>
+            </div>
+          </div>
+          <div class="actions action-bar">
+            <button class="primary" id="speak"><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></svg> გახმოვანება</button>
+            <button class="ghost" id="compare">ყველა ემოციის შედარება</button>
+            <span class="muted small" id="speak-info"></span>
+          </div>
+          <audio id="player" controls hidden></audio>
+          <div id="compare-list" class="compare"></div>
+        </div>
+
+        <div class="card" id="long-card" data-pane="long">
+          <div class="card-head"><h2>გრძელი ტექსტი → ფაილი</h2>
+            <label class="ghost small file-btn btn"><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg> .txt ფაილი<input type="file" id="long-file" accept=".txt,.md,.srt,text/plain" hidden></label></div>
+          <p class="muted small help">ჩასვით ტექსტი ან გახსენით .txt ფაილი — მიიღებთ MP3/WAV-ს და SRT სუბტიტრებს.</p>
+          <details class="hint"><summary><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2.2-2.4 3.7M12 17h.01"/></svg> დაწვრილებით</summary><p class="muted small">აბზაცები ცალ-ცალკე ჩანს („აბზაცების ნახვა“) — თითოს შეგიძლიათ მისცეთ თავისი ხმა და ემოცია. ან ტექსტშივე, აბზაცის დასაწყისში: <code>[სევდიანი]</code>, <code>[ქალი 1]</code>, <code>[ქალი 1, მხიარული]</code>.</p></details>
+          <textarea id="long-text" rows="10" placeholder="ტექსტი… (აბზაცები ცარიელი ხაზით ან ახალი ხაზით)"></textarea>
+          <div class="actions tight">
+            <button class="ghost small" id="long-split">აბზაცების ნახვა ▾</button>
+            <span class="muted small" id="long-count"></span>
+          </div>
+          <div id="long-blocks" class="long-blocks" hidden></div>
+          <div class="form-row">
+            <label class="field-inline">პაუზა აბზაცებს შორის <input type="number" id="long-pause" value="0.7" min="0" max="5" step="0.1"> წმ</label>
+            <label class="field-inline">წინადადებებს შორის <input type="number" id="long-spause" value="0.25" min="0" max="3" step="0.05"> წმ</label>
+            <label class="check-inline"><input type="checkbox" id="long-mp3" checked> MP3</label>
+          </div>
+          <div class="actions action-bar">
+            <button class="primary" id="long-go"><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></svg> მთლიანი ტექსტის გახმოვანება</button>
+            <button class="ghost small" id="long-cancel" hidden>გაუქმება</button>
+          </div>
+          <div id="long-status" class="small long-status"></div>
+        </div>
+
+        <div class="card" data-pane="library">
+          <div class="card-head"><h2>ბიბლიოთეკა</h2><button class="ghost small" id="hidden-toggle" hidden></button></div>
+          <div class="voice-list slot" id="voice-list"></div>
+        </div>
+        <div class="card" id="check-card" data-pane="library" hidden></div>
+
+        <div class="card" data-pane="lexicon">
+          <details id="lex-box">
+            <summary tabindex="-1"><h2 class="inline">ლექსიკონი</h2> </summary>
+            <p class="muted small help">როგორ წაიკითხოს ბრენდები, უცხო სიტყვები და შემოკლებები. დაამატეთ სიტყვა, თუ არასწორად კითხულობს.</p>
+            <details class="hint"><summary><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2.2-2.4 3.7M12 17h.01"/></svg> დაწვრილებით</summary><p class="muted small">რიცხვებს, თარიღებს, ფასებს (₾ $ €), პროცენტებს, დროს, „მე-5“, „XX საუკუნე“, „ქ.“, „ა.შ.“ ავტომატურად კითხულობს. ლათინურ სიტყვას, რომელიც აქ არ არის, ქართული ასოებით გადაწერს („Hello“ → „ჰელო“).</p></details>
+            <form id="lex-form" class="lex-form">
+              <input name="word" placeholder="როგორ წერია (მაგ. Spotify)" required maxlength="60" aria-label="როგორ წერია">
+              <input name="say" placeholder="როგორ წაიკითხოს (მაგ. სპოტიფაი)" required maxlength="120" aria-label="როგორ წაიკითხოს">
+              <button class="ghost small" type="button" id="lex-try"><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></svg> მოსმენა</button>
+              <button class="primary small" type="submit">დამატება</button>
+            </form>
+            <input id="lex-filter" placeholder="ძებნა…" class="lex-filter" type="search" aria-label="ძებნა ლექსიკონში">
+            <div id="lex-list" class="lex-list"></div>
+          </details>
+        </div>
+      </section>
+
+      <!-- საბაზო მოდელი -->
+      <section id="tab-base" class="tab" hidden>
+        <div class="subtabs" data-subtabs="base" aria-label="საბაზო მოდელი">
+          <button data-subtab="progress">მიმდინარეობა</button>
+          <button data-subtab="samples">ნიმუშები</button>
+          <button data-subtab="stats">სტატისტიკა</button>
+        </div>
+        <div id="base" class="slot"></div>
+      </section>
+
+      <!-- ხმის შემქმნელი -->
+      <section id="tab-designer" class="tab" hidden>
+        <div class="subtabs" data-subtabs="designer" aria-label="ხმის შემქმნელი">
+          <button data-subtab="mix">ნარევი</button>
+          <button data-subtab="audition">ყველა ხმის მოსმენა</button>
+          <button data-subtab="rank">რეიტინგი</button>
+        </div>
+        <div id="designer" class="slot"></div>
+      </section>
+
+      <!-- ჩაწერა -->
+      <section id="tab-record" class="tab" hidden>
+        <div id="rec" class="slot"></div>
+      </section>
+
+      <!-- წვრთნა (train.js) -->
+      <section id="tab-train" class="tab" hidden>
+        <div id="train" class="slot"></div>
+      </section>
+
+      <!-- პარამეტრები + პირველი დაყენება (settings.js) -->
+      <section id="tab-settings" class="tab" hidden>
+        <div class="subtabs" data-subtabs="settings" aria-label="პარამეტრები">
+          <button data-subtab="checks">შემოწმება</button>
+          <button data-subtab="config">პარამეტრები</button>
+          <button data-subtab="models">მოდელები</button>
+          <button data-subtab="accounts">ანგარიშები</button>
+          <button data-subtab="update">განახლება</button>
+        </div>
+        <div id="settings" class="slot"></div>
+      </section>
+
+      <!-- მონაცემები -->
+      <section id="tab-data" class="tab" hidden>
+        <div id="data" class="slot"></div>
+      </section>
+    </main>
   </div>
-  <nav class="tabs" role="tablist">
-    <button role="tab" data-tab="overview" aria-selected="true">მიმოხილვა</button>
-    <button role="tab" data-tab="voices">ხმები</button>
-    <button role="tab" data-tab="base">საბაზო მოდელი</button>
-    <button role="tab" data-tab="designer">ხმის შემქმნელი</button>
-    <button role="tab" data-tab="train">წვრთნა</button>
-    <button role="tab" data-tab="record">ჩაწერა</button>
-    <button role="tab" data-tab="data">მონაცემები</button>
-    <button role="tab" data-tab="settings">⚙ პარამეტრები</button>
-  </nav>
-</header>
+</div>
 
-<main>
-  <!-- მიმოხილვა -->
-  <section id="tab-overview" class="tab">
-    <div class="stats" id="stats"></div>
-    <div class="card">
-      <h2>აქტიური სამუშაოები</h2>
-      <div id="jobs"></div>
-    </div>
-    <div class="grid2">
-      <div class="card">
-        <h2>გეგმა</h2>
-        <ol class="roadmap" id="roadmap"></ol>
-        <p class="muted small" id="roadmap-updated"></p>
-      </div>
-      <div class="card">
-        <h2>ბიბლიოთეკა</h2>
-        <div id="ov-voices" class="checks"></div>
-        <div class="actions"><button class="ghost small" onclick="document.querySelector('.tabs button[data-tab=voices]').click()">„ხმები“ →</button></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ხმები -->
-  <section id="tab-voices" class="tab" hidden>
-    <div class="card">
-      <h2>მოსმენა</h2>
-      <p class="muted">ტემბრი ფიქსირებულია — ემოცია მხოლოდ ტემპს, ინტონაციას და ხმამაღლობას ცვლის, შეზღუდულ ფარგლებში.
-        თითო ხმას თავისი <b>ნორმა</b> აქვს („ნეიტრალური“); სხვა ემოციები მისგან ითვლება. სლაიდერებით მოარგეთ და „ნორმად შენახვა“.</p>
-      <div class="play-grid">
-        <div>
-          <label class="lbl" for="voice-select">ხმა</label>
-          <select id="voice-select"></select>
-          <label class="lbl" for="text">ტექსტი</label>
-          <textarea id="text" rows="4">გამარჯობა! მე ვარ ქართული ხმა, რომელიც ლოკალურად, თქვენს კომპიუტერზე მუშაობს. დღეს ამინდი მშვენიერია, არა?</textarea>
-          <div class="chips" id="phrases"></div>
-          <div class="norm-preview small" id="norm-preview" hidden><span class="muted">როგორ წაიკითხავს:</span> <span id="norm-text"></span></div>
-        </div>
-        <div>
-          <span class="lbl">ემოცია</span>
-          <div class="chips" id="emotions"></div>
-          <div class="sliders" id="sliders"></div>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="primary" id="speak">▶ გახმოვანება</button>
-        <button class="ghost" id="compare">ყველა ემოციის შედარება</button>
-        <button class="ghost" id="save-default" title="ამჟამინდელი სლაიდერები → ამ ხმის „ნეიტრალური“">💾 ნორმად შენახვა</button>
-        <button class="ghost" id="reset-default" title="წვრთნისას დაყენებულ მნიშვნელობებზე დაბრუნება">↺</button>
-        <span class="muted small" id="speak-info"></span>
-      </div>
-      <audio id="player" controls hidden></audio>
-      <div id="compare-list" class="compare"></div>
-    </div>
-    <div class="card" id="long-card">
-      <h2>გრძელი ტექსტი → ფაილი</h2>
-      <p class="muted small">ჩასვით ტექსტი ან გახსენით .txt ფაილი. აბზაცები ცალ-ცალკე ჩანს — თითოს შეგიძლიათ მისცეთ თავისი ხმა და ემოცია
-        (ან ტექსტშივე: აბზაცის დასაწყისში <code>[სევდიანი]</code>, <code>[ქალი 1]</code>, <code>[ქალი 1, მხიარული]</code>).
-        შედეგი: MP3/WAV + SRT სუბტიტრები.</p>
-      <textarea id="long-text" rows="8" placeholder="ტექსტი… (აბზაცები ცარიელი ხაზით ან ახალი ხაზით)"></textarea>
-      <div class="actions">
-        <label class="ghost small file-btn">📄 .txt ფაილი<input type="file" id="long-file" accept=".txt,.md,.srt,text/plain" hidden></label>
-        <button class="ghost small" id="long-split">აბზაცების ნახვა ▾</button>
-        <span class="muted small" id="long-count"></span>
-      </div>
-      <div id="long-blocks" class="long-blocks" hidden></div>
-      <div class="actions">
-        <label class="small">პაუზა აბზაცებს შორის <input type="number" id="long-pause" value="0.7" min="0" max="5" step="0.1" style="width:64px"> წმ</label>
-        <label class="small">წინადადებებს შორის <input type="number" id="long-spause" value="0.25" min="0" max="3" step="0.05" style="width:64px"> წმ</label>
-        <label class="small"><input type="checkbox" id="long-mp3" checked> MP3</label>
-        <button class="primary" id="long-go">▶ მთლიანი ტექსტის გახმოვანება</button>
-        <button class="ghost small" id="long-cancel" hidden>გაუქმება</button>
-      </div>
-      <div id="long-status" class="small"></div>
-    </div>
-
-    <div class="card">
-      <h2>ბიბლიოთეკა</h2>
-      <div class="voice-list" id="voice-list"></div>
-      <button class="ghost small" id="hidden-toggle" hidden></button>
-    </div>
-    <div class="card" id="check-card" hidden></div>
-    <div class="card">
-      <details id="lex-box">
-        <summary><h2 style="display:inline">ლექსიკონი</h2> <span class="muted small">— სიტყვები, რომლებსაც სხვანაირად კითხულობს (ბრენდები, უცხო სიტყვები, შემოკლებები)</span></summary>
-        <p class="muted small">რიცხვებს, თარიღებს, ფასებს (₾ $ €), პროცენტებს, დროს, „მე-5“, „XX საუკუნე“, „ქ.“, „ა.შ.“ ავტომატურად კითხულობს.
-          ლათინურ სიტყვას, რომელიც აქ არ არის, ქართული ასოებით გადაწერს („Hello“ → „ჰელო“). აქ დაამატეთ, თუ სხვანაირად უნდა.</p>
-        <form id="lex-form" class="lex-form">
-          <input name="word" placeholder="როგორ წერია (მაგ. Spotify)" required maxlength="60">
-          <input name="say" placeholder="როგორ წაიკითხოს (მაგ. სპოტიფაი)" required maxlength="120">
-          <button class="ghost small" type="button" id="lex-try">▶ მოსმენა</button>
-          <button class="primary small" type="submit">დამატება</button>
-        </form>
-        <input id="lex-filter" placeholder="ძებნა…" class="lex-filter">
-        <div id="lex-list" class="lex-list"></div>
-      </details>
-    </div>
-  </section>
-
-  <!-- საბაზო მოდელი -->
-  <section id="tab-base" class="tab" hidden>
-    <div id="base"></div>
-  </section>
-
-  <!-- ხმის შემქმნელი -->
-  <section id="tab-designer" class="tab" hidden>
-    <div id="designer"></div>
-  </section>
-
-  <!-- ჩაწერა -->
-  <section id="tab-record" class="tab" hidden>
-    <div id="rec"></div>
-  </section>
-
-  <!-- წვრთნა (train.js) -->
-  <section id="tab-train" class="tab" hidden>
-    <div id="train"></div>
-  </section>
-
-  <!-- პარამეტრები + პირველი დაყენება (settings.js) -->
-  <section id="tab-settings" class="tab" hidden>
-    <div id="settings"></div>
-  </section>
-
-  <!-- მონაცემები -->
-  <section id="tab-data" class="tab" hidden>
-    <div id="data"></div>
-  </section>
-</main>
-
-<script src="app.js?v=20"></script>
-<script src="rec.js?v=20"></script>
-<script src="designer.js?v=20"></script>
-<script src="settings.js?v=20"></script>
-<script src="train.js?v=20"></script>
-<script src="longform.js?v=20"></script>
+<script src="ui.js?v=30"></script>
+<script src="app.js?v=30"></script>
+<script src="rec.js?v=30"></script>
+<script src="designer.js?v=30"></script>
+<script src="settings.js?v=30"></script>
+<script src="train.js?v=30"></script>
+<script src="longform.js?v=30"></script>
 </body>
 </html>

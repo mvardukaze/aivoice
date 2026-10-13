@@ -32,8 +32,8 @@ window.Train = (() => {
     box.innerHTML = `
       <div class="card">
         <h2>ახალი ხმა შენახული ნარევიდან</h2>
-        <p class="muted small">ნარევი იქმნება „ხმის შემქმნელში“ („შენახვა“). აქედან ის ცალკე, მსუბუქ ხმად იქცევა: ჯერ ამ კომპიუტერზე
-          მზადდება ~3000 ჩანაწერი (~1–2 სთ), მერე იწვრთნება Kaggle-ზე (~6 სთ, უფასოდ) და ბოლოს თავისით ჩნდება „ხმებში“.</p>
+        <p class="muted small help">შენახული ნარევი ცალკე, მსუბუქ ხმად იქცევა და ~8 საათში თავისით გამოჩნდება „ხმებში“.</p>
+        ${UI.hint(`ნარევი იქმნება „ხმის შემქმნელში“ („შენახვა“). ჯერ ამ კომპიუტერზე მზადდება ~3000 ჩანაწერი (~1–2 სთ), მერე იწვრთნება Kaggle-ზე (~6 სთ, უფასოდ).`)}
         <form id="tr-new" class="tr-new">
           <label>ნარევი <select name="design" required>${designs.map((d) => `<option>${esc(d.name)}</option>`).join("")}</select></label>
           <label>ხმის სახელი <input name="name" placeholder="მაგ. ქალი 2" required></label>
@@ -54,7 +54,7 @@ window.Train = (() => {
   async function renderJobs() {
     const { jobs } = await api("/api/train/jobs");
     const box = $("#tr-jobs");
-    box.innerHTML = jobs.length ? jobs.map(jobCard).join("") : `<div class="empty">ჯერ არაფერია.</div>`;
+    box.innerHTML = jobs.length ? jobs.map(jobCard).join("") : `<div class="empty">${UI.icon("activity", 22)}<div>ჯერ არაფერია.</div></div>`;
     bind(box, jobs);
   }
 
@@ -109,20 +109,20 @@ window.Train = (() => {
       const slot = el.dataset.slot;
       el.querySelectorAll("[data-act]").forEach((b) => b.addEventListener("click", async () => {
         const act = b.dataset.act;
-        if (act === "stop" && !confirm("გავაჩერო?")) return;
+        if (act === "stop" && !(await UI.confirm("გავაჩერო?", { okText: "გაჩერება", danger: true }))) return;
         b.disabled = true;
         try {
           if (act === "start") {
             const on = el.querySelector("[data-on]").value, epochs = +el.querySelector("[data-epochs]").value;
-            if (on === "local" && !confirm("ამ კომპიუტერის პროცესორზე წვრთნა ძალიან ნელია (დღეები). გავაგრძელო?")) { b.disabled = false; return; }
+            if (on === "local" && !(await UI.confirm("ამ კომპიუტერის პროცესორზე წვრთნა ძალიან ნელია (დღეები). გავაგრძელო?", { okText: "გაგრძელება" }))) { b.disabled = false; return; }
             await post(`/api/train/${slot}/start`, { on, epochs });
           } else await post(`/api/train/${slot}/${act}`);
           openLog = slot;
           setTimeout(renderJobs, 1500);
-        } catch (err) { alert(err.message); b.disabled = false; }
+        } catch (err) { UI.toast(err.message, "error"); b.disabled = false; }
       }));
       el.querySelector("[data-log]").addEventListener("click", () => { openLog = openLog === slot ? null : slot; renderJobs(); });
-      el.querySelector("[data-goto]")?.addEventListener("click", () => document.querySelector('.tabs button[data-tab="voices"]').click());
+      el.querySelector("[data-goto]")?.addEventListener("click", () => { document.querySelector('.tabs button[data-tab="voices"]').click(); UI.setSub("voices", "library"); });
       if (openLog === slot) api(`/api/train/${slot}/log`).then((l) => {
         el.querySelector(".tr-log").textContent = (l.ctl || "").split("\n").slice(-40).join("\n") + (l.train ? "\n---- train.log ----\n" + l.train.split("\n").slice(-15).join("\n") : "") || "ლოგი ცარიელია";
       });

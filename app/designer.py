@@ -275,10 +275,68 @@ RANK = ROOT / "data" / "mms_rank.json"  # tools/mms_rank.py
 def rank():
     """tools/mms_rank.py: ყველა ხმა და ნარევი, 5 წინადადება — საუკეთესოდან (ნაკლები შეცდომა) უარესისკენ."""
     d = read_json(RANK, {}) or {}
-    rows = sorted(d.values(), key=lambda r: r["cer"])
+    names = {x.get("name") for x in designs()}
+    rows = sorted((r for r in d.values() if r["kind"] != "mix" or r["name"] in names), key=lambda r: r["cer"])
     return {"sentences": ["გამარჯობა! დღეს მშვენიერი ამინდია, არა?",
                           "ოდესღაც, ძალიან დიდი ხნის წინ, ერთ პატარა სოფელში ცხოვრობდა მოხუცი მეთევზე.",
                           "შენ აქ რას აკეთებ? ხომ გითხარი, არ მოსულიყავი!",
                           "ზღვის ღრმა ტალღებმა ნავი ნაპირისკენ გააქანა.",
                           "მწვრთნელმა ბავშვებს წყალში ცურვა ასწავლა."],
-            "rows": rows, "total": len(rows)}
+            "rows": rows, "total": len(rows), "job": rank_job(),
+            "model_epoch": (read_json(DES / "meta.json") or {}).get("epoch")}
+
+
+# ---------- რეიტინგის გაშვება პანელიდან (./aivoice rank) ----------
+RANK_PROGRESS = ROOT / "data" / "mms_rank.progress.json"
+RANK_LOG = cpath("runs") / "_rank.log"
+_rank: dict = {"proc": None}
+
+
+def rank_job() -> dict:
+    p = _rank["proc"]
+    busy = bool(p and p.poll() is None)
+    prog = read_json(RANK_PROGRESS, {}) or {}
+    log = RANK_LOG.read_text(encoding="utf-8", errors="replace").strip().splitlines()[-1:] if RANK_LOG.exists() else []
+    return {"busy": busy, **prog, "last": log[0] if log else "", "code": None if busy or not p else p.returncode}
+
+
+class RankRun(BaseModel):
+    kind: str = Field("mix", pattern=r"^(all|speaker|mix)$")
+    fresh: bool = False
+
+
+@router.post("/rank/run")
+def rank_run(r: RankRun):
+    import subprocess
+    p = _rank["proc"]
+    if p and p.poll() is None:
+        raise HTTPException(409, "რეიტინგი უკვე მიმდინარეობს")
+    RANK_PROGRESS.unlink(missing_ok=True)
+    RANK_LOG.parent.mkdir(parents=True, exist_ok=True)
+    log = RANK_LOG.open("w", encoding="utf-8")
+    args = ["nice", "-n", "10", str(ROOT / "aivoice"), "rank", "--kind", r.kind] + (["--fresh"] if r.fresh else [])
+    _rank["proc"] = p = subprocess.Popen(args, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                         start_new_session=True, env={**__import__("os").environ, "PYTHONUNBUFFERED": "1"})
+    threading.Thread(target=p.wait, daemon=True).start()
+    return {"ok": True}
+
+
+@router.post("/rank/stop")
+def rank_stop():
+    import os
+    import signal
+    p = _rank["proc"]
+    if p and p.poll() is None:
+        os.killpg(p.pid, signal.SIGTERM)  # შედეგები ყოველ ხმაზე ინახება — შემდეგ ჯერზე იქიდან გააგრძელებს
+    return {"ok": True}
+
+
+@router.delete("/rank")
+def rank_clear(kind: str = "all"):
+    if _rank["proc"] and _rank["proc"].poll() is None:
+        raise HTTPException(409, "ჯერ გააჩერეთ მიმდინარე შეფასება")
+    d = read_json(RANK, {}) or {}
+    d = {k: v for k, v in d.items() if kind != "all" and v["kind"] != kind}
+    RANK.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+    RANK_PROGRESS.unlink(missing_ok=True)
+    return {"ok": True, "left": len(d)}

@@ -10,6 +10,7 @@
     designer/      designer.onnx, embeddings.npy, config.json, meta.json, speakers.json   (ხმის შემქმნელი)
     designs/       <id>.json                                                              (შენახული ნარევები)
     lexicon/       lexicon.json                                                           (წარმოთქმის ლექსიკონი)
+    rank/          mms_rank.json                                                          (ხმების რეიტინგი, MMS)
     voices/<id>/   <id>.onnx, <id>.onnx.json, voice.json (კატალოგის ჩანაწერი)             (ხმები)
     base_ka/       final.ckpt, config.json                                                (--base)
     ljspeech/      ljspeech-medium.clean.ckpt                                             (--base)
@@ -57,6 +58,7 @@ def repo() -> str:
 
 DESIGNS = ROOT / "data" / "designs"
 CATALOG = ROOT / "voices" / "catalog.json"
+RANK = ROOT / "data" / "mms_rank.json"  # ხმის შემქმნელის რეიტინგი (MMS)
 LEXICON = ROOT / "data" / "lexicon.json"  # ლექსიკონის დამატებები (pull: აერთიანებს, ადგილობრივი უპირატესია)
 SHARED_STATUS = ("ready", "testing")  # ეს ხმები იტვირთება; „დამალული“/„იქმნება“ — არა
 
@@ -83,6 +85,8 @@ def local_files(base: bool) -> list[tuple[Path, str]]:
     out += [(p, f"designs/{p.name}") for p in sorted(DESIGNS.glob("*.json"))] if DESIGNS.exists() else []
     if LEXICON.exists():
         out.append((LEXICON, "lexicon/lexicon.json"))
+    if RANK.exists():
+        out.append((RANK, "rank/mms_rank.json"))
     for v in catalog()["voices"]:
         if v.get("status") in SHARED_STATUS and v.get("model"):
             m = ROOT / "voices" / v["model"]
@@ -225,6 +229,8 @@ def target_for(f: str, base: bool) -> Path | None:
         return DESIGNS / rest
     if top == "lexicon":
         return LEXICON
+    if top == "rank":
+        return RANK
     if top == "voices":
         return ROOT / f
     if base and top == "base_ka":
@@ -257,7 +263,7 @@ def cmd_pull(a):
                 print(f"  + ლექსიკონი: {len(new)} ახალი სიტყვა")
             continue
         # ამ კომპიუტერზე შეცვლილი პარამეტრები/ნარევები არ გადაიწერება (--force-ის გარდა)
-        keep_local = f.endswith(".onnx.json") or f.startswith("designs/")
+        keep_local = f.endswith(".onnx.json") or f.startswith("designs/") or f.startswith("rank/")
         if dst.exists() and (same(dst, r, cache) or (keep_local and not a.force)):
             continue
         print(f"  ↓ {f} ({r[0] / 1e6:.1f} MB)", flush=True)

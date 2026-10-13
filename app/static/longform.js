@@ -48,7 +48,7 @@
           <span class="muted small">${i + 1}</span>
           <select data-k="voice">${voices.map((v) => `<option value="${esc(v.id)}" ${v.id === b.voice ? "selected" : ""}>${esc(v.name)}</option>`).join("")}</select>
           <select data-k="emotion">${Object.entries(EMO).map(([k, e]) => `<option value="${k}" ${k === b.emotion ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select>
-          <button class="ghost small" data-play title="ამ აბზაცის მოსმენა">▶</button>
+          <button class="ghost small" data-play title="ამ აბზაცის მოსმენა" aria-label="მოსმენა">${UI.icon("play", 12)}</button>
         </div>
         <div class="long-text small">${esc(b.text.length > 400 ? b.text.slice(0, 400) + "…" : b.text)}</div>
       </div>`).join("");
@@ -64,7 +64,7 @@
           const r = await api("/api/synthesize", { method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ voice: b.voice, emotion: b.emotion, text: b.text.slice(0, 2000) }) });
           const a = new Audio(r.url); a.play();
-        } catch (err) { alert(err.message); } finally { e.target.disabled = false; }
+        } catch (err) { UI.toast(err.message, "error"); } finally { e.target.disabled = false; }
       });
     });
     return blocks;
@@ -81,7 +81,7 @@
       <div class="${s.status === "failed" ? "err" : ""}">${esc(LBL[s.status] || s.status)}</div>
       ${s.status === "done" ? `
         <audio controls src="/api/longform/${s.id}/${files[0]}" style="width:100%;margin-top:6px"></audio>
-        <div class="actions">${files.map((f) => `<a class="ghost small btn" href="/api/longform/${s.id}/${f}" download>⬇ ${f.endsWith(".srt") ? "სუბტიტრები (SRT)" : f.toUpperCase().replace("AUDIO.", "")}</a>`).join("")}</div>` : ""}`;
+        <div class="actions">${files.map((f) => `<a class="ghost small btn" href="/api/longform/${s.id}/${f}" download>${UI.icon("download", 14)} ${f.endsWith(".srt") ? "სუბტიტრები (SRT)" : f.toUpperCase().replace("AUDIO.", "")}</a>`).join("")}</div>` : ""}`;
     const busy = ["queued", "running", "encoding"].includes(s.status);
     $("#long-go").disabled = busy;
     $("#long-cancel").hidden = !busy;

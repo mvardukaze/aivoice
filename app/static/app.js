@@ -30,7 +30,7 @@ let current = "neutral";
 // ---------- tabs ----------
 document.querySelectorAll(".tabs button").forEach((b) =>
   b.addEventListener("click", () => {
-    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+    document.querySelectorAll(".tabs button").forEach((x) => (x === b ? x.setAttribute("aria-current", "page") : x.removeAttribute("aria-current")));
     document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== `tab-${b.dataset.tab}`));
     try { localStorage.setItem("tab", b.dataset.tab); } catch {}
   })
@@ -70,14 +70,16 @@ function renderStats(ov, base, tj) {
   const run = base.run || {};
   const busy = (tj?.jobs || []).filter(jobActive).length;
   const items = [
-    [`${ready}${testing ? ` + ${testing}` : ""}`, testing ? "მზა ხმა + სატესტო" : "მზა ხმა"],
-    [busy ? `${busy}` : "—", "მიმდინარე სამუშაო"],
-    [run.epoch != null ? `${epochShown(run)} ეპოქა` : "—", "საბაზო მოდელი"],
+    [`${ready}${testing ? ` + ${testing}` : ""}`, testing ? "მზა ხმა + სატესტო" : "მზა ხმა", "wave", "voices"],
+    [busy ? `${busy}` : "—", "მიმდინარე სამუშაო", "activity", "train"],
+    [run.epoch != null ? `${epochShown(run)} ეპოქა` : "—", "საბაზო მოდელი", "layers", "base"],
     run.device === "gcp" && run.status === "training"
-      ? [`~${hm(run.eta_hours)}`, "დარჩა (Google Cloud L4)"]
-      : [`${(+ov.kaggle_week_hours).toFixed(1)} / ${ov.kaggle_week_limit} სთ`, "Kaggle GPU ბოლო 7 დღეში"],
+      ? [`~${hm(run.eta_hours)}`, "დარჩა (Google Cloud L4)", "sparkle", "base"]
+      : [`${(+ov.kaggle_week_hours).toFixed(1)} / ${ov.kaggle_week_limit} სთ`, "Kaggle GPU ბოლო 7 დღეში", "sparkle", "train"],
   ];
-  $("#stats").innerHTML = items.map(([b, s]) => `<div class="stat"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join("");
+  $("#stats").innerHTML = items.map(([b, s, ic, page]) => `<button type="button" class="stat" data-stat-go="${page}">
+    <span class="stat-ico">${UI.icon(ic, 18)}</span><span class="stat-body"><b>${esc(b)}</b><span>${esc(s)}</span></span></button>`).join("");
+  $("#stats").querySelectorAll("[data-stat-go]").forEach((x) => x.addEventListener("click", () => UI.go(x.dataset.statGo)));
 }
 
 function progressPct(r) {
@@ -94,6 +96,9 @@ const TARGET_KA = { kaggle: "Kaggle", local: "ეს კომპიუტერ
 
 function renderJobs(tj) {
   const jobs = (tj?.jobs || []).filter(jobActive);
+  const running = jobs.filter((j) => !["failed", "partial"].includes(j.stage)).length, failed = jobs.filter((j) => j.stage === "failed").length;
+  UI.setStatus("jobs", jobs.length ? { text: running ? `${running} მიმდინარე` : `${jobs.length} სამუშაო`, kind: failed ? "bad" : "busy",
+    title: `აქტიური სამუშაოები: ${jobs.length}${failed ? ` (შეცდომა: ${failed})` : ""}`, go: ["train"] } : null);
   $("#jobs").innerHTML = jobs.length ? jobs.map((j) => `
     <div class="job">
       <div class="run-head">
@@ -103,16 +108,17 @@ function renderJobs(tj) {
       <div class="bar"><span style="width:${j.max_epochs ? Math.min(100, (j.epoch / j.max_epochs) * 100).toFixed(1) : 0}%"></span></div>
       <div class="muted small">ეპოქა ${j.epoch} / ${j.max_epochs ?? "—"}${j.note ? " · " + esc(j.note) : ""}${j.error ? ` · <span class="err">${esc(j.error)}</span>` : ""}</div>
     </div>`).join("") + `<div class="actions"><button class="ghost small" data-goto-tab="train">დეტალები — „წვრთნა“ →</button></div>`
-    : `<div class="empty">ამჟამად არაფერი მიმდინარეობს.</div>`;
+    : `<div class="empty">${UI.icon("check", 20)}<div>ამჟამად არაფერი მიმდინარეობს.</div></div>`;
   $("#jobs").querySelector("[data-goto-tab]")?.addEventListener("click", () => document.querySelector('.tabs button[data-tab="train"]').click());
 }
 
 function renderLibrarySummary() {
   const shown = voices.filter((v) => v.status !== "hidden");
   $("#ov-voices").innerHTML = shown.length ? shown.map((v) => `
-    <div class="check-row"><span class="badge ${v.status}">${esc(STATUS[v.status] || v.status)}</span> <b>${esc(v.name)}</b>
-      <span class="muted small">${esc([v.gender, v.character].filter(Boolean).join(" · "))}</span></div>`).join("")
-    : `<div class="empty">ჯერ არცერთი — „⚙ პარამეტრები → მოდელები → ჩამოტვირთვა“.</div>`;
+    <div class="lib-row"><span class="avatar sm" style="--h:${hue(v.id)}">${esc(initial(v.name))}</span>
+      <div class="lib-main"><b>${esc(v.name)}</b><span class="muted small">${esc([v.gender, v.character].filter(Boolean).join(" · "))}</span></div>
+      <span class="badge ${v.status}">${esc(STATUS[v.status] || v.status)}</span></div>`).join("")
+    : `<div class="empty">ჯერ არცერთი ხმა — „პარამეტრები → მოდელები → ჩამოტვირთვა“.</div>`;
 }
 
 // ---------- voices ----------
@@ -120,19 +126,33 @@ function renderLibrarySummary() {
 let showHidden = false, editing = null;
 const curVoice = () => voices.find((v) => v.id === $("#voice-select").value);
 
+const hue = (s) => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
+const initial = (s) => [...String(s || "?").trim()][0] || "?";
+
 function voiceCard(v) {
   if (editing === v.id) return voiceEditCard(v);
   const d = v.defaults;
+  const canListen = v.available && ["ready", "testing"].includes(v.status);
   return `
     <div class="voice ${v.status}" data-id="${esc(v.id)}">
-      <div class="row"><span class="name">${esc(v.name)}</span><span class="badge ${v.status}">${STATUS[v.status] || v.status}</span></div>
-      <div class="id">${esc(v.id)}</div>
-      <div class="meta">${[v.gender, v.age, v.character].filter(Boolean).map(esc).join(" · ")}</div>
-      <div class="meta">${esc(v.source)}${v.size_mb ? ` · ${v.sample_rate} Hz, ${v.size_mb} MB` : ""}</div>
-      ${d ? `<div class="meta small">ნორმა: ტემპი ${d.length_scale} · ინტონაცია ${d.noise_scale} · რიტმი ${d.noise_w_scale} · ხმამაღლობა ${d.volume}</div>` : ""}
+      <div class="voice-top">
+        <span class="avatar" style="--h:${hue(v.id)}" aria-hidden="true">${esc(initial(v.name))}</span>
+        <div class="voice-title"><span class="name">${esc(v.name)}</span><span class="id">${esc(v.id)}</span></div>
+        ${UI.dd([
+          UI.ddItem("data-edit", "edit", "რედაქტირება"),
+          v.available ? UI.ddItem("data-check", "shield", "შემოწმება") : "",
+          !["hidden", "planned"].includes(v.status) ? UI.ddItem("data-hide", "eyeoff", "დამალვა") : "",
+          `<div class="dd-sep" role="separator"></div>`,
+          UI.ddItem("data-remove", "trash", "წაშლა", true),
+        ])}
+      </div>
+      <div class="voice-tags"><span class="badge ${v.status}">${STATUS[v.status] || v.status}</span>
+        ${[v.gender, v.age].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div>
+      ${v.character ? `<div class="meta">${esc(v.character)}</div>` : ""}
+      <div class="meta small">${esc(v.source)}${v.size_mb ? ` · ${v.sample_rate} Hz, ${v.size_mb} MB` : ""}</div>
+      ${d ? `<div class="norm-line small" title="ნორმა">ტემპი <b>${d.length_scale}</b> · ინტონაცია <b>${d.noise_scale}</b> · რიტმი <b>${d.noise_w_scale}</b> · ხმამაღლობა <b>${d.volume}</b></div>` : ""}
       ${v.model && !v.available ? `<div class="meta err">მოდელი ამ კომპიუტერზე არ არის — „პარამეტრები → მოდელები“</div>` : ""}
-      <div class="actions"><button class="ghost small" data-edit>რედაქტირება</button>
-        ${v.available ? `<button class="ghost small" data-check>შემოწმება</button>` : ""}</div>
+      ${canListen ? `<div class="voice-foot"><button class="ghost small" data-listen>${UI.icon("play", 12)} მოსმენა</button></div>` : ""}
     </div>`;
 }
 
@@ -140,7 +160,7 @@ function voiceEditCard(v) {
   const opt = (val, label) => `<option value="${val}" ${v.status === val ? "selected" : ""}>${label}</option>`;
   return `
     <form class="voice editing" data-id="${esc(v.id)}">
-      <div class="id">${esc(v.id)}</div>
+      <div class="edit-head"><b>რედაქტირება</b><span class="id">${esc(v.id)}</span></div>
       <label class="lbl">სახელი <input name="name" value="${esc(v.name)}" required maxlength="60"></label>
       <label class="lbl">სქესი <input name="gender" value="${esc(v.gender)}" maxlength="20"></label>
       <label class="lbl">ასაკი <input name="age" value="${esc(v.age)}" maxlength="20" placeholder="მაგ. 25–40"></label>
@@ -158,7 +178,7 @@ function voiceEditCard(v) {
 
 function renderVoices() {
   const vis = voices.filter((v) => showHidden || v.status !== "hidden");
-  $("#voice-list").innerHTML = vis.map(voiceCard).join("") || `<div class="empty">ბიბლიოთეკა ცარიელია.</div>`;
+  $("#voice-list").innerHTML = vis.map(voiceCard).join("") || `<div class="empty">${UI.icon("wave", 22)}<div>ბიბლიოთეკა ცარიელია.</div></div>`;
   const nHidden = voices.filter((v) => v.status === "hidden").length;
   $("#hidden-toggle").hidden = !nHidden;
   $("#hidden-toggle").textContent = showHidden ? "დამალულების დამალვა" : `დამალულების ჩვენება (${nHidden})`;
@@ -175,20 +195,34 @@ function bindVoiceCards() {
     editing = b.closest("[data-id]").dataset.id; renderVoices();
   }));
   $("#voice-list").querySelectorAll("[data-check]").forEach((b) => b.addEventListener("click", () => openCheck(b.closest("[data-id]").dataset.id)));
+  $("#voice-list").querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => deleteVoice(b.closest("[data-id]").dataset.id)));
+  $("#voice-list").querySelectorAll("[data-hide]").forEach((b) => b.addEventListener("click", async () => {
+    const id = b.closest("[data-id]").dataset.id;
+    try { await postJSON(`/api/voices/${id}`, { status: "hidden" }); await reloadVoices(); UI.toast("ხმა დაიმალა", "ok"); }
+    catch (e) { UI.toast(e.message, "error"); }
+  }));
+  $("#voice-list").querySelectorAll("[data-listen]").forEach((b) => b.addEventListener("click", () => {
+    $("#voice-select").value = b.closest("[data-id]").dataset.id;
+    $("#voice-select").dispatchEvent(new Event("change"));
+    UI.setSub("voices", "listen");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }));
   const f = $("#voice-list").querySelector("form.editing");
   if (!f) return;
   const id = f.dataset.id;
   f.querySelector("[data-cancel]").onclick = () => { editing = null; renderVoices(); };
-  f.querySelector("[data-delete]").onclick = async () => {
-    if (!confirm("ხმა ბიბლიოთეკიდან ამოვიღო? ფაილები გადავა მონაცემების საქაღალდის trash/-ში (საბოლოოდ არ იშლება).")) return;
-    try { await api(`/api/voices/${id}`, { method: "DELETE" }); editing = null; await reloadVoices(); }
-    catch (e) { alert(e.message); }
-  };
+  f.querySelector("[data-delete]").onclick = () => deleteVoice(id);
   f.onsubmit = async (e) => {
     e.preventDefault();
-    try { await postJSON(`/api/voices/${id}`, Object.fromEntries(new FormData(f))); editing = null; await reloadVoices(); }
-    catch (err) { alert(err.message); }
+    try { await postJSON(`/api/voices/${id}`, Object.fromEntries(new FormData(f))); editing = null; await reloadVoices(); UI.toast("შენახულია", "ok"); }
+    catch (err) { UI.toast(err.message, "error"); }
   };
+}
+
+async function deleteVoice(id) {
+  if (!(await UI.confirm("ხმა ბიბლიოთეკიდან ამოვიღო? ფაილები გადავა მონაცემების საქაღალდის trash/-ში (საბოლოოდ არ იშლება)."))) return;
+  try { await api(`/api/voices/${id}`, { method: "DELETE" }); editing = null; await reloadVoices(); }
+  catch (e) { UI.toast(e.message, "error"); }
 }
 
 const postJSON = (url, data) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
@@ -203,6 +237,7 @@ const cerCls = (c) => c == null ? "" : c <= 0.08 ? "good" : c <= 0.15 ? "maybe" 
 async function openCheck(id) {
   checkId = id;
   $("#check-card").hidden = false;
+  UI.setSub("voices", "library");
   await renderCheck();
   $("#check-card").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -226,7 +261,7 @@ async function renderCheck() {
         ${r.started ? `<span class="muted small"> · ${esc(r.started.replace("T", " "))}</span>` : ""}</div>
       <table class="check-table"><thead><tr><th>ფრაზა</th><th>ხმა</th>${r.design ? "<th>ნარევი</th>" : ""}</tr></thead><tbody>
         ${r.rows.map((row) => `<tr><td>${esc(row.text)}</td><td>${au(row.voice.file)} ${cer(row.voice)}</td>${r.design ? `<td>${row.mix ? au(row.mix.file) + " " + cer(row.mix) : ""}</td>` : ""}</tr>`).join("")}
-      </tbody></table>` : `<div class="empty">ჯერ არ შემოწმებულა.</div>`}
+      </tbody></table>` : `<div class="empty">${UI.icon("shield", 22)}<div>ჯერ არ შემოწმებულა.</div></div>`}
     ${c.busy ? `<pre class="tr-log">${esc(c.log.split("\n").slice(-6).join("\n"))}\n… მიმდინარეობს</pre>` : ""}
     <div class="actions">
       <button class="primary small" id="chk-run" ${c.busy ? "disabled" : ""}>${r ? "თავიდან შემოწმება" : "შემოწმების დაწყება"}</button>
@@ -235,7 +270,7 @@ async function renderCheck() {
       <button class="ghost small" id="chk-close">დახურვა</button>
       <span class="muted small">სტატუსი: ${STATUS[v.status] || v.status}</span>
     </div>`;
-  $("#chk-run").onclick = async () => { try { await api(`/api/voices/${id}/check`, { method: "POST" }); renderCheck(); } catch (e) { alert(e.message); } };
+  $("#chk-run").onclick = async () => { try { await api(`/api/voices/${id}/check`, { method: "POST" }); renderCheck(); } catch (e) { UI.toast(e.message, "error"); } };
   $("#chk-close").onclick = () => { checkId = null; $("#check-card").hidden = true; };
   const setStatus = async (status) => { await postJSON(`/api/voices/${id}`, { status }); await reloadVoices(); renderCheck(); };
   $("#chk-ready")?.addEventListener("click", () => setStatus("ready"));
@@ -290,7 +325,7 @@ async function synth(params) {
 $("#save-default").addEventListener("click", async () => {
   const v = curVoice();
   if (!v) return;
-  if (!confirm(`ეს მნიშვნელობები გახდეს „${v.name}“-ის ნორმა? (ყველა ემოცია მასზე გადაითვლება)`)) return;
+  if (!(await UI.confirm(`ეს მნიშვნელობები გახდეს „${v.name}“-ის ნორმა? (ყველა ემოცია მასზე გადაითვლება)`, { okText: "შენახვა" }))) return;
   try {
     await postJSON(`/api/voices/${v.id}`, { defaults: sliderParams() });
     await reloadVoices(); applyPreset("neutral");
@@ -299,7 +334,7 @@ $("#save-default").addEventListener("click", async () => {
 });
 $("#reset-default").addEventListener("click", async () => {
   const v = curVoice();
-  if (!v || !confirm(`„${v.name}“-ის ნორმა დავაბრუნო წვრთნისდროინდელზე?`)) return;
+  if (!v || !(await UI.confirm(`„${v.name}“-ის ნორმა დავაბრუნო წვრთნისდროინდელზე?`, { okText: "დაბრუნება" }))) return;
   try { await api(`/api/voices/${v.id}/reset`, { method: "POST" }); await reloadVoices(); applyPreset("neutral"); }
   catch (e) { $("#speak-info").textContent = "შეცდომა: " + e.message; }
 });
@@ -324,9 +359,9 @@ async function renderLexicon() {
   const rows = d.entries.filter((e) => !q || e.word.toLowerCase().includes(q) || e.say.includes(q));
   $("#lex-list").innerHTML = rows.map((e) => `
     <div class="lex-row"><span class="mono">${esc(e.word)}</span><span>→ ${esc(e.say)}</span>
-      <span class="muted small">${e.local ? "დამატებული" : "ნაგულისხმევი"}</span>
-      <button class="ghost small" data-say="${esc(e.say)}" title="მოსმენა">▶</button>
-      <button class="ghost small" data-del="${esc(e.word)}" title="${e.local ? "წაშლა" : "გაუქმება"}">✕</button></div>`).join("")
+      <span class="muted small">${e.local ? `<span class="tag">დამატებული</span>` : ""}</span>
+      <button class="ghost small" data-say="${esc(e.say)}" title="მოსმენა" aria-label="მოსმენა">${UI.icon("play", 12)}</button>
+      <button class="ghost small" data-del="${esc(e.word)}" title="${e.local ? "წაშლა" : "გაუქმება"}" aria-label="წაშლა">${UI.icon("x", 13)}</button></div>`).join("")
     || `<div class="empty">ვერ მოიძებნა.</div>`;
   $("#lex-list").querySelectorAll("[data-say]").forEach((b) => b.addEventListener("click", () => sayWord(b.dataset.say)));
   $("#lex-list").querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
@@ -339,15 +374,20 @@ async function sayWord(text) {
     const r = await api("/api/synthesize", { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ voice: $("#voice-select").value, text }) });
     lexAudio.src = r.url; lexAudio.play();
-  } catch (e) { alert(e.message); }
+  } catch (e) { UI.toast(e.message, "error"); }
 }
 $("#lex-box").addEventListener("toggle", (e) => { if (e.target.open) renderLexicon(); });
+// „ლექსიკონი“ ქვე-ჩანართია — გახსნისას ყოველთვის ღიაა
+document.addEventListener("subtab", (e) => {
+  if (e.detail.page !== "voices" || e.detail.key !== "lexicon") return;
+  if ($("#lex-box").open) renderLexicon(); else $("#lex-box").open = true;
+});
 $("#lex-filter").addEventListener("input", renderLexicon);
 $("#lex-try").addEventListener("click", () => { const v = $("#lex-form").say.value.trim(); if (v) sayWord(v); });
 $("#lex-form").onsubmit = async (e) => {
   e.preventDefault();
-  try { await postJSON("/api/lexicon", Object.fromEntries(new FormData(e.target))); e.target.reset(); renderLexicon(); updateNorm(); }
-  catch (err) { alert(err.message); }
+  try { await postJSON("/api/lexicon", Object.fromEntries(new FormData(e.target))); e.target.reset(); renderLexicon(); updateNorm(); UI.toast("დაემატა", "ok"); }
+  catch (err) { UI.toast(err.message, "error"); }
 };
 
 $("#phrases").innerHTML = PHRASES.map((p, i) => `<button class="chip" data-i="${i}">${esc(p.slice(0, 28))}…</button>`).join("");
@@ -445,7 +485,7 @@ function renderBase(b) {
     return f0 ? `${f0 < 165 ? "დაბალი" : "მაღალი"} ხმა · ${Math.round(f0)} Hz` : id;
   };
   $("#base").innerHTML = `
-    <div class="card">
+    <div class="card" data-pane="progress">
       <h2>ქართული საბაზო მოდელი</h2>
       <p class="muted">${esc(b.note || "")}. ქართული გამოთქმა ისწავლა ბევრ ხმაზე — მისგან იქმნება ხმის შემქმნელის ნარევები და
         ცალკე ხმები (მაგ. „ქალი 1“). ლიცენზიისგან თავისუფალია.</p>
@@ -470,14 +510,14 @@ function renderBase(b) {
         : `<div class="empty">წვრთნა ჯერ არ დაწყებულა — dataset Kaggle-ზე იტვირთება.</div>`}
     </div>
 
-    <div class="card">
+    <div class="card" data-pane="samples">
       <h2>მოსასმენი ნიმუშები</h2>
-      <p class="muted small">ერთი და იგივე ფრაზები ოთხი ხმით — ყოველ თაობაზე (წვრთნის გაგრძელებისას ახალი სვეტი ემატება).
-        შეადარეთ სვეტები: ძველი მარცხნივ, ახალი მარჯვნივ; „▶ ყველა“ ერთ ხმას ყველა თაობით ზედიზედ უკრავს. ✕ — თაობის წაშლა.</p>
+      <p class="muted small help">ერთი და იგივე ფრაზები ოთხი ხმით, ყოველ თაობაზე — ძველი მარცხნივ, ახალი მარჯვნივ.</p>
+      ${UI.hint(`წვრთნის გაგრძელებისას ახალი სვეტი ემატება. „ყველა“ ერთ ხმას ყველა თაობით ზედიზედ უკრავს; სვეტის თავში ✕ — თაობის წაშლა.`)}
       <div id="prev-matrix"></div>
     </div>
 
-    <div class="grid2">
+    <div class="grid2" data-pane="stats">
       <div class="card">
         <h2>ხმის სიმაღლის განაწილება</h2>
         <p class="muted small">${ds.low ?? 0} დაბალი (კაცის ტიპის) · ${ds.high ?? 0} მაღალი (ქალის ტიპის) ხმა · დინამიკზე მედიანა ${ds.minutes_median ?? "—"} წთ</p>
@@ -487,9 +527,9 @@ function renderBase(b) {
       </div>
       <div class="card">
         <h2>სესიები</h2>
-        ${sessions.length ? `<table><thead><tr><th>დასრულდა</th><th class="num">საათი</th><th class="num">ეპოქა</th><th>შედეგი</th></tr></thead>
+        ${sessions.length ? `<div class="table-wrap"><table><thead><tr><th>დასრულდა</th><th class="num">საათი</th><th class="num">ეპოქა</th><th>შედეგი</th></tr></thead>
           <tbody>${sessions.filter((x) => x.hours).map((x) => `<tr><td>${esc((x.ended || "").slice(5, 16).replace("T", " "))}</td><td class="num">${x.hours ?? "—"}</td>
-            <td class="num">${x.epoch != null ? x.epoch + 1 : "—"}</td><td>${esc(RUN_STATUS[x.status] || x.status || "")}</td></tr>`).join("")}</tbody></table>`
+            <td class="num">${x.epoch != null ? x.epoch + 1 : "—"}</td><td>${esc(RUN_STATUS[x.status] || x.status || "")}</td></tr>`).join("")}</tbody></table></div>`
           : `<div class="empty">დასრულებული სესია ჯერ არ არის.</div>`}
         <p class="muted small">სესიები Kaggle-ზე; ბოლო ეტაპი (ეპოქა 27–72) — Google Cloud L4.</p>
       </div>
@@ -521,20 +561,20 @@ function renderPreviewMatrix(gens, spkLabel) {
     <div class="cmp-wrap"><table class="cmp">
       <thead><tr><th>ხმა</th>${gens.map((g) => `<th><b>${esc(g.label || "")}</b>
         <span>ეპოქა ${g.epoch != null ? g.epoch + 1 : "—"} · ${esc((g.time || "").slice(5, 10))}</span>
-        <button class="ghost small gen-del" data-gen="${esc(g.files[0].file.split("/")[0])}" data-label="${esc(g.label || "")}" title="ამ თაობის წაშლა">✕</button></th>`).join("")}</tr></thead>
+        <button class="ghost small gen-del" data-gen="${esc(g.files[0].file.split("/")[0])}" data-label="${esc(g.label || "")}" title="ამ თაობის წაშლა" aria-label="ამ თაობის წაშლა">${UI.icon("x", 13)}</button></th>`).join("")}</tr></thead>
       <tbody>${speakers.map((sp) => `<tr>
         <td><span class="small">${esc(spkLabel(sp))}</span>
-          <button class="ghost small seq" data-seq="${esc(sp)}" title="ყველა თაობა ზედიზედ">▶ ყველა</button></td>
+          <button class="ghost small seq" data-seq="${esc(sp)}" title="ყველა თაობა ზედიზედ">${UI.icon("play", 12)} ყველა</button></td>
         ${gens.map((g) => { const f = cell(g, sp);
-          return `<td>${f ? `<button class="play" data-src="${src(f)}" title="${esc(g.label || "")}">▶</button>` : "—"}</td>`; }).join("")}
+          return `<td>${f ? `<button class="play" data-src="${src(f)}" title="${esc(g.label || "")}" aria-label="მოსმენა">${UI.icon("play", 12)}</button>` : "—"}</td>`; }).join("")}
       </tr>`).join("")}</tbody>
     </table></div>`;
   box.querySelectorAll("[data-gen]").forEach((b) => b.addEventListener("click", async () => {
-    if (!confirm(`წავშალო ნიმუშების თაობა „${b.dataset.label}“?`)) return;
+    if (!(await UI.confirm(`წავშალო ნიმუშების თაობა „${b.dataset.label}“?`))) return;
     try {
       await api(`/api/preview/base_ka/${b.dataset.gen}`, { method: "DELETE" });
       renderPreviewMatrix(gens.filter((g) => g.files[0].file.split("/")[0] !== b.dataset.gen), spkLabel);
-    } catch (e) { alert(e.message); }
+    } catch (e) { UI.toast(e.message, "error"); }
   }));
   box.querySelectorAll("[data-phr]").forEach((b) => b.addEventListener("click", () => {
     prevPhrase = +b.dataset.phr;

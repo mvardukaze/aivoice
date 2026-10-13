@@ -31,25 +31,25 @@ window.Settings = (() => {
         <p class="muted small">ყველა ნაბიჯის მდგომარეობა ჩანს ქვემოთ „შემოწმებაში“ — მწვანე ✓ ნიშნავს, რომ მზადაა.</p>
       </div>` : ""}
 
-      <div class="card" id="upd-card">
+      <div class="card" id="upd-card" data-pane="update">
         <h2>განახლება</h2>
         <div class="muted small" id="upd-cur"></div>
         <div id="upd-body" class="small muted">მოწმდება GitHub…</div>
         <pre class="tr-log" id="upd-log" hidden></pre>
       </div>
 
-      <div class="card">
+      <div class="card" data-pane="checks">
         <div class="card-head"><h2>შემოწმება</h2>
           <span class="verdict ${st.ready ? "good" : "bad"}">${st.ready ? "ყველაფერი აუცილებელი მზადაა" : "რაღაც აკლია"}</span></div>
         ${Object.entries(groups).map(([g, items]) => `
-          <div class="lbl">${esc(g)}</div>
+          <div class="check-group"><div class="lbl">${esc(g)}</div>
           <div class="checks">${items.map((i) => `
             <div class="check-row"><span class="verdict ${STATE[i.state][1]}">${STATE[i.state][0]}</span>
-              <b>${esc(i.name)}</b> <span class="muted small">${esc(i.detail)}</span></div>`).join("")}</div>`).join("")}
+              <b>${esc(i.name)}</b> <span class="muted small">${esc(i.detail)}</span></div>`).join("")}</div></div>`).join("")}
         <div class="actions"><button class="ghost small" id="set-recheck">თავიდან შემოწმება</button></div>
       </div>
 
-      <div class="card">
+      <div class="card" data-pane="config">
         <div class="card-head"><h2>პარამეტრები</h2><span class="muted small mono">${esc(s.file)}</span></div>
         <p class="muted small">მისამართებში შეგიძლიათ გამოიყენოთ <code>{data_root}</code> და <code>~</code>. ცვლილება ძალაში შედის პანელის გადატვირთვის შემდეგ.</p>
         <form id="set-form">
@@ -70,22 +70,23 @@ window.Settings = (() => {
         </form>
       </div>
 
-      <div class="card" id="models-card">
+      <div class="card" id="models-card" data-pane="models">
         <div class="card-head"><h2>მოდელები (Hugging Face)</h2><span class="muted small mono" id="mdl-repo"></span></div>
-        <p class="muted small">ხმები, ნარევები და ხმის შემქმნელი ინახება საერთო პირად რეპოზიტორიაში. „ჩამოტვირთვა“ მოიტანს ახალს
-          (აქ შეცვლილ პარამეტრებს არ გადაწერს), „ატვირთვა“ — გაგზავნის თქვენს ახალ ხმებს და ნარევებს (მხოლოდ შეცვლილს; საჭიროა Write token).
-          „დამალული“ ხმები არ იტვირთება.</p>
+        <p class="muted small help">ხმები და ნარევები საერთო პირად რეპოზიტორიაშია. „ჩამოტვირთვა“ მოიტანს ახალს, „ატვირთვა“ გაგზავნის თქვენსას.</p>
+        <details class="hint"><summary>${UI.icon("help", 14)} დაწვრილებით</summary>
+          <p class="muted small">„ჩამოტვირთვა“ აქ შეცვლილ პარამეტრებს არ გადაწერს. „ატვირთვა“ აგზავნის მხოლოდ შეცვლილს და საჭიროებს Write token-ს.
+          „დამალული“ ხმები არ იტვირთება.</p></details>
+        <label class="check small"><input type="checkbox" id="mdl-base"> საბაზო checkpoint-ებიც (~1.8 GB — საჭიროა ახალი ხმის მოსამზადებლად)</label>
         <div class="actions">
-          <button class="primary small" data-mdl="pull">↓ ჩამოტვირთვა</button>
-          <button class="ghost small" data-mdl="push">↑ ატვირთვა</button>
-          <label class="small"><input type="checkbox" id="mdl-base"> + საბაზო checkpoint-ები (~1.8 GB — საჭიროა ახალი ხმის მოსამზადებლად)</label>
+          <button class="primary small" data-mdl="pull">${UI.icon("download", 14)} ჩამოტვირთვა</button>
+          <button class="ghost small" data-mdl="push">${UI.icon("download", 14).replace('class="ico"', 'class="ico flip"')} ატვირთვა</button>
           <button class="ghost small" id="mdl-check">შედარება</button>
         </div>
         <div id="mdl-files" class="small"></div>
         <pre class="tr-log" id="mdl-log" hidden></pre>
       </div>
 
-      <div class="card">
+      <div class="card" data-pane="accounts">
         <h2>ანგარიშები და გასაღებები</h2>
         <p class="muted small">გასაღები მხოლოდ ამ კომპიუტერზე ინახება (დაცულ ფაილში) და პანელი მას უკან არასოდეს აჩვენებს. ჩატში ან სხვაგან ნუ ჩასვამთ.</p>
         ${s.secrets.map((x) => `
@@ -119,8 +120,8 @@ window.Settings = (() => {
     box.querySelectorAll("[data-secret-save]").forEach((b) => b.addEventListener("click", async () => {
       const inp = box.querySelector(`[data-secret="${b.dataset.secretSave}"]`);
       if (!inp.value.trim()) { inp.focus(); return; }
-      try { await post("/api/settings/secret", { name: b.dataset.secretSave, value: inp.value }); inp.value = ""; render(); }
-      catch (err) { alert(err.message); }
+      try { await post("/api/settings/secret", { name: b.dataset.secretSave, value: inp.value }); inp.value = ""; render(); UI.toast("გასაღები შენახულია", "ok"); }
+      catch (err) { UI.toast(err.message, "error"); }
     }));
   }
 
@@ -133,7 +134,7 @@ window.Settings = (() => {
     if (!u.ok) { body.innerHTML = `<span class="err">${esc(u.error)}</span>`; return; }
     $("#upd-cur").textContent = "ახლა: " + u.current;
     if (!u.behind) {
-      body.innerHTML = `<span class="verdict good">✓ უახლესი ვერსიაა</span> <button class="ghost small" id="upd-recheck">შემოწმება</button>`;
+      body.innerHTML = `<div class="actions tight"><span class="verdict good">${UI.icon("check", 12)} უახლესი ვერსიაა</span> <button class="ghost small" id="upd-recheck">ხელახლა შემოწმება</button></div>`;
       $("#upd-recheck").onclick = renderUpdate;
       return;
     }
@@ -145,8 +146,8 @@ window.Settings = (() => {
       ${u.ahead ? `<div class="err">ამ კომპიუტერზე საკუთარი ცვლილებებია (${u.ahead}) — ავტომატური განახლება შეუძლებელია.</div>` : ""}
       <div class="actions"><button class="primary small" id="upd-go" ${u.blocked.length || u.ahead ? "disabled" : ""}>განახლება და გადატვირთვა</button></div>`;
     $("#upd-go").onclick = async () => {
-      if (!confirm("განვაახლო? მიმდინარე წვრთნა/მომზადება არ შეწყდება; პანელი თავიდან ჩაიტვირთება.")) return;
-      try { await post("/api/update", {}); pollUpdate(); } catch (err) { alert(err.message); }
+      if (!(await UI.confirm("განვაახლო? მიმდინარე წვრთნა/მომზადება არ შეწყდება; პანელი თავიდან ჩაიტვირთება.", { okText: "განახლება" }))) return;
+      try { await post("/api/update", {}); pollUpdate(); } catch (err) { UI.toast(err.message, "error"); }
     };
   }
 
@@ -171,6 +172,7 @@ window.Settings = (() => {
   function markTab(u) {
     const b = document.querySelector('.tabs button[data-tab="settings"]');
     if (b && u?.ok && u.behind) { b.classList.add("attn"); b.title = `ახალი ვერსია: ${u.behind} ცვლილება`; }
+    window.UI?.setStatus("update", u?.ok && u.behind ? { text: "ახალი ვერსია", kind: "accent", title: `ახალი ვერსია: ${u.behind} ცვლილება`, go: ["settings", "update"] } : null);
   }
 
   // ---------- მოდელები ----------
@@ -180,9 +182,9 @@ window.Settings = (() => {
   function bindModels() {
     document.querySelectorAll("[data-mdl]").forEach((b) => b.addEventListener("click", async () => {
       const base = $("#mdl-base").checked;
-      if (b.dataset.mdl === "push" && !confirm("ატვირთვა საერთო რეპოზიტორიაში" + (base ? " (საბაზო checkpoint-ებიც)" : "") + "?")) return;
+      if (b.dataset.mdl === "push" && !(await UI.confirm("ატვირთვა საერთო რეპოზიტორიაში" + (base ? " (საბაზო checkpoint-ებიც)" : "") + "?", { okText: "ატვირთვა" }))) return;
       try { await post(`/api/models/${b.dataset.mdl}`, { base }); pollModels(); }
-      catch (err) { alert(err.message); }
+      catch (err) { UI.toast(err.message, "error"); }
     }));
     $("#mdl-check").onclick = checkModels;
     api("/api/models/log").then((l) => { if (l.busy || l.log) showLog(l); if (l.busy) pollModels(); });
@@ -233,6 +235,7 @@ window.Settings = (() => {
     if (st && !st.configured) document.querySelector('.tabs button[data-tab="settings"]')?.click();
     const b = document.querySelector('.tabs button[data-tab="settings"]');
     if (b && st && !st.ready) b.classList.add("attn");
+    if (st && !st.ready) window.UI?.setStatus("setup", { text: "დაყენება", kind: "warn", title: "რაღაც აკლია — პარამეტრები → შემოწმება", go: ["settings", "checks"] });
     api("/api/update").then(markTab).catch(() => {});  // ახალი ვერსია — „პარამეტრებზე“ ნიშანი
   }
 

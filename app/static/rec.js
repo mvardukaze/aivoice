@@ -21,14 +21,14 @@
     $("#rec").innerHTML = `
       <div class="card">
         <h2>ხმის ჩაწერა</h2>
-        <p class="muted">ერთი ადამიანი კითხულობს 1200 წინადადებას (~77 წთ მეტყველება, ჩაწერით ~4–6 სთ).
-          ჯობს 3–4 დღეზე გადანაწილება — დღეში 1–1.5 სთ, რომ ხმა არ დაიღალოს. შეწყვეტა და გაგრძელება ნებისმიერ დროს შეიძლება.</p>
+        <p class="muted small help">ერთი ადამიანი კითხულობს 1200 წინადადებას (ჩაწერით ~4–6 სთ). შეწყვეტა და გაგრძელება ნებისმიერ დროს შეიძლება.</p>
+        ${UI.hint("~77 წთ სუფთა მეტყველება. ჯობს 3–4 დღეზე გადანაწილება — დღეში 1–1.5 სთ, რომ ხმა არ დაიღალოს.")}
         ${list.length ? `<div class="spk-list">${list.map((s) => `
           <button class="spk-card" data-id="${esc(s.id)}">
             <b>${esc(s.name)}</b>
             <span class="muted small">${s.recorded} / ${s.total} · ${s.minutes} წთ · კარგი ${s.good}${s.flagged ? ` · <span class="warn-t">შესამოწმებელი ${s.flagged}</span>` : ""}</span>
             <span class="bar"><span style="width:${(s.recorded / s.total * 100).toFixed(1)}%"></span></span>
-          </button>`).join("")}</div>` : ""}
+          </button>`).join("")}</div>` : `<div class="empty">ჯერ არცერთი დინამიკი — დაამატეთ ქვემოთ.</div>`}
       </div>
       <div class="card">
         <h2>ახალი დინამიკი</h2>
@@ -55,7 +55,7 @@
           body: JSON.stringify({ name: $("#spk-name").value, gender: $("#spk-gender").value, age: $("#spk-age").value, consent: $("#spk-consent").checked }),
         });
         open(r.id);
-      } catch (err) { alert(err.message); }
+      } catch (err) { UI.toast(err.message, "error"); }
     });
   }
 
@@ -84,7 +84,7 @@
         <div class="meter"><span id="rec-level"></span><i class="meter-ok"></i></div>
         <div class="rec-controls">
           <button class="rec-btn" id="rec-toggle" title="Space">● ჩაწერა</button>
-          <button class="ghost" id="rec-play" title="P">▶ მოსმენა</button>
+          <button class="ghost" id="rec-play" title="P">${UI.icon("play", 14)} მოსმენა</button>
           <button class="ghost" id="rec-del" title="Delete">წაშლა</button>
           <span class="rec-time" id="rec-time"></span>
         </div>
@@ -108,8 +108,8 @@
     $("#rec-export").onclick = async () => {
       try {
         const r = await api(`/api/rec/${spk}/export`, { method: "POST" });
-        alert(`dataset მზადაა: ${r.clips} კლიპი, ${r.hours} სთ (datasets/rec_${spk})`);
-      } catch (e) { alert(e.message); }
+        UI.toast(`dataset მზადაა: ${r.clips} კლიპი, ${r.hours} სთ (datasets/rec_${spk})`, "ok", 10000);
+      } catch (e) { UI.toast(e.message, "error"); }
     };
     $("#rec-toggle").onclick = toggle;
     $("#rec-play").onclick = play;
@@ -247,7 +247,7 @@
 
   async function del() {
     const it = state.items[idx];
-    if (!it.recorded || !confirm("წავშალო ეს ჩანაწერი?")) return;
+    if (!it.recorded || !(await UI.confirm("წავშალო ეს ჩანაწერი?"))) return;
     const r = await api(`/api/rec/${spk}/${it.id}`, { method: "DELETE" });
     Object.assign(it, { recorded: false, warnings: [], cer: null });
     state.stats = r.stats;
@@ -266,7 +266,7 @@
   }, 10000);
 
   document.addEventListener("keydown", (e) => {
-    if (!spk || $("#tab-record").hidden || ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+    if (!spk || $("#tab-record").hidden || ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName) || document.querySelector("dialog[open]")) return;
     if (e.code === "Space") { e.preventDefault(); e.target.blur?.(); toggle(); }
     else if (e.code === "ArrowRight") go(idx + 1);
     else if (e.code === "ArrowLeft") go(idx - 1);

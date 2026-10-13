@@ -48,17 +48,16 @@ window.Designer = (() => {
     speakers = d.speakers; meta = d.meta;
     byName = Object.fromEntries(speakers.map((s) => [s.name, s]));
     $("#designer").innerHTML = `
-      <div class="card">
+      <div class="card" data-pane="mix">
         <div class="card-head"><h2>ხმის შემქმნელი</h2>
           <span class="muted small">საბაზო მოდელი · ეპოქა ${meta.epoch != null ? meta.epoch + 1 : "—"} </span></div>
-        <p class="muted">აირჩიეთ რამდენიმე ხმა რუკაზე ან მზა ვარიანტით, ძრავებით დაალაგეთ წილები და მოუსმინეთ.
-          ნარევი ახალი ხმაა — არცერთ რეალურ დინამიკს არ ეკუთვნის.</p>
+        <p class="muted small help">აირჩიეთ ხმები რუკაზე ან მზა ვარიანტით, დაალაგეთ წილები და მოუსმინეთ. ნარევი ახალი ხმაა — არცერთ რეალურ დინამიკს არ ეკუთვნის.</p>
         <div class="des-grid">
           <div>
-            <div class="lbl">ხმების რუკა <span class="muted small">— მარცხნივ დაბალი ხმები, მარჯვნივ მაღალი; ზემოთ-ქვემოთ — ჟღერადობის სხვა თვისება</span></div>
+            <div class="lbl">ხმების რუკა <span class="muted small" title="ზემოთ-ქვემოთ — ჟღერადობის სხვა თვისება">· მარცხნივ დაბალი, მარჯვნივ მაღალი</span></div>
             <div class="des-map-wrap">
               <svg id="des-map" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="დინამიკების რუკა"></svg>
-              <div class="des-zoom"><button class="ghost small" id="des-zin" aria-label="გადიდება">+</button><button class="ghost small" id="des-zout" aria-label="დაპატარავება">−</button><button class="ghost small" id="des-zreset" aria-label="მთლიანი რუკა">⤢</button></div>
+              <div class="des-zoom"><button class="ghost small" id="des-zin" aria-label="გადიდება">+</button><button class="ghost small" id="des-zout" aria-label="დაპატარავება">−</button><button class="ghost small" id="des-zreset" aria-label="მთლიანი რუკა" title="მთლიანი რუკა">${UI.icon("fit", 13)}</button></div>
               <div class="des-axis"><span>← დაბალი</span><span>სიმაღლე</span><span>მაღალი →</span></div>
             </div>
             <p class="muted small" id="des-hover">დააჭირეთ წერტილს — დაემატება ან მოიხსნება ნარევიდან. ბორბალი — გადიდება, გადათრევა — გადაადგილება.</p>
@@ -84,7 +83,7 @@ window.Designer = (() => {
         <textarea id="des-text" rows="2">${esc(PHRASES[0])}</textarea>
         <div class="chips">${PHRASES.map((p, i) => `<button class="chip" data-ph="${i}">${esc(p.slice(0, 26))}…</button>`).join("")}</div>
         <div class="actions">
-          <button class="primary" id="des-play">▶ მოსმენა</button>
+          <button class="primary" id="des-play">${UI.icon("play", 14)} მოსმენა</button>
           <span class="muted small" id="des-info"></span>
         </div>
         <audio id="des-audio" controls preload="none"></audio>
@@ -93,31 +92,31 @@ window.Designer = (() => {
           <button class="ghost" id="des-save-btn">შენახვა</button>
         </div>
       </div>
-      <div class="card" id="rank-card"></div>
-      <div class="card" id="aud-card">
+      <div class="card" id="rank-card" data-pane="rank"></div>
+      <div class="card rank-empty" data-pane="rank"><div class="empty">რეიტინგი ჯერ არ არის.</div></div>
+      <div class="card" id="aud-card" data-pane="audition">
         <div class="card-head"><h2>ყველა ხმის მოსმენა</h2><span class="muted small" id="aud-count"></span></div>
-        <p class="muted small">რუკის ყველა ხმა ერთსა და იმავე ფრაზას ზედიზედ კითხულობს, თავისით გადადის შემდეგზე.
-          მონიშნეთ, ვინ ამბობს კარგად — 👍 ან 👎. კლავიშები: <kbd>Space</kbd> პაუზა, <kbd>→</kbd> შემდეგი, <kbd>←</kbd> წინა,
-          <kbd>L</kbd> მომწონს, <kbd>D</kbd> არ მომწონს. ტემპი და ინტონაცია ზემოთა ძრავებიდან მოდის.</p>
+        <p class="muted small help">ყველა ხმა ზედიზედ კითხულობს ერთ ფრაზას — მონიშნეთ, ვინ ამბობს კარგად.
+          <span class="kbd-hint"><kbd>Space</kbd> პაუზა · <kbd>←</kbd><kbd>→</kbd> წინა/შემდეგი · <kbd>L</kbd> მომწონს · <kbd>D</kbd> არ მომწონს</span></p>
         <div class="aud-opts">
           <label>ფრაზა <select id="aud-phrase">${PHRASES.map((p, i) => `<option value="${i}" ${i === 1 ? "selected" : ""}>${i + 1}. ${esc(p.slice(0, 40))}…</option>`).join("")}</select></label>
           <label>რიგი <select id="aud-order"><option value="f0">სიმაღლით (დაბალი → მაღალი)</option><option value="map">რუკის მიხედვით</option><option value="minutes">ჩანაწერის მოცულობით</option><option value="random">შემთხვევით</option><option value="auto">ავტომატური რეიტინგით (საუკეთესო პირველი)</option></select></label>
-          <label class="check"><input type="checkbox" id="aud-skip" checked> 👎-ები გამოტოვე</label>
+          <label class="check"><input type="checkbox" id="aud-skip" checked> „არ მომწონს“ ხმების გამოტოვება</label>
         </div>
         <div class="aud-player">
-          <button class="ghost" id="aud-start" title="სიის დასაწყისიდან">⏮ თავიდან</button>
-          <button class="ghost" id="aud-prev" title="წინა (←)">◀</button>
-          <button class="primary" id="aud-play" title="დაკვრა / პაუზა (Space)">▶ დაწყება</button>
-          <button class="ghost" id="aud-next" title="შემდეგი (→)">▶▶</button>
+          <button class="ghost" id="aud-start" title="სიის დასაწყისიდან">${UI.icon("first", 14)} თავიდან</button>
+          <button class="ghost" id="aud-prev" title="წინა (←)" aria-label="წინა">${UI.icon("prev", 14)}</button>
+          <button class="primary" id="aud-play" title="დაკვრა / პაუზა (Space)">${UI.icon("play", 14)} დაწყება</button>
+          <button class="ghost" id="aud-next" title="შემდეგი (→)" aria-label="შემდეგი">${UI.icon("next", 14)}</button>
           <div class="aud-now" id="aud-now">—</div>
-          <button class="ghost aud-rate" id="aud-like" title="მომწონს (L)">👍</button>
-          <button class="ghost aud-rate" id="aud-dislike" title="არ მომწონს (D)">👎</button>
+          <button class="ghost aud-rate" id="aud-like" title="მომწონს (L)" aria-label="მომწონს">${UI.icon("up", 16)}</button>
+          <button class="ghost aud-rate" id="aud-dislike" title="არ მომწონს (D)" aria-label="არ მომწონს">${UI.icon("down", 16)}</button>
         </div>
         <div class="bar"><span id="aud-bar" style="width:0%"></span></div>
         <div class="lbl">მოწონებული ხმები <button class="ghost small" id="aud-mix-all">ყველა ნარევში →</button></div>
         <div id="aud-liked"></div>
       </div>
-      <div class="card">
+      <div class="card" data-pane="mix">
         <h2>შენახული ხმები</h2>
         <div id="des-list"></div>
       </div>`;
@@ -252,7 +251,8 @@ window.Designer = (() => {
         body: JSON.stringify({ name, weights: mix, length_scale: lenScale(), noise_scale: +$("#des-noise").value }) });
       $("#des-name").value = "";
       loadDesigns();
-    } catch (e) { alert(e.message); }
+      UI.toast(`„${name}“ შენახულია`, "ok");
+    } catch (e) { UI.toast(e.message, "error"); }
   }
 
   async function loadDesigns() {
@@ -275,7 +275,7 @@ window.Designer = (() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }));
     $("#des-list").querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
-      if (!confirm("წავშალო ეს ხმა?")) return;
+      if (!(await UI.confirm("წავშალო ეს ხმა?"))) return;
       await api(`/api/designer/designs/${b.dataset.del}`, { method: "DELETE" });
       loadDesigns();
     }));
@@ -322,12 +322,12 @@ window.Designer = (() => {
   function audRestart() {  // სიის დასაწყისი: თუ უკრავდა — პირველი (გამოუტოვებელი) ხმიდან გააგრძელებს
     const was = au.playing;
     aud.pause(); au.playing = false; au.i = 0;
-    $("#aud-play").textContent = "▶ დაწყება";
+    $("#aud-play").innerHTML = `${UI.icon("play", 14)} დაწყება`;
     if (was) audPlay(skippable(au.queue[0]) ? nextIndex(0, 1) : 0); else { renderNow(); drawMap(); }
   }
   function audStop() {
     au.playing = false; aud.pause();
-    $("#aud-play").textContent = "▶ გაგრძელება";
+    $("#aud-play").innerHTML = `${UI.icon("play", 14)} გაგრძელება`;
     renderNow(); drawMap();
   }
   function renderNow(msg) {
@@ -336,13 +336,13 @@ window.Designer = (() => {
     const rt = ratings[n]?.rating;
     $("#aud-now").innerHTML = n ? `<b>${au.i + 1} / ${au.queue.length}</b> · ${esc(label(n))} <span class="muted small">${esc(n)}</span>
       ${scan[n] ? `<span class="small"> · ${esc(scanLabel(n))}</span>` : ""}
-      ${rt === 1 ? "<span class=\"verdict good\">👍</span>" : rt === -1 ? "<span class=\"verdict bad\">👎</span>" : ""}
+      ${rt === 1 ? `<span class="verdict good">${UI.icon("up", 12)} მომწონს</span>` : rt === -1 ? `<span class="verdict bad">${UI.icon("down", 12)} არ მომწონს</span>` : ""}
       ${msg ? `<span class="muted small"> · ${esc(msg)}</span>` : ""}` : "—";
     $("#aud-bar").style.width = `${au.queue.length ? ((au.i + 1) / au.queue.length) * 100 : 0}%`;
-    if (au.playing) $("#aud-play").textContent = "⏸ პაუზა";
+    if (au.playing) $("#aud-play").innerHTML = `${UI.icon("pause", 14)} პაუზა`;
     const liked = Object.keys(ratings).filter((k) => ratings[k].rating === 1).length;
     const bad = Object.keys(ratings).filter((k) => ratings[k].rating === -1).length;
-    $("#aud-count").textContent = `👍 ${liked} · 👎 ${bad} · შეუფასებელი ${speakers.length - liked - bad}`;
+    $("#aud-count").innerHTML = `<span class="cnt-ico">${UI.icon("up", 13)} ${liked}</span> · <span class="cnt-ico">${UI.icon("down", 13)} ${bad}</span> · შეუფასებელი ${speakers.length - liked - bad}`;
   }
   async function rateCur(v) {
     const n = au.queue[au.i];
@@ -351,21 +351,21 @@ window.Designer = (() => {
     if (nv) ratings[n] = { rating: nv, phrase: au.phrase }; else delete ratings[n];
     renderNow(); renderLiked(); drawMap();
     api("/api/designer/ratings", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: n, rating: nv, phrase: au.phrase }) }).catch((e) => alert("შეფასება ვერ შეინახა: " + e.message));
+      body: JSON.stringify({ name: n, rating: nv, phrase: au.phrase }) }).catch((e) => UI.toast("შეფასება ვერ შეინახა: " + e.message, "error"));
     if (nv === -1 && au.playing) audPlay(nextIndex(au.i, 1));  // 👎 — მაშინვე შემდეგზე
   }
   function renderLiked() {
     const liked = speakers.filter((s) => ratings[s.name]?.rating === 1).sort((a, b) => (a.f0 || 0) - (b.f0 || 0));
     $("#aud-liked").innerHTML = liked.length ? `<div class="aud-liked">${liked.map((s) => `
       <span class="aud-chip"><span class="dotc" style="background:${f0color(s.f0)}"></span>${esc(label(s.name))}
-        <button class="x" data-aplay="${esc(s.name)}" title="მოსმენა">▶</button>
+        <button class="x" data-aplay="${esc(s.name)}" title="მოსმენა" aria-label="მოსმენა">${UI.icon("play", 12)}</button>
         <button class="x" data-amix="${esc(s.name)}" title="ნარევში დამატება">+</button></span>`).join("")}</div>`
       : `<div class="empty small">ჯერ არაფერია მონიშნული.</div>`;
     $("#aud-liked").querySelectorAll("[data-aplay]").forEach((b) => b.addEventListener("click", () => {
       const i = au.queue.indexOf(b.dataset.aplay); if (i >= 0) audPlay(i);
     }));
     $("#aud-liked").querySelectorAll("[data-amix]").forEach((b) => b.addEventListener("click", () => {
-      mix[b.dataset.amix] = 50; renderMix(); drawMap();
+      mix[b.dataset.amix] = 50; renderMix(); drawMap(); UI.toast("ნარევში დაემატა", "ok", 2500);
     }));
   }
   function bindAudition() {
@@ -384,10 +384,11 @@ window.Designer = (() => {
     $("#aud-skip").onchange = (e) => (au.skipBad = e.target.checked);
     $("#aud-mix-all").onclick = () => {
       speakers.filter((s) => ratings[s.name]?.rating === 1).forEach((s) => (mix[s.name] = 50));
+      UI.setSub("designer", "mix");
       renderMix(); drawMap(); play(); window.scrollTo({ top: 0, behavior: "smooth" });
     };
     document.addEventListener("keydown", (e) => {
-      if ($("#tab-designer")?.hidden || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return;
+      if ($("#tab-designer")?.hidden || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) || document.querySelector("dialog[open]") || UI.getSub("designer") !== "audition") return;
       if (e.code === "Space") { e.preventDefault(); $("#aud-play").click(); }
       else if (e.key === "ArrowRight") $("#aud-next").click();
       else if (e.key === "ArrowLeft") $("#aud-prev").click();
@@ -396,39 +397,93 @@ window.Designer = (() => {
     });
   }
 
+  // რეიტინგის მართვა: შეფასება (ახლები / თავიდან), გაჩერება, გასუფთავება — backend: /api/designer/rank/*
+  let rkTimer = null, rkRunKind = "mix";
+  const RK_KIND = { mix: "ნარევები", speaker: "ხმები (296, ~1–2 სთ)", all: "ყველა" };
+  function rankControls(job, stale) {
+    if (job.busy) {
+      const pct = job.total ? Math.round((job.done / job.total) * 100) : 0;
+      return `<div class="rank-ctl"><div class="grow">
+          <div class="small"><b>მიმდინარეობს:</b> ${job.stage === "load" ? "MMS-ის ჩატვირთვა…" : `${job.done}/${job.total}${job.current ? ` · ${esc(job.current)}` : ""}${job.eta_min != null ? ` · დარჩა ~${job.eta_min} წთ` : ""}`}</div>
+          <div class="bar"><span style="width:${pct}%"></span></div></div>
+        <button class="ghost small" id="rk-stop">გაჩერება</button></div>`;
+    }
+    return `<div class="rank-ctl">
+        <label class="small">შევაფასო <select id="rk-run-kind">${Object.entries(RK_KIND).map(([k, t]) => `<option value="${k}" ${k === rkRunKind ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+        <button class="primary small" id="rk-run" title="მხოლოდ ის, რაც ჯერ არ შეფასებულა (მაგ. ახალი ნარევები)">${UI.icon("play", 12)} ახლების შეფასება</button>
+        ${UI.dd([UI.ddItem("data-rk-fresh", "reset", "არჩეულის თავიდან შეფასება"), UI.ddItem("data-rk-clear", "trash", "არჩეულის შედეგების წაშლა", true)])}
+        ${stale ? `<span class="small warn-text" title="ხმის შემქმნელის მოდელი შეიცვალა">${stale} შედეგი ძველ მოდელზეა — „თავიდან შეფასება“</span>` : ""}
+        ${job.stage === "done" && job.code === 0 ? `<span class="small muted">✓ დასრულდა</span>` : job.code ? `<span class="small err">შეწყდა: ${esc(job.last || "")}</span>` : ""}
+      </div>`;
+  }
+  function bindRankControls(box, job) {
+    clearTimeout(rkTimer);
+    const kindSel = box.querySelector("#rk-run-kind");
+    if (kindSel) kindSel.onchange = (e) => (rkRunKind = e.target.value);
+    const run = async (fresh) => {
+      try {
+        await api("/api/designer/rank/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: rkRunKind, fresh }) });
+        UI.toast("შეფასება დაიწყო", "ok", 2500); renderRank();
+      } catch (e) { UI.toast(e.message, "error"); }
+    };
+    box.querySelector("#rk-run")?.addEventListener("click", () => run(false));
+    box.querySelector("[data-rk-fresh]")?.addEventListener("click", async () => {
+      if (await UI.confirm(`„${RK_KIND[rkRunKind]}“ — ძველი შედეგები წაიშლება და თავიდან შეფასდება. გავაგრძელო?`)) run(true);
+    });
+    box.querySelector("[data-rk-clear]")?.addEventListener("click", async () => {
+      if (!(await UI.confirm(`წავშალო „${RK_KIND[rkRunKind]}“-ის შედეგები რეიტინგიდან?`, { danger: true }))) return;
+      try { await api(`/api/designer/rank?kind=${rkRunKind}`, { method: "DELETE" }); UI.toast("გასუფთავდა", "ok", 2500); renderRank(); }
+      catch (e) { UI.toast(e.message, "error"); }
+    });
+    box.querySelector("#rk-stop")?.addEventListener("click", async () => {
+      await api("/api/designer/rank/stop", { method: "POST" }).catch(() => {});
+      UI.toast("ჩერდება — შემდეგ ჯერზე იქიდან გააგრძელებს", "info", 3500); setTimeout(renderRank, 1500);
+    });
+    if (job.busy) rkTimer = setTimeout(() => { if (!$("#tab-designer").hidden) renderRank(); else bindRankControls(box, job); }, 4000);
+  }
+
   // ---------- რეიტინგი (tools/mms_rank.py): ყველა ხმა და ნარევი, 5 წინადადება, საუკეთესოდან უარესისკენ ----------
   let rk = { data: null, lo: 0, hi: 400, kind: "all", show: 40, sent: 0 };
   async function renderRank() {
     const box = $("#rank-card");
     rk.data = await api("/api/designer/rank").catch(() => null);
-    if (!rk.data || !rk.data.rows.length) { box.hidden = true; return; }
     box.hidden = false;
-    const S = rk.data.sentences;
+    if (!rk.data) { box.innerHTML = `<div class="empty">რეიტინგი ვერ ჩაიტვირთა.</div>`; return; }
+    const S = rk.data.sentences, job = rk.data.job || {};
+    const stale = rk.data.rows.filter((r) => r.epoch !== rk.data.model_epoch).length;
+    const ctl = rankControls(job, stale);
+    if (!rk.data.rows.length) {
+      box.innerHTML = `<div class="card-head"><h2>რეიტინგი</h2></div>${ctl}<div class="empty">ჯერ არაფერია შეფასებული — აირჩიეთ რა შევაფასო და დააჭირეთ „შეფასებას“.</div>`;
+      bindRankControls(box, job);
+      return;
+    }
     const rows = rk.data.rows.filter((r) => (rk.kind === "all" || r.kind === rk.kind)
       && (r.kind === "mix" || ((r.f0 || 0) >= rk.lo && (r.f0 || 0) <= rk.hi)));
     const pct = (x) => Math.round(x * 100);
     const cls = (x) => (x <= 0.12 ? "ok" : x <= 0.25 ? "" : "bad");
     box.innerHTML = `
       <div class="card-head"><h2>რეიტინგი — საუკეთესოდან უარესისკენ</h2><span class="muted small">${rk.data.total} შეფასებული (ხმები + ნარევები)</span></div>
-      <p class="muted small">თითოეულმა 5 წინადადება წაიკითხა; ავტომატურმა მსმენელმა (MMS) ჩაიწერა, რაც გაიგონა. რიცხვი — შეცდომა (%): რაც ნაკლებია, მით სუფთად და გასაგებად ლაპარაკობს.
-        „ღ“-ს ის კარგად ვერ აფასებს — ეს ბოლოს ყურით. ▶ უკრავს არჩეულ წინადადებას; სვეტის რიცხვზე მიტანისას ჩანს, რა „გაიგონა“.</p>
+      <p class="muted small help">რიცხვი — გაუგებრობის % (რაც ნაკლებია, მით სუფთად ლაპარაკობს). საბოლოოდ მაინც ყურით შეამოწმეთ.</p>
+      ${ctl}
+      ${UI.hint(`თითოეულმა 5 წინადადება წაიკითხა; ავტომატურმა მსმენელმა (MMS) ჩაიწერა, რაც გაიგონა. „ღ“-ს ის კარგად ვერ აფასებს. დაკვრის ღილაკი უკრავს არჩეულ წინადადებას; სვეტის რიცხვზე მიტანისას ჩანს, რა „გაიგონა“.`)}
       <div class="aud-opts">
         <label>ჩვენება <select id="rk-kind"><option value="all">ყველა</option><option value="speaker">მხოლოდ ხმები</option><option value="mix">მხოლოდ ნარევები</option></select></label>
         <label>სიმაღლე <input type="number" id="rk-lo" value="${rk.lo}" style="width:70px"> – <input type="number" id="rk-hi" value="${rk.hi}" style="width:70px"> Hz</label>
-        <label>▶ წინადადება <select id="rk-sent">${S.map((t, i) => `<option value="${i}" ${i === rk.sent ? "selected" : ""}>${i + 1}. ${esc(t.slice(0, 30))}…</option>`).join("")}</select></label>
+        <label>მოსასმენი წინადადება <select id="rk-sent">${S.map((t, i) => `<option value="${i}" ${i === rk.sent ? "selected" : ""}>${i + 1}. ${esc(t.slice(0, 30))}…</option>`).join("")}</select></label>
       </div>
       <div class="cmp-wrap"><table class="cmp rank-table">
         <thead><tr><th>#</th><th></th><th>ხმა / ნარევი</th><th>საშუალო</th>${S.map((t, i) => `<th title="${esc(t)}">${i + 1}</th>`).join("")}<th></th></tr></thead>
         <tbody>${rows.slice(0, rk.show).map((r, i) => `<tr class="${r.kind === "mix" ? "mixrow" : ""}">
           <td>${i + 1}</td>
-          <td><button class="play" data-rk="${esc(r.kind)}|${esc(r.name)}">▶</button></td>
-          <td class="small">${r.kind === "mix" ? `<b>${esc(r.name)}</b>` : `${r.f0 ? Math.round(r.f0) + " Hz" : ""} <span class="muted">${esc(r.name)}</span>
-            ${ratings[r.name]?.rating === 1 ? "👍" : ratings[r.name]?.rating === -1 ? "👎" : ""}`}</td>
+          <td><button class="play" data-rk="${esc(r.kind)}|${esc(r.name)}" aria-label="მოსმენა">${UI.icon("play", 12)}</button></td>
+          <td class="small name">${r.kind === "mix" ? `<b>${esc(r.name)}</b>` : `${r.f0 ? Math.round(r.f0) + " Hz" : ""} <span class="muted">${esc(r.name)}</span>
+            ${ratings[r.name]?.rating === 1 ? `<span class="ok" title="მომწონს">${UI.icon("up", 12)}</span>` : ratings[r.name]?.rating === -1 ? `<span class="bad" title="არ მომწონს">${UI.icon("down", 12)}</span>` : ""}`}</td>
           <td class="${cls(r.cer)}"><b>${pct(r.cer)}%</b></td>
           ${r.per.map((x, j) => `<td class="small ${cls(x)}" title="${esc(r.texts[j] || "")}">${pct(x)}</td>`).join("")}
           <td>${r.kind === "speaker" ? `<button class="x" data-rkmix="${esc(r.name)}" title="ნარევში დამატება">+</button>` : ""}</td>
         </tr>`).join("")}</tbody></table></div>
       ${rows.length > rk.show ? `<div class="actions"><button class="ghost small" id="rk-more">კიდევ 40 (${rows.length - rk.show} დარჩა)</button></div>` : ""}`;
+    bindRankControls(box, job);
     $("#rk-kind").value = rk.kind;
     $("#rk-kind").onchange = (e) => { rk.kind = e.target.value; renderRank(); };
     $("#rk-lo").onchange = (e) => { rk.lo = +e.target.value || 0; renderRank(); };
@@ -444,7 +499,7 @@ window.Designer = (() => {
         body: JSON.stringify({ weights, text: S[rk.sent], length_scale: lenScale(), noise_scale: +$("#des-noise").value }) });
       aud.src = r.url; aud.play();
     }));
-    box.querySelectorAll("[data-rkmix]").forEach((b) => b.addEventListener("click", () => { mix[b.dataset.rkmix] = 50; renderMix(); drawMap(); }));
+    box.querySelectorAll("[data-rkmix]").forEach((b) => b.addEventListener("click", () => { mix[b.dataset.rkmix] = 50; renderMix(); drawMap(); UI.toast("ნარევში დაემატა", "ok", 2500); }));
   }
 
   return { render: () => { if (!inited) init().catch((e) => ($("#designer").innerHTML = `<div class="card"><div class="empty">შეცდომა: ${esc(e.message)}</div></div>`)); } };
