@@ -206,6 +206,22 @@ def stage_mms(a):
     out_f = OUT / "mms.jsonl"
     done = load_ids(out_f)
     todo = [r for r in rows if not r.get("err") and r["id"] not in done]
+    # რიგი: ჯერ CV-ში შეუმოწმებელი (other) + თითო დინამიკზე 30 ნიმუში — ამით დინამიკების შეფასება უკვე შესაძლებელია;
+    # მერე დანარჩენი დადასტურებული (მათ ტექსტი ისედაც ემთხვევა — ეს მხოლოდ ზუსტი ჩანაწერ-დონის ფილტრისთვისაა)
+    seen: dict[str, int] = {}
+    for r in rows:
+        if r["id"] in done and not r.get("err"):
+            seen[r["spk"]] = seen.get(r["spk"], 0) + 1
+    first, rest = [], []
+    for r in todo:
+        if r.get("kind") == "other" or seen.get(r["spk"], 0) < 30:
+            first.append(r)
+            if r.get("kind") != "other":
+                seen[r["spk"]] = seen.get(r["spk"], 0) + 1
+        else:
+            rest.append(r)
+    todo = first + rest
+    print(f"MMS რიგი: პირველი {len(first)}, შემდეგ {len(rest)}", flush=True)
     if a.limit:
         todo = todo[: a.limit]
     total = sum(1 for r in rows if not r.get("err"))

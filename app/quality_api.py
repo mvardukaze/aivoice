@@ -62,6 +62,16 @@ def reasons(m: dict) -> list[str]:
     return [k for k, (f, _) in BAD.items() if f(m)]
 
 
+MMS_MIN_LETTERS, MMS_MIN_CLIPS = 10, 10
+
+
+def cer_med(C: list) -> float | None:
+    """დინამიკის MMS შეცდომა: მხოლოდ ≥10-ასოიანი ტექსტები (ერთ სიტყვაზე MMS არასანდოა), თითო ჩანაწერი ≤100%,
+    და მხოლოდ მაშინ, როცა ≥10 ასეთი ჩანაწერი უკვე შემოწმდა."""
+    v = [min(1.0, c["cer"]) for c in C if c.get("cer") is not None and len(c.get("text", "")) >= MMS_MIN_LETTERS]
+    return round(st.median(v), 3) if len(v) >= MMS_MIN_CLIPS else None
+
+
 def load() -> dict:
     f, fm = DIR / "clips.jsonl", DIR / "mms.jsonl"
     key = tuple((x.stat().st_mtime, x.stat().st_size) if x.exists() else None for x in (f, fm))
@@ -101,7 +111,7 @@ def load() -> dict:
         good_min = round(sum(x["dur"] for x in good) / 60, 1)
         rows.append({"spk": name, "current": s["current"], "n": len(s["clips"]), "bad_share": bad_share,
                      "good_min": good_min, "min": round(sum(x["dur"] for x in C) / 60, 1),
-                     "cer": med("cer"), "snr": med("snr"), "hiss": med("hiss"), "speech_db": med("speech_db"),
+                     "cer": cer_med(C), "mms_n": sum(1 for x in C if x.get("cer") is not None), "snr": med("snr"), "hiss": med("hiss"), "speech_db": med("speech_db"),
                      "f0": c.get("f0_median"), "why": s["why"],
                      "suggest": "exclude" if bad_share > SPEAKER_BAD_SHARE or good_min < MIN_GOOD_MIN else "include"})
     data = {"rows": rows, "clips": {n: s["clips"] for n, s in spk.items()}}

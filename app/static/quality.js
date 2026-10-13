@@ -92,7 +92,7 @@
       <td class="num">${r.f0 ? Math.round(r.f0) : "—"}</td>
       <td class="num">${r.good_min} <span class="muted small">/ ${r.min}</span></td>
       <td class="num ${r.bad_share > 0.4 ? "err" : ""}">${pct(r.bad_share)}</td>
-      <td class="num">${pct(r.cer)}</td><td class="num">${r.snr ?? "—"}</td><td class="num">${r.hiss ?? "—"}</td>
+      <td class="num" title="${r.mms_n ? `MMS-ით შემოწმებული: ${r.mms_n}` : "MMS ჯერ არ შემოწმებულა"}">${r.cer == null ? `<span class="muted">${r.mms_n ? "…" : "—"}</span>` : pct(r.cer)}</td><td class="num">${r.snr ?? "—"}</td><td class="num">${r.hiss ?? "—"}</td>
       <td class="small muted">${top}</td>
       <td>${decSeg(r)}</td>
       <td><button class="ghost small ${st.open === r.spk ? "on" : ""}" data-open>მოსმენა</button></td>
@@ -161,7 +161,7 @@
         <div><div>${esc(c.text)}</div>
           ${c.heard ? `<div class="muted">MMS-მა გაიგონა: ${esc(c.heard)}</div>` : ""}
           <div class="small">${c.bad?.length ? `<span class="err">${c.bad.map((k) => esc(data.rules[k] || k)).join(", ")}</span> · ` : `<span class="ok">კარგი</span> · `}
-            ${c.cer != null ? `MMS ${pct(c.cer)} · ` : ""}SNR ${c.snr ?? "—"} · შიშინი ${c.hiss ?? "—"} · ${c.dur ?? "—"} წმ${c.kind === "other" ? " · შეუმოწმებელი CV-ში" : ""}</div></div>
+            ${c.cer != null ? `MMS ${pct(Math.min(1, c.cer))}${c.text.length < 10 ? " (მოკლე — არასანდო)" : ""} · ` : ""}SNR ${c.snr ?? "—"} · შიშინი ${c.hiss ?? "—"} · ${c.dur ?? "—"} წმ${c.kind === "other" ? " · შეუმოწმებელი CV-ში" : ""}</div></div>
       </div>`).join("");
     el.querySelectorAll("[data-src]").forEach((b) => b.addEventListener("click", () => {
       el.querySelectorAll(".play.on").forEach((x) => x.classList.remove("on"));
