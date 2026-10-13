@@ -890,3 +890,11 @@ label.check input { width: auto; margin: 0; }
 .rank-ctl { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 8px 0 12px; }
 .rank-ctl .grow { flex: 1 1 240px; }
 .warn-text { color: var(--warn, #b45309); }
+/* მონაცემები → ხარისხი */
+.q-table td { vertical-align: middle; }
+.q-table tr.q-ex td { opacity: .6; }
+.q-table .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.q-table .seg button { border: 0; background: transparent; padding: 3px 8px; font: inherit; font-size: 12px; cursor: pointer; color: var(--muted); }
+.q-table .seg button.on { background: var(--accent, #4f46e5); color: #fff; }
+.q-clip { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.q-clips td { background: var(--surface-2); }

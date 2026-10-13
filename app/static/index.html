@@ -248,7 +248,12 @@
 
       <!-- მონაცემები -->
       <section id="tab-data" class="tab" hidden>
-        <div id="data" class="slot"></div>
+        <div class="subtabs" data-subtabs="data" aria-label="მონაცემები">
+          <button data-subtab="quality">ხარისხი</button>
+          <button data-subtab="sources">წყაროები</button>
+        </div>
+        <div id="quality" data-pane="quality" class="slot"></div>
+        <div id="data" data-pane="sources" class="slot"></div>
       </section>
     </main>
   </div>
@@ -260,6 +265,7 @@
 <script src="designer.js?v=30"></script>
 <script src="settings.js?v=30"></script>
 <script src="train.js?v=30"></script>
+<script src="quality.js?v=1"></script>
 <script src="longform.js?v=30"></script>
 </body>
 </html>
