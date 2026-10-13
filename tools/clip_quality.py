@@ -313,8 +313,14 @@ def stage_mms(a):
                 if n % 200 == 0:
                     other = mms_done()  # მეორე მუშის შედეგები — გაკეთებულს აღარ ვიმეორებთ
                 left = sum(1 for x in todo if x["id"] not in other)
-                progress(stage="mms", total=total, done=len(other), rate=round(rate, 2), device=dev, temp=gpu_temp() if dev == "cuda" else None,
-                         eta_h=round(left / rate / 3600, 1))
+                # ორი მუშა (ვიდეობარათი + პროცესორი) — სიჩქარე ჯამდება ბოლო 5 წუთში აქტიურებით
+                prev = json.loads((OUT / "progress.json").read_text(encoding="utf-8")) if (OUT / "progress.json").exists() else {}
+                workers = {k: v for k, v in (prev.get("workers") or {}).items() if time.time() - v.get("t", 0) < 300}
+                workers[dev] = {"rate": round(rate, 2), "t": time.time()}
+                both = sum(w["rate"] for w in workers.values())
+                temp = gpu_temp() if dev == "cuda" else prev.get("temp")
+                progress(stage="mms", total=total, done=len(other), rate=round(both, 2), workers=workers, temp=temp,
+                         eta_h=round(left / both / 3600, 1))
                 print(f"  MMS ({dev}) {len(other)}/{total} · {rate:.2f}/წმ", flush=True)
 
 
