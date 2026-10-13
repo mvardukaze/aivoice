@@ -36,6 +36,9 @@ case "$cmd" in
       *) echo "./aivoice voice texts|dataset|init|previews ..."; exit 1 ;;
     esac ;;
 
+  update)  # განახლება GitHub-იდან: check | apply
+    $PY tools/update.py "${@:-check}" ;;
+
   check)   # გაწვრთნილი ხმის შემოწმება: სატესტო ფრაზები, ნარევთან შედარება, MMS
     if [ -x "$TPY" ]; then $TPY tools/voice_check.py "$@"; else $PY tools/voice_check.py --no-mms "$@"; fi ;;
   designer) need_training; $TPY tools/export_designer.py "$@" ;;       # საბაზო checkpoint → ხმის შემქმნელის მოდელი
@@ -49,6 +52,7 @@ case "$cmd" in
 aivoice — ქართული სინთეზური ხმები
 
   ./aivoice serve                     პანელი (http://127.0.0.1:8200)
+  ./aivoice update [apply]            ახალი ვერსია GitHub-იდან (შემოწმება / დაყენება)
   ./aivoice models pull [--base]      ხმები, ნარევები, შემქმნელი Hugging Face-იდან (+ საბაზო)
   ./aivoice models push               ახალი ხმები და ნარევები → Hugging Face (Write token)
   ./aivoice models status             რა განსხვავდება რეპოზიტორიასა და ამ კომპიუტერს შორის

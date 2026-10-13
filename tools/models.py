@@ -60,10 +60,14 @@ SHARED_STATUS = ("ready", "testing")  # ეს ხმები იტვირ�
 
 
 def catalog() -> dict:
-    return json.loads(CATALOG.read_text(encoding="utf-8"))
+    try:
+        return json.loads(CATALOG.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {"voices": []}
 
 
 def save_catalog(cat: dict):
+    CATALOG.parent.mkdir(parents=True, exist_ok=True)
     tmp = CATALOG.with_suffix(".tmp")
     tmp.write_text(json.dumps(cat, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     tmp.replace(CATALOG)
@@ -142,7 +146,7 @@ def same(p: Path, rem, cache) -> bool:
 
 
 def voice_entry_bytes(v: dict) -> bytes:
-    keep = {k: x for k, x in v.items() if k not in ("status",)}
+    keep = dict(v)
     return (json.dumps(keep, ensure_ascii=False, indent=2) + "\n").encode()
 
 
@@ -256,7 +260,7 @@ def cmd_pull(a):
         vid = f.split("/")[1]
         entry = json.loads(Path(hf_hub_download(repo(), f, token=t)).read_text(encoding="utf-8"))
         if vid not in known:
-            entry["status"] = "testing"  # ახალი ხმა — ჯერ „სატესტო“, მოსმენის შემდეგ „მზადაა“
+            entry.setdefault("status", "testing")  # ავტორის სტატუსი (დამტკიცებული → „მზადაა“)
             cat["voices"].append(entry)
             print(f"  + ახალი ხმა: {entry.get('name', vid)} ({vid})")
         elif a.force:

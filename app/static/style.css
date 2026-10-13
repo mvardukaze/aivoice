@@ -375,3 +375,4 @@ button.danger { color: #c0392b; border-color: currentColor; }
 .check-table audio { height: 32px; max-width: 220px; vertical-align: middle; }
 .check-sum { margin-top: 6px; }
 @media (max-width: 700px) { .check-table thead { display: none; } .check-table td { display: block; border: 0; } .check-table tr { display: block; border-bottom: 1px solid var(--border); } }
+.upd-list { margin: 6px 0; padding-left: 18px; }

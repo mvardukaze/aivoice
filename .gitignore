@@ -41,3 +41,10 @@ kaggle/base/*.whl
 
 # ლოკალური კონფიგურაცია (თითო კომპიუტერს თავისი)
 aivoice.toml
+
+# პანელის მიერ ცვლადი მონაცემები — თითო კომპიუტერს თავისი (გაზიარება: Hugging Face, ./aivoice models)
+voices/catalog.json
+data/designs/
+data/kaggle_jobs/*
+!data/kaggle_jobs/base_ka.json
+data/ghtest/answers.json

@@ -31,6 +31,12 @@ window.Settings = (() => {
         <p class="muted small">ყველა ნაბიჯის მდგომარეობა ჩანს ქვემოთ „შემოწმებაში“ — მწვანე ✓ ნიშნავს, რომ მზადაა.</p>
       </div>` : ""}
 
+      <div class="card" id="upd-card">
+        <div class="card-head"><h2>განახლება</h2><span class="muted small" id="upd-cur"></span></div>
+        <div id="upd-body" class="small muted">მოწმდება GitHub…</div>
+        <pre class="tr-log" id="upd-log" hidden></pre>
+      </div>
+
       <div class="card">
         <div class="card-head"><h2>შემოწმება</h2>
           <span class="verdict ${st.ready ? "good" : "bad"}">${st.ready ? "ყველაფერი აუცილებელი მზადაა" : "რაღაც აკლია"}</span></div>
@@ -92,6 +98,7 @@ window.Settings = (() => {
 
     $("#set-recheck").onclick = render;
     bindModels();
+    renderUpdate();
     $("#set-form").onsubmit = async (e) => {
       e.preventDefault();
       const values = {};
@@ -114,6 +121,55 @@ window.Settings = (() => {
       try { await post("/api/settings/secret", { name: b.dataset.secretSave, value: inp.value }); inp.value = ""; render(); }
       catch (err) { alert(err.message); }
     }));
+  }
+
+  // ---------- განახლება ----------
+  async function renderUpdate() {
+    const u = await api("/api/update").catch((e) => ({ ok: false, error: e.message }));
+    const body = $("#upd-body");
+    if (!body) return;
+    markTab(u);
+    if (!u.ok) { body.innerHTML = `<span class="err">${esc(u.error)}</span>`; return; }
+    $("#upd-cur").textContent = "ახლა: " + u.current;
+    if (!u.behind) {
+      body.innerHTML = `<span class="verdict good">✓ უახლესი ვერსიაა</span> <button class="ghost small" id="upd-recheck">შემოწმება</button>`;
+      $("#upd-recheck").onclick = renderUpdate;
+      return;
+    }
+    body.innerHTML = `
+      <div><span class="verdict maybe">ახალი ვერსია: ${u.behind} ცვლილება</span></div>
+      <ul class="upd-list">${u.commits.map((c) => { const [, d, msg] = c.split("|"); return `<li><span class="mono">${esc(d)}</span> ${esc(msg.split("\n")[0])}</li>`; }).join("")}</ul>
+      ${u.needs.requirements || u.needs.training ? `<div>ბიბლიოთეკებიც განახლდება (შეიძლება რამდენიმე წუთი დასჭირდეს).</div>` : ""}
+      ${u.blocked.length ? `<div class="err">ხელით შეცვლილი ფაილები ხელს უშლის: ${u.blocked.map(esc).join(", ")}</div>` : ""}
+      ${u.ahead ? `<div class="err">ამ კომპიუტერზე საკუთარი ცვლილებებია (${u.ahead}) — ავტომატური განახლება შეუძლებელია.</div>` : ""}
+      <div class="actions"><button class="primary small" id="upd-go" ${u.blocked.length || u.ahead ? "disabled" : ""}>განახლება და გადატვირთვა</button></div>`;
+    $("#upd-go").onclick = async () => {
+      if (!confirm("განვაახლო? მიმდინარე წვრთნა/მომზადება არ შეწყდება; პანელი თავიდან ჩაიტვირთება.")) return;
+      try { await post("/api/update", {}); pollUpdate(); } catch (err) { alert(err.message); }
+    };
+  }
+
+  function pollUpdate() {
+    const el = $("#upd-log");
+    el.hidden = false;
+    document.querySelector("#upd-go")?.setAttribute("disabled", "");
+    const t = setInterval(async () => {
+      const l = await api("/api/update/log").catch(() => null);
+      if (!l) return;
+      el.textContent = l.log + (l.busy ? "\n… მიმდინარეობს" : "");
+      if (l.busy) return;
+      clearInterval(t);
+      if (l.code === 0) {
+        el.textContent += "\n↻ პანელი თავიდან იტვირთება…";
+        await post("/api/settings/restart", {}).catch(() => {});
+        setTimeout(() => location.reload(), 5000);
+      }
+    }, 2000);
+  }
+
+  function markTab(u) {
+    const b = document.querySelector('.tabs button[data-tab="settings"]');
+    if (b && u?.ok && u.behind) { b.classList.add("attn"); b.title = `ახალი ვერსია: ${u.behind} ცვლილება`; }
   }
 
   // ---------- მოდელები ----------
@@ -176,6 +232,7 @@ window.Settings = (() => {
     if (st && !st.configured) document.querySelector('.tabs button[data-tab="settings"]')?.click();
     const b = document.querySelector('.tabs button[data-tab="settings"]');
     if (b && st && !st.ready) b.classList.add("attn");
+    api("/api/update").then(markTab).catch(() => {});  // ახალი ვერსია — „პარამეტრებზე“ ნიშანი
   }
 
   return { render, maybeFirstRun };

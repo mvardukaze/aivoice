@@ -5,10 +5,12 @@
 /api/settings/secret   — გასაღების ჩაწერა (მხოლოდ წერა: მნიშვნელობა უკან არასოდეს ბრუნდება)
 /api/settings/restart  — პანელის გადატვირთვა (systemd / `aivoice serve` თავიდან უშვებს)
 /api/setup/status      — დაყენების შემოწმება: ხელსაწყოები, საქაღალდეები, მოდელები, ანგარიშები
+/api/update            — ახალი ვერსია GitHub-ზე? (GET) / განახლება (POST, tools/update.py apply) / ლოგი
 """
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -126,6 +128,42 @@ def save_secret(body: SecretIn):
 def restart():
     threading.Thread(target=lambda: (time.sleep(0.5), os._exit(RESTART_CODE)), daemon=True).start()
     return {"ok": True}
+
+
+# ---------- განახლება (tools/update.py) ----------
+_update: dict = {"proc": None}
+UPDATE_LOG = C.path("runs") / "_update.log"
+
+
+@router.get("/update")
+def update_check():
+    try:
+        r = subprocess.run([str(C.ROOT / ".venv" / "bin" / "python"), str(C.ROOT / "tools" / "update.py"), "check", "--json"],
+                           cwd=C.ROOT, capture_output=True, text=True, timeout=90)
+        return json.loads(r.stdout)
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as e:
+        return {"ok": False, "error": f"შემოწმება ვერ მოხერხდა: {e}"}
+
+
+@router.post("/update")
+def update_apply():
+    p = _update["proc"]
+    if p and p.poll() is None:
+        raise HTTPException(409, "განახლება უკვე მიმდინარეობს")
+    UPDATE_LOG.parent.mkdir(parents=True, exist_ok=True)
+    log = UPDATE_LOG.open("w", encoding="utf-8")
+    _update["proc"] = subprocess.Popen([str(C.ROOT / "aivoice"), "update", "apply"], cwd=C.ROOT, stdout=log,
+                                       stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True,
+                                       env={**os.environ, "PYTHONUNBUFFERED": "1"})
+    return {"ok": True}
+
+
+@router.get("/update/log")
+def update_log():
+    p = _update["proc"]
+    busy = bool(p and p.poll() is None)
+    return {"busy": busy, "code": None if busy or not p else p.returncode,
+            "log": UPDATE_LOG.read_text(encoding="utf-8", errors="replace")[-4000:] if UPDATE_LOG.exists() else ""}
 
 
 def _cmd(args, timeout=10) -> str:

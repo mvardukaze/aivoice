@@ -273,7 +273,9 @@ def cmd_fetch(a):
         shutil.copy2(onnx, vdir / onnx.name)
         shutil.copy2(str(onnx) + ".json", vdir / (onnx.name + ".json"))
         cat_p = ROOT / "voices" / "catalog.json"
-        cat = json.loads(cat_p.read_text(encoding="utf-8"))
+        cat = json.loads(cat_p.read_text(encoding="utf-8")) if cat_p.exists() else {"voices": []}
+        if not any(v["id"] == slot for v in cat["voices"]):
+            cat["voices"].append({"id": slot, "name": slot, "status": "testing", "license": "own", "base": "base_ka"})
         for v in cat["voices"]:
             if v["id"] == slot:
                 v.update(status="testing", model=f"{slot}/{onnx.name}")  # „სატესტო“ — შემოწმების შემდეგ „მზადაა“
