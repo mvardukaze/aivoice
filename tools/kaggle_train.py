@@ -276,7 +276,7 @@ def cmd_fetch(a):
         cat = json.loads(cat_p.read_text(encoding="utf-8"))
         for v in cat["voices"]:
             if v["id"] == slot:
-                v.update(status="ready", model=f"{slot}/{onnx.name}")
+                v.update(status="testing", model=f"{slot}/{onnx.name}")  # „სატესტო“ — შემოწმების შემდეგ „მზადაა“
         cat_p.write_text(json.dumps(cat, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     prev_st = json.loads((run_dir(slot) / "status.json").read_text())
     log = out / "train.log"

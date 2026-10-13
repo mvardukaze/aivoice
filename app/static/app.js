@@ -20,7 +20,7 @@ const PHRASES = [
   "ჩუმად, ვიღაც მოდის. არ გაინძრე.",
   "ოდესღაც, ძალიან დიდი ხნის წინ, ერთ პატარა სოფელში ცხოვრობდა მოხუცი მეთევზე.",
 ];
-const STATUS = { ready: "მზადაა", training: "იწვრთნება", selected: "არჩეულია", planned: "დაგეგმილი" };
+const STATUS = { ready: "მზადაა", testing: "სატესტო", hidden: "დამალული", training: "იწვრთნება", selected: "არჩეულია", planned: "იქმნება" };
 
 let emotions = { presets: {}, limits: {} };
 let voices = [];
@@ -121,26 +121,82 @@ function renderJobs(ov) {
 }
 
 // ---------- voices ----------
+// ემოციები ფარდობითია: თითო ხმას თავისი ნორმა აქვს (backend: /api/voices → defaults, emotions)
+let showHidden = false, editing = null;
+const curVoice = () => voices.find((v) => v.id === $("#voice-select").value);
+
 function voiceCard(v) {
+  if (editing === v.id) return voiceEditCard(v);
+  const d = v.defaults;
   return `
-    <div class="voice ${v.status}">
+    <div class="voice ${v.status}" data-id="${esc(v.id)}">
       <div class="row"><span class="name">${esc(v.name)}</span><span class="badge ${v.status}">${STATUS[v.status] || v.status}</span></div>
       <div class="id">${esc(v.id)}</div>
-      <div class="meta">${esc(v.gender)} · ${esc(v.age)}${v.character ? " · " + esc(v.character) : ""}</div>
-      <div class="meta">${esc(v.source)}${v.size_mb ? ` · ${v.quality || "medium"}, ${v.sample_rate} Hz, ${v.size_mb} MB` : ""}</div>
-      ${v.license === "personal" ? `<div class="lic" title="ნათიას ლიცენზია: მხოლოდ ფიზიკური პირის პირადი გამოყენება">🔒 მხოლოდ პირადი გამოყენებისთვის</div>` : ""}
+      <div class="meta">${[v.gender, v.age, v.character].filter(Boolean).map(esc).join(" · ")}</div>
+      <div class="meta">${esc(v.source)}${v.size_mb ? ` · ${v.sample_rate} Hz, ${v.size_mb} MB` : ""}</div>
+      ${d ? `<div class="meta small">ნორმა: ტემპი ${d.length_scale} · ინტონაცია ${d.noise_scale} · რიტმი ${d.noise_w_scale} · ხმამაღლობა ${d.volume}</div>` : ""}
+      ${v.model && !v.available ? `<div class="meta err">მოდელი ამ კომპიუტერზე არ არის — „პარამეტრები → მოდელები“</div>` : ""}
+      <div class="actions"><button class="ghost small" data-edit>რედაქტირება</button></div>
     </div>`;
 }
 
-function renderVoices() {
-  const active = voices.filter((v) => v.status !== "planned");
-  const planned = voices.filter((v) => v.status === "planned");
-  $("#voice-list").innerHTML = active.map(voiceCard).join("");
-  $("#planned-list").innerHTML = planned.map(voiceCard).join("");
-  $("#planned-count").textContent = planned.length;
-  const ready = voices.filter((v) => v.status === "ready");
-  $("#voice-select").innerHTML = ready.map((v) => `<option value="${esc(v.id)}">${esc(v.name)}${v.license === "personal" ? " 🔒" : ""}</option>`).join("");
+function voiceEditCard(v) {
+  const opt = (val, label) => `<option value="${val}" ${v.status === val ? "selected" : ""}>${label}</option>`;
+  return `
+    <form class="voice editing" data-id="${esc(v.id)}">
+      <div class="id">${esc(v.id)}</div>
+      <label class="lbl">სახელი <input name="name" value="${esc(v.name)}" required maxlength="60"></label>
+      <label class="lbl">სქესი <input name="gender" value="${esc(v.gender)}" maxlength="20"></label>
+      <label class="lbl">ასაკი <input name="age" value="${esc(v.age)}" maxlength="20" placeholder="მაგ. 25–40"></label>
+      <label class="lbl">ხასიათი <input name="character" value="${esc(v.character)}" maxlength="200"></label>
+      <label class="lbl">სტატუსი <select name="status">
+        ${opt("ready", "მზადაა — ბიბლიოთეკაშია")}${opt("testing", "სატესტო — ჯერ მოწმდება")}${opt("hidden", "დამალული")}
+        ${v.status === "planned" ? opt("planned", "იქმნება") : ""}</select></label>
+      <div class="actions">
+        <button class="primary small" type="submit">შენახვა</button>
+        <button class="ghost small" type="button" data-cancel>გაუქმება</button>
+        <button class="ghost small danger" type="button" data-delete>წაშლა</button>
+      </div>
+    </form>`;
 }
+
+function renderVoices() {
+  const vis = voices.filter((v) => showHidden || v.status !== "hidden");
+  $("#voice-list").innerHTML = vis.map(voiceCard).join("") || `<div class="empty">ბიბლიოთეკა ცარიელია.</div>`;
+  const nHidden = voices.filter((v) => v.status === "hidden").length;
+  $("#hidden-toggle").hidden = !nHidden;
+  $("#hidden-toggle").textContent = showHidden ? "დამალულების დამალვა" : `დამალულების ჩვენება (${nHidden})`;
+  const sel = $("#voice-select"), prev = sel.value;
+  const usable = voices.filter((v) => v.available && ["ready", "testing"].includes(v.status));
+  sel.innerHTML = usable.map((v) => `<option value="${esc(v.id)}">${esc(v.name)}${v.status === "testing" ? " (სატესტო)" : ""}</option>`).join("");
+  if (usable.some((v) => v.id === prev)) sel.value = prev;
+  bindVoiceCards();
+  if (Object.keys(emotions.presets).length && $("#sliders").innerHTML) applyPreset(current || "neutral");
+}
+
+function bindVoiceCards() {
+  $("#voice-list").querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => {
+    editing = b.closest("[data-id]").dataset.id; renderVoices();
+  }));
+  const f = $("#voice-list").querySelector("form.editing");
+  if (!f) return;
+  const id = f.dataset.id;
+  f.querySelector("[data-cancel]").onclick = () => { editing = null; renderVoices(); };
+  f.querySelector("[data-delete]").onclick = async () => {
+    if (!confirm("ხმა ბიბლიოთეკიდან ამოვიღო? ფაილები გადავა მონაცემების საქაღალდის trash/-ში (საბოლოოდ არ იშლება).")) return;
+    try { await api(`/api/voices/${id}`, { method: "DELETE" }); editing = null; await reloadVoices(); }
+    catch (e) { alert(e.message); }
+  };
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    try { await postJSON(`/api/voices/${id}`, Object.fromEntries(new FormData(f))); editing = null; await reloadVoices(); }
+    catch (err) { alert(err.message); }
+  };
+}
+
+const postJSON = (url, data) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+async function reloadVoices() { voices = await api("/api/voices"); renderVoices(); }
+window.reloadVoices = reloadVoices;
 
 function renderEmotions() {
   $("#emotions").innerHTML = Object.entries(emotions.presets).map(([k, p]) =>
@@ -158,13 +214,19 @@ function renderEmotions() {
     current = null;
     $("#emotions").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
   }));
+  $("#voice-select").addEventListener("change", () => applyPreset(current || "neutral"));
   applyPreset(current);
+}
+
+// ხმის საკუთარი ემოციები (ნორმიდან); ხმა თუ არ არის — ზოგადი პრესეტი
+function presetFor(key) {
+  return curVoice()?.emotions?.[key] || emotions.presets[key];
 }
 
 function applyPreset(key) {
   current = key;
-  const p = emotions.presets[key];
-  SLIDERS.forEach((s) => { $(`#sl-${s.key}`).value = p[s.key]; $(`#out-${s.key}`).textContent = p[s.key].toFixed(2); });
+  const p = presetFor(key);
+  SLIDERS.forEach((s) => { $(`#sl-${s.key}`).value = p[s.key]; $(`#out-${s.key}`).textContent = (+p[s.key]).toFixed(2); });
   $("#emotions").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", c.dataset.emo === key));
 }
 
@@ -179,6 +241,24 @@ async function synth(params) {
     body: JSON.stringify({ voice: $("#voice-select").value, text: $("#text").value, ...params }),
   });
 }
+
+$("#save-default").addEventListener("click", async () => {
+  const v = curVoice();
+  if (!v) return;
+  if (!confirm(`ეს მნიშვნელობები გახდეს „${v.name}“-ის ნორმა? (ყველა ემოცია მასზე გადაითვლება)`)) return;
+  try {
+    await postJSON(`/api/voices/${v.id}`, { defaults: sliderParams() });
+    await reloadVoices(); applyPreset("neutral");
+    $("#speak-info").textContent = `✓ „${v.name}“-ის ნორმა შენახულია`;
+  } catch (e) { $("#speak-info").textContent = "შეცდომა: " + e.message; }
+});
+$("#reset-default").addEventListener("click", async () => {
+  const v = curVoice();
+  if (!v || !confirm(`„${v.name}“-ის ნორმა დავაბრუნო წვრთნისდროინდელზე?`)) return;
+  try { await api(`/api/voices/${v.id}/reset`, { method: "POST" }); await reloadVoices(); applyPreset("neutral"); }
+  catch (e) { $("#speak-info").textContent = "შეცდომა: " + e.message; }
+});
+$("#hidden-toggle").addEventListener("click", () => { showHidden = !showHidden; renderVoices(); });
 
 $("#phrases").innerHTML = PHRASES.map((p, i) => `<button class="chip" data-i="${i}">${esc(p.slice(0, 28))}…</button>`).join("");
 $("#phrases").querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => ($("#text").value = PHRASES[c.dataset.i])));
@@ -209,8 +289,8 @@ $("#compare").addEventListener("click", async () => {
   try {
     const rows = [];
     for (const [k, p] of Object.entries(emotions.presets)) {
-      const { label, ...params } = p;
-      const r = await synth(params);
+      const label = p.label;
+      const r = await synth({ emotion: k });
       rows.push(`<div class="compare-row"><span>${esc(label)}</span><audio controls preload="none" src="${r.url}"></audio></div>`);
     }
     list.innerHTML = rows.join("");
@@ -525,20 +605,20 @@ function renderData(d) {
 }
 
 // ---------- განახლება ----------
-async function refresh() {
+async function refresh(fromTab = false) {
   try {
     const [ov, base] = await Promise.all([api("/api/overview"), api("/api/base")]);
     renderStats(ov, base);
     renderJobs(ov);
     if (!$("#tab-base").hidden || !$("#base").innerHTML) renderBase(base);
     renderDesigner();
-    if (!$("#tab-settings").hidden) window.Settings?.render();
+    if (fromTab && !$("#tab-settings").hidden) window.Settings?.render();  // ფორმა 60 წამში არ უნდა გასუფთავდეს
     if (!$("#tab-train").hidden) window.Train?.render();
     if ($("#runs").closest("details").open) renderRuns(await api("/api/training"));
   } catch (e) { console.warn(e); }
 }
 setInterval(() => { if (!document.hidden) refresh(); }, 60000);
-document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", refresh));
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => refresh(true)));
 
 // ---------- init ----------
 (async () => {
@@ -546,7 +626,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   renderVoices();
   renderEmotions();
   loadRoadmap();
-  await refresh();
+  await refresh(true);
   const [runs, sources, data] = await Promise.all([api("/api/training"), api("/api/sources"), api("/api/data")]);
   renderRuns(runs);
   renderSources(sources);

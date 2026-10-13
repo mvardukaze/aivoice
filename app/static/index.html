@@ -63,7 +63,8 @@
   <section id="tab-voices" class="tab" hidden>
     <div class="card">
       <h2>მოსმენა</h2>
-      <p class="muted">ტემბრი ფიქსირებულია — ემოცია მხოლოდ ტემპს, ინტონაციას და ხმამაღლობას ცვლის, შეზღუდულ ფარგლებში.</p>
+      <p class="muted">ტემბრი ფიქსირებულია — ემოცია მხოლოდ ტემპს, ინტონაციას და ხმამაღლობას ცვლის, შეზღუდულ ფარგლებში.
+        თითო ხმას თავისი <b>ნორმა</b> აქვს („ნეიტრალური“); სხვა ემოციები მისგან ითვლება. სლაიდერებით მოარგეთ და „ნორმად შენახვა“.</p>
       <div class="play-grid">
         <div>
           <label class="lbl" for="voice-select">ხმა</label>
@@ -81,6 +82,8 @@
       <div class="actions">
         <button class="primary" id="speak">▶ გახმოვანება</button>
         <button class="ghost" id="compare">ყველა ემოციის შედარება</button>
+        <button class="ghost" id="save-default" title="ამჟამინდელი სლაიდერები → ამ ხმის „ნეიტრალური“">💾 ნორმად შენახვა</button>
+        <button class="ghost" id="reset-default" title="წვრთნისას დაყენებულ მნიშვნელობებზე დაბრუნება">↺</button>
         <span class="muted small" id="speak-info"></span>
       </div>
       <audio id="player" controls hidden></audio>
@@ -89,10 +92,7 @@
     <div class="card">
       <h2>ბიბლიოთეკა</h2>
       <div class="voice-list" id="voice-list"></div>
-      <details class="planned-box">
-        <summary class="muted">დაგეგმილი ხმები (<span id="planned-count">0</span>)</summary>
-        <div class="voice-list" id="planned-list"></div>
-      </details>
+      <button class="ghost small" id="hidden-toggle" hidden></button>
     </div>
   </section>
 

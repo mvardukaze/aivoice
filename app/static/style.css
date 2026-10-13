@@ -358,3 +358,15 @@ kbd { font: 12px ui-monospace, monospace; padding: 1px 5px; border: 1px solid va
 .tr-job:first-child { border-top: 0; }
 .tr-job .actions { flex-wrap: wrap; gap: 6px; }
 .tr-log { max-height: 280px; overflow: auto; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 12px; white-space: pre-wrap; }
+
+/* ხმის რედაქტირება */
+.voice.hidden, .voice.testing { border-style: dashed; }
+.voice.hidden { opacity: .6; }
+.voice.editing { display: grid; gap: 6px; }
+.voice.editing input, .voice.editing select { width: 100%; }
+.voice .actions { margin-top: 8px; }
+button.danger { color: #c0392b; border-color: currentColor; }
+.badge.testing { background: #fff3cd; color: #7a5b00; }
+.badge.hidden { background: var(--surface-2); color: var(--muted); }
+@media (prefers-color-scheme: dark) { .badge.testing { background: #4a3d10; color: #f3d77a; } button.danger { color: #ff8a7a; } }
+#hidden-toggle { margin-top: 10px; }

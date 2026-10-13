@@ -10,6 +10,7 @@ import json
 import os
 import re
 import subprocess
+import threading
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -56,6 +57,7 @@ def spawn(slot: str, *args: str):
     log.flush()
     p = subprocess.Popen([str(ROOT / "aivoice"), "train", *args], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
                          stdin=subprocess.DEVNULL, start_new_session=True)
+    threading.Thread(target=p.wait, daemon=True).start()  # zombie-ს არ ვტოვებთ (თორემ „მიმდინარეობს“ სამუდამოდ)
     c = read_json(run / "ctl.json", {}) or {}
     c.update(pid=p.pid, action=args[0])
     (run / "ctl.json").write_text(json.dumps(c, ensure_ascii=False, indent=1), encoding="utf-8")

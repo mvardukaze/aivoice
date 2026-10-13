@@ -26,7 +26,7 @@ window.Settings = (() => {
         <ol>
           <li><b>მონაცემების საქაღალდე</b> — ქვემოთ „მისამართებში“ მიუთითეთ, სად შეინახოს დიდი ფაილები (≥ 50 GB), და დააჭირეთ „შენახვა“.</li>
           <li><b>ანგარიშები</b> — Kaggle-ის token (წვრთნისთვის) და Hugging Face-ის token (მოდელების ჩამოსატვირთად).</li>
-          <li><b>მოდელები</b> — ჩამოტვირთეთ საბაზო მოდელი და მზა ხმები (ბრძანება: <code>./aivoice models pull</code>).</li>
+          <li><b>მოდელები</b> — ქვემოთ „მოდელები“ → „ჩამოტვირთვა“ (ხმის შემქმნელი და მზა ხმები).</li>
         </ol>
         <p class="muted small">ყველა ნაბიჯის მდგომარეობა ჩანს ქვემოთ „შემოწმებაში“ — მწვანე ✓ ნიშნავს, რომ მზადაა.</p>
       </div>` : ""}
@@ -63,6 +63,21 @@ window.Settings = (() => {
         </form>
       </div>
 
+      <div class="card" id="models-card">
+        <div class="card-head"><h2>მოდელები (Hugging Face)</h2><span class="muted small mono" id="mdl-repo"></span></div>
+        <p class="muted small">ხმები, ნარევები და ხმის შემქმნელი ინახება საერთო პირად რეპოზიტორიაში. „ჩამოტვირთვა“ მოიტანს ახალს
+          (აქ შეცვლილ პარამეტრებს არ გადაწერს), „ატვირთვა“ — გაგზავნის თქვენს ახალ ხმებს და ნარევებს (მხოლოდ შეცვლილს; საჭიროა Write token).
+          „დამალული“ ხმები არ იტვირთება.</p>
+        <div class="actions">
+          <button class="primary small" data-mdl="pull">↓ ჩამოტვირთვა</button>
+          <button class="ghost small" data-mdl="push">↑ ატვირთვა</button>
+          <label class="small"><input type="checkbox" id="mdl-base"> + საბაზო checkpoint-ები (~1.8 GB — საჭიროა ახალი ხმის მოსამზადებლად)</label>
+          <button class="ghost small" id="mdl-check">შედარება</button>
+        </div>
+        <div id="mdl-files" class="small"></div>
+        <pre class="tr-log" id="mdl-log" hidden></pre>
+      </div>
+
       <div class="card">
         <h2>ანგარიშები და გასაღებები</h2>
         <p class="muted small">გასაღები მხოლოდ ამ კომპიუტერზე ინახება (დაცულ ფაილში) და პანელი მას უკან არასოდეს აჩვენებს. ჩატში ან სხვაგან ნუ ჩასვამთ.</p>
@@ -76,6 +91,7 @@ window.Settings = (() => {
       </div>`;
 
     $("#set-recheck").onclick = render;
+    bindModels();
     $("#set-form").onsubmit = async (e) => {
       e.preventDefault();
       const values = {};
@@ -98,6 +114,60 @@ window.Settings = (() => {
       try { await post("/api/settings/secret", { name: b.dataset.secretSave, value: inp.value }); inp.value = ""; render(); }
       catch (err) { alert(err.message); }
     }));
+  }
+
+  // ---------- მოდელები ----------
+  const MDL = { same: ["✓", "good", "ერთნაირია"], differs: ["≠", "maybe", "განსხვავდება"], remote: ["↓", "maybe", "მხოლოდ რეპოზიტორიაში"], local: ["↑", "maybe", "მხოლოდ აქ"] };
+  let mdlTimer = null;
+
+  function bindModels() {
+    document.querySelectorAll("[data-mdl]").forEach((b) => b.addEventListener("click", async () => {
+      const base = $("#mdl-base").checked;
+      if (b.dataset.mdl === "push" && !confirm("ატვირთვა საერთო რეპოზიტორიაში" + (base ? " (საბაზო checkpoint-ებიც)" : "") + "?")) return;
+      try { await post(`/api/models/${b.dataset.mdl}`, { base }); pollModels(); }
+      catch (err) { alert(err.message); }
+    }));
+    $("#mdl-check").onclick = checkModels;
+    api("/api/models/log").then((l) => { if (l.busy || l.log) showLog(l); if (l.busy) pollModels(); });
+  }
+
+  function showLog(l) {
+    const el = $("#mdl-log");
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = l.log.split("\n").slice(-25).join("\n") + (l.busy ? "\n… მიმდინარეობს" : "");
+    document.querySelectorAll("[data-mdl]").forEach((b) => (b.disabled = l.busy));
+  }
+
+  function pollModels() {
+    clearInterval(mdlTimer);
+    const tick = async () => {
+      const l = await api("/api/models/log").catch(() => null);
+      if (!l) return;
+      showLog(l);
+      if (!l.busy) { clearInterval(mdlTimer); window.reloadVoices?.(); }
+    };
+    tick();
+    mdlTimer = setInterval(tick, 3000);
+  }
+
+  async function checkModels() {
+    const box = $("#mdl-files");
+    box.innerHTML = `<span class="muted">მოწმდება… (დიდი ფაილების პირველად შედარებას ~1 წთ სჭირდება)</span>`;
+    const s = await api("/api/models/status").catch((e) => ({ error: e.message, files: [] }));
+    $("#mdl-repo").textContent = s.repo || "";
+    if (s.error) { box.innerHTML = `<span class="err">${esc(s.error)}</span>`; return; }
+    const groups = {};
+    s.files.forEach((f) => (groups[f.path.split("/")[0]] ||= []).push(f));
+    const NAME = { designer: "ხმის შემქმნელი", designs: "ნარევები", voices: "ხმები", base_ka: "საბაზო მოდელი", ljspeech: "LJSpeech (საწყისი)" };
+    box.innerHTML = Object.entries(groups).map(([g, fs]) => {
+      const cnt = {};
+      fs.forEach((f) => (cnt[f.state] = (cnt[f.state] || 0) + 1));
+      const diff = fs.filter((f) => f.state !== "same");
+      return `<div class="check-row"><b>${esc(NAME[g] || g)}</b>
+        ${Object.entries(cnt).map(([k, n]) => `<span class="verdict ${MDL[k][1]}" title="${MDL[k][2]}">${MDL[k][0]} ${n}</span>`).join(" ")}
+        ${diff.length ? `<span class="muted mono">${diff.slice(0, 6).map((f) => `${MDL[f.state][0]} ${esc(f.path.split("/").slice(1).join("/"))}`).join(", ")}${diff.length > 6 ? " …" : ""}</span>` : ""}</div>`;
+    }).join("") + `<div class="muted">✓ ერთნაირია · ↓ მხოლოდ რეპოზიტორიაში · ↑ მხოლოდ აქ · ≠ განსხვავდება</div>`;
   }
 
   // პირველ გაშვებაზე (კონფიგურაცია ჯერ არ არის) — პირდაპირ „პარამეტრებზე“
