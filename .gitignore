@@ -38,3 +38,6 @@ data/designer_ratings.json
 
 # Piper-ის wheel (Kaggle/Google Cloud-ისთვის) — აიწყობა setup-ით
 kaggle/base/*.whl
+
+# ლოკალური კონფიგურაცია (თითო კომპიუტერს თავისი)
+aivoice.toml

@@ -13,6 +13,8 @@ import wave
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
 sys.path.insert(0, str(ROOT / "tools"))
 from common import PHRASES  # noqa: E402
 
@@ -25,10 +27,11 @@ def main():
     a = ap.parse_args()
     import torch
     epoch = torch.load(a.checkpoint, map_location="cpu", weights_only=False, mmap=True)["epoch"]
-    run = ROOT / "training" / "runs" / a.slot
+    run = cpath("runs") / a.slot
     job = json.loads((ROOT / "data" / "kaggle_jobs" / f"{a.slot}.json").read_text())
     cfg = run / "kaggle_out" / "config.json"
-    with tempfile.TemporaryDirectory(dir="/mnt/d/aivoice/tmp") as td:
+    cpath("tmp").mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=cpath("tmp")) as td:
         onnx = Path(td) / "m.onnx"
         subprocess.run([sys.executable, "-m", "piper.train.export_onnx", "--checkpoint", a.checkpoint,
                         "--output-file", str(onnx)], check=True, capture_output=True, cwd=ROOT / "training")

@@ -5,7 +5,7 @@
 თითო წინადადება `--variants`-ჯერ (სინთეზი შემთხვევითია) → MMS (ქართული) ჩაწერს, რაც გაიგონა → რჩება ყველაზე
 ნაკლები შეცდომის ვარიანტი; თუ საუკეთესოსაც > --max-cer შეცდომა აქვს, წინადადება ამოვარდება.
 ტექსტი ka_text()-ით მზადდება („ოდეს-ღაც“) — metadata-შიც იგივე, რომ წვრთნა და გახმოვანება ერთნაირი იყოს.
-შედეგი: /mnt/d/aivoice/datasets/<slot>/{wav/*.wav, metadata.csv, stats.jsonl, design.json}; შეჩერების შემდეგ აგრძელებს.
+შედეგი: <paths.datasets>/<slot>/{wav/*.wav, metadata.csv, stats.jsonl, design.json}; შეჩერების შემდეგ აგრძელებს.
 """
 
 import argparse
@@ -20,9 +20,11 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
+sys.path.insert(0, str(ROOT))
 from app.textnorm import ka_text  # noqa: E402
 
-DES = Path("/mnt/d/aivoice/designer")
+DES = cpath("designer")
 SR = 22050
 STRIP = str.maketrans("", "", ".,!?;:„“\"'—–-() ")
 
@@ -54,7 +56,7 @@ def main():
 
     design = next(d for p in (ROOT / "data" / "designs").glob("*.json")
                   if (d := json.loads(p.read_text(encoding="utf-8")))["name"] == a.design)
-    out = Path("/mnt/d/aivoice/datasets") / a.slot
+    out = cpath("datasets") / a.slot
     (out / "wav").mkdir(parents=True, exist_ok=True)
     meta_des = json.loads((DES / "meta.json").read_text())
     (out / "design.json").write_text(json.dumps({**design, "base_model": meta_des}, ensure_ascii=False, indent=1),

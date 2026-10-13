@@ -2,7 +2,7 @@
 დინამიკის ვექტორს (g, 512 რიცხვი) იღებს + ყველა დინამიკის ვექტორების ცხრილი.
 
 გამოყენება (training/.venv-ით):
-    training/.venv/bin/python tools/export_designer.py [<checkpoint>] [--out /mnt/d/aivoice/designer]
+    training/.venv/bin/python tools/export_designer.py [<checkpoint>] [--out <paths.designer>]
 შედეგი:
     <out>/designer.onnx       inputs: input, input_lengths, scales, g[1,gin]
     <out>/embeddings.npy      [n_speakers, gin] — speaker_id_map-ის რიგით
@@ -17,6 +17,7 @@ import argparse
 import datetime as dt
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -25,13 +26,15 @@ import torch
 from piper.train.vits.lightning import VitsModel
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_CKPT = ROOT / "training" / "runs" / "base_ka" / "kaggle_out" / "final.ckpt"
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
+DEFAULT_CKPT = cpath("runs") / "base_ka" / "kaggle_out" / "final.ckpt"
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("checkpoint", nargs="?", default=str(DEFAULT_CKPT))
-    ap.add_argument("--out", default="/mnt/d/aivoice/designer")  # D:-ზე — app/designer.py აქედან კითხულობს
+    ap.add_argument("--out", default=str(cpath("designer")))  # app/designer.py აქედან კითხულობს
     ap.add_argument("--config", help="Piper-ის config.json (ნაგულისხმევად checkpoint-ის გვერდით)")
     ap.add_argument("--source", default="kaggle", help="მეტამონაცემისთვის: kaggle | local")
     a = ap.parse_args()

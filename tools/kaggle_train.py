@@ -1,6 +1,6 @@
 """წვრთნა Kaggle-ის უფასო GPU-ზე (T4 ×2), ამ კომპიუტერიდან მართვით.
 
-გამოყენება (/var/www/ai_voices/.venv-ით — kaggle CLI იქ არის):
+გამოყენება (პროექტის .venv-ით — kaggle CLI იქ არის):
     .venv/bin/python tools/kaggle_train.py base            # wheel + core.pyx + საწყისი checkpoint-ები → aivoice-base
     .venv/bin/python tools/kaggle_train.py push <slot>     # dataset (ერთხელ) + resume (თუ არის) + წვრთნის გაშვება
     .venv/bin/python tools/kaggle_train.py status <slot>
@@ -28,11 +28,13 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
 KAGGLE = ROOT / ".venv" / "bin" / "kaggle"
-WORK = Path("/mnt/d/aivoice/kaggle")  # ატვირთვის დროებითი ფაილები D:-ზე (C: SSD-ს ვზოგავთ)
+WORK = cpath("work")  # ატვირთვის დროებითი ფაილები
 BASE_DIR = WORK / "base"
 # wheel + core.pyx + LJSpeech checkpoint. v2 — ნათიას checkpoint-ის გარეშე (ძველი „aivoice-base“ წაიშალა 2026-10-13)
-BASE_SLUG = "aivoice-base2"
+BASE_SLUG = cfg()["kaggle"]["base_dataset"]
 TEMPLATE = ROOT / "kaggle" / "kernel_train.py"
 JOBS = ROOT / "data" / "kaggle_jobs"
 
@@ -42,7 +44,7 @@ from common import MAX_EPOCHS, MIN_EPOCHS, PHRASES, TARGET_SAMPLES  # noqa: E402
 _user = None
 KAGGLE_WEEK_H, SESSION_H, QUOTA_MARGIN_H = 30, 11.5, 3  # მარაგი: ჩავარდნილი გაშვებებიც ხარჯავს, მაგრამ არ ითვლება
 LOCAL_CTRL = ROOT / "data" / "local_train.json"
-GCP_STATE = Path("/mnt/d/aivoice/gcp/state.json")
+GCP_STATE = cpath("gcp") / "state.json"
 TRAIN_PY = ROOT / "training" / ".venv" / "bin" / "python"
 
 
@@ -94,7 +96,7 @@ def slug(slot):
 
 
 def run_dir(slot):
-    d = ROOT / "training" / "runs" / slot
+    d = cpath("runs") / slot
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -298,7 +300,7 @@ def kaggle_hours_7d() -> float:
     """ბოლო 7 დღის Kaggle-ის GPU-საათები (სესია ითვლება, თუ ფანჯარაში მოხვდა მისი ნებისმიერი ნაწილი)."""
     cutoff = time.time() - 7 * 86400
     total = 0.0
-    for p in (ROOT / "training" / "runs").glob("*/status.json"):
+    for p in (cpath("runs")).glob("*/status.json"):
         for s in (json.loads(p.read_text(encoding="utf-8")).get("sessions") or []):
             try:
                 end = time.mktime(time.strptime(s["ended"], "%Y-%m-%dT%H:%M:%S"))
@@ -360,7 +362,7 @@ def take_local_ckpt(slot) -> bool:
 
 def cmd_watch(_):
     while True:
-        for p in sorted((ROOT / "training" / "runs").glob("*/status.json")):
+        for p in sorted((cpath("runs")).glob("*/status.json")):
             st = json.loads(p.read_text(encoding="utf-8"))
             if st.get("device") != "kaggle" or st.get("status") not in ("training", "partial"):
                 continue

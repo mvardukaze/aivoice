@@ -1,6 +1,6 @@
 """ხმის შემქმნელი: საბაზო მოდელის დინამიკების ვექტორების შერევა → ახალი, არავის ხმა.
 
-მონაცემები (tools/export_designer.py): /mnt/d/aivoice/designer/{designer.onnx, embeddings.npy, config.json, meta.json}
+მონაცემები (tools/export_designer.py): <paths.designer>/{designer.onnx, embeddings.npy, config.json, meta.json}
 დიზაინები: data/designs/<id>.json — სახელი, წილები, სინთეზის პარამეტრები.
 
 „უნიკალურობა“ — ნარევის ვექტორის კოსინუსური მსგავსება ყველაზე ახლო რეალურ დინამიკთან. ეს სწრაფი
@@ -23,11 +23,12 @@ from pydantic import BaseModel, Field
 
 from .textnorm import ka_text
 
-ROOT = Path(__file__).resolve().parent.parent
-DES = Path("/mnt/d/aivoice/designer")  # D:-ზე (C: SSD ხურდება); იწერება tools/export_designer.py-ით
+from .config import ROOT, path as cpath
+
+DES = cpath("designer")  # იწერება tools/export_designer.py-ით
 DESIGNS = ROOT / "data" / "designs"
-CACHE = ROOT / "data" / "cache" / "designer"
-BASE_SPEAKERS = Path("/mnt/d/aivoice/datasets/base_ka_v1/speakers.json")
+CACHE = cpath("cache") / "designer"
+BASE_SPEAKERS = cpath("datasets") / "base_ka_v1" / "speakers.json"
 SR = 22050
 
 router = APIRouter(prefix="/api/designer")

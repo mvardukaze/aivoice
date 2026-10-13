@@ -14,14 +14,17 @@ import random
 import shutil
 import time
 import urllib.request
+import sys
 from pathlib import Path
 
 import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
 OUT = ROOT / "data" / "ghtest"
 TEXT = "ოდესღაც, ძალიან დიდი ხნის წინ"
-API = "http://127.0.0.1:8200/api/designer"
+API = api_url("/api/designer")
 # მომხმარებელმა ყურით: „ღ“ კარგად ისმის (2026-10-09)
 USER_GOOD = ["cv_6023d1c991", "cv_3d7e36c318", "cv_b2fae02602", "cv_cf7c24d61c", "cv_75ef8f1d11", "cv_34be44c191"]
 GH_LIKE = set("ɣʁɰ")  # ამომცნობი „ღ“-ს შეიძლება ახლო ბგერით ჩაწეროს — ცალკე ვაჩვენებთ ზუსტ ɣ-ს

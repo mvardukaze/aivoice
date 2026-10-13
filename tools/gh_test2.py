@@ -9,12 +9,15 @@ import json
 import random
 import shutil
 import urllib.request
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
 GHT = ROOT / "data" / "ghtest"
 TEXT = "დღეს ზღვაზე ტალღები აღარ ჩანს."
-API = "http://127.0.0.1:8200/api/designer"
+API = api_url("/api/designer")
 
 
 def synth(name):

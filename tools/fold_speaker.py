@@ -4,11 +4,12 @@ VITS-ში დინამიკის ვექტორი g ყველგ�
 შესაბამისი შრის bias-ში „ჩაცხვეს“: dec.conv_pre, dp.pre (SDP), WN in_layers (enc_q და flow-ები).
 შედეგი: single-speaker მოდელი, რომელიც პირველივე ნაბიჯიდან ზუსტად ნარევის ხმით ლაპარაკობს.
 
-    training/.venv/bin/python tools/fold_speaker.py --design "ქალი 1" --out /mnt/d/aivoice/kaggle/init-f_mix_01/init.ckpt
+    training/.venv/bin/python tools/fold_speaker.py --design "ქალი 1" --out <paths.work>/init-f_mix_01/init.ckpt
 """
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -17,7 +18,9 @@ import torch
 from piper.train.vits.lightning import VitsModel
 
 ROOT = Path(__file__).resolve().parent.parent
-BASE = ROOT / "training" / "runs" / "base_ka" / "kaggle_out" / "final.ckpt"
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
+BASE = cpath("runs") / "base_ka" / "kaggle_out" / "final.ckpt"
 
 
 def main():

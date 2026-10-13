@@ -1,7 +1,7 @@
 """საერთო (multi-speaker) dataset ქართული საბაზო მოდელისთვის — Common Voice 27-დან.
 
 გამოყენება:  nice python3 tools/build_base_dataset.py [--name base_ka_v1] [--cap-hours 3] [--include-other]
-შედეგი:      /mnt/d/aivoice/datasets/<name>/
+შედეგი:      <paths.datasets>/<name>/
                audio/<clip>.flac     22050 Hz მონო, სიჩუმე მოჭრილი, ხმამაღლობა გათანაბრებული
                metadata.csv          <clip>.flac|<speaker>|<ტექსტი>   (Piper-ის multi-speaker ფორმატი)
                speakers.json         დინამიკი → წუთები, F0 (ხმების შერევისთვის)
@@ -24,12 +24,16 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
 import soundfile as sf
 
 sys.path.insert(0, str(Path(__file__).parent))
 from cv_speakers import rows  # noqa: E402
 
-SRC = Path("/mnt/d/aivoice/sources/cv27_ka")
+SRC = cpath("sources") / "cv27_ka"
 SR = 22050
 TEXT_OK = re.compile(r"^[ა-ჰ .,!?:;\-—–„“\"'()]+$")
 
@@ -82,7 +86,7 @@ def main():
     ap.add_argument("--include-other", action="store_true")
     ap.add_argument("--workers", type=int, default=10)
     a = ap.parse_args()
-    out = Path("/mnt/d/aivoice/datasets") / a.name
+    out = cpath("datasets") / a.name
     (out / "audio").mkdir(parents=True, exist_ok=True)
     rng = random.Random(27)
 

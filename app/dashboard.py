@@ -7,12 +7,13 @@ from pathlib import Path
 
 from fastapi import APIRouter
 
-ROOT = Path(__file__).resolve().parent.parent
-RUNS = ROOT / "training" / "runs"
-DDATA = Path("/mnt/d/aivoice/datasets")
+from .config import ROOT, path as cpath
+
+RUNS = cpath("runs")
+DDATA = cpath("datasets")
 BASE_SLOT = "base_ka"
 KAGGLE_WEEKLY_HOURS = 30
-GCP_STATE = Path("/mnt/d/aivoice/gcp/state.json")
+GCP_STATE = cpath("gcp") / "state.json"
 GCP_SEC_PER_BATCH = 1.05  # L4, batch 32 — გაზომილი 2026-10-08
 GCP_BATCH = 32
 
@@ -154,17 +155,16 @@ def _corpus_summary(path: str, mtime: float):
 @router.get("/data")
 def data():
     datasets = []
-    for d in sorted([p for p in (ROOT / "datasets").iterdir() if p.is_dir()] +
-                    ([p for p in DDATA.iterdir() if p.is_dir() and not p.name.endswith("_unused")] if DDATA.exists() else [])):
+    for d in sorted([p for p in DDATA.iterdir() if p.is_dir() and not p.name.endswith("_unused")] if DDATA.exists() else []):
         st = read_json(d / "stats.json", {}) or {}
         meta = d / "metadata.csv"
-        datasets.append({"name": d.name, "location": "D:" if str(d).startswith("/mnt/d") else "C:",
+        datasets.append({"name": d.name, "location": str(d.parent),
                          "clips": st.get("clips") or (sum(1 for _ in meta.open(encoding="utf-8")) if meta.exists() else 0),
                          "hours": st.get("hours"), "speakers": st.get("speakers"),
                          "speaker": st.get("speaker"), "source": st.get("source"), "status": st.get("status")})
     sources = []
-    for name, path, label in [("cv27_ka", Path("/mnt/d/aivoice/sources/cv27_ka/corpus.json"), "Common Voice 27 (Mozilla Data Collective)"),
-                              ("cv17_ka", ROOT / "sources" / "cv17_ka" / "corpus.json", "Common Voice 17 (ძველი, CV27-ში შედის)")]:
+    for name, path, label in [("cv27_ka", cpath("sources") / "cv27_ka" / "corpus.json", "Common Voice 27 (Mozilla Data Collective)"),
+                              ("cv17_ka", cpath("sources") / "cv17_ka" / "corpus.json", "Common Voice 17 (ძველი, CV27-ში შედის)")]:
         if path.exists():
             sources.append({"name": name, "label": label, **_corpus_summary(str(path), path.stat().st_mtime)})
     return {"datasets": datasets, "sources": sources}

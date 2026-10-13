@@ -25,11 +25,12 @@ from app.designer import router as designer_router
 from app.recorder import router as rec_router
 from app.textnorm import ka_text
 
-ROOT = Path(__file__).resolve().parent.parent
+from app.config import ROOT, path as cpath  # noqa: E402
+
 VOICES = ROOT / "voices"
-DATASETS = ROOT / "datasets"
+DATASETS = cpath("datasets")
 TRAINING = ROOT / "training"
-CACHE = ROOT / "data" / "cache"
+CACHE = cpath("cache")
 CACHE.mkdir(parents=True, exist_ok=True)
 
 # (min, max) — ემოციის ცვლილების დაშვებული დიაპაზონი
@@ -174,7 +175,7 @@ def api_datasets():
     return out
 
 
-SOURCES = ROOT / "sources"
+SOURCES = cpath("sources")
 AGE_KA = {"teens": "თინეიჯერი", "twenties": "20-იანი", "thirties": "30-იანი", "fourties": "40-იანი",
           "fifties": "50-იანი", "sixties": "60-იანი", "seventies": "70-იანი", "eighties": "80-იანი"}
 

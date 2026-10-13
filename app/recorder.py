@@ -26,8 +26,9 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-ROOT = Path(__file__).resolve().parent.parent
-REC = ROOT / "recordings"
+from .config import ROOT, path as cpath
+
+REC = cpath("recordings")
 PROMPTS = ROOT / "data" / "prompts"
 SR = 22050
 MAX_CER = 0.30
@@ -250,7 +251,7 @@ def state(spk: str):
 def export(spk: str):
     """კარგი ჩანაწერები → datasets/rec_<spk>/ (Piper-ის ფორმატი: wav/ + metadata.csv)."""
     d = spk_dir(spk)
-    out = ROOT / "datasets" / f"rec_{spk}"
+    out = cpath("datasets") / f"rec_{spk}"
     shutil.rmtree(out, ignore_errors=True)
     (out / "wav").mkdir(parents=True)
     lines, secs = [], 0.0

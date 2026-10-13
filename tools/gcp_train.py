@@ -1,6 +1,6 @@
 """წვრთნა Google Cloud-ის L4-ზე ($300 საცდელი კრედიტი) — base_ka-ს გაგრძელება.
 
-გამოყენება (gcloud: ~/google-cloud-sdk, ანგარიში აქტიური, impersonation: aivoice-trainer SA):
+გამოყენება (gcloud: aivoice.toml [gcp].gcloud, ანგარიში აქტიური, impersonation: aivoice-trainer SA):
     python3 tools/gcp_train.py create     # spot მანქანა g2-standard-8 (1× L4), us-central1 (a→b→c)
     python3 tools/gcp_train.py push       # dataset + piper + checkpoint → მანქანა, setup, წვრთნის ჩართვა
     python3 tools/gcp_train.py status     # მანქანის მდგომარეობა + წვრთნის ბოლო სტრიქონები
@@ -21,12 +21,14 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-G = str(Path.home() / "google-cloud-sdk" / "bin" / "gcloud")
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
+G = str(expand(cfg()["gcp"]["gcloud"])) if "/" in cfg()["gcp"]["gcloud"] else cfg()["gcp"]["gcloud"]
 NAME = "aivoice-l4"
 ZONES = ["us-central1-a", "us-central1-b", "us-central1-c"]
-KEY = Path.home() / ".ssh" / "aivoice_gcp"
-STAGE = Path("/mnt/d/aivoice/gcp")
-RUN = ROOT / "training" / "runs" / "base_ka"
+KEY = expand(cfg()["gcp"]["ssh_key"])
+STAGE = cpath("gcp")
+RUN = cpath("runs") / "base_ka"
 SLOT = "base_ka"
 STATE = STAGE / "state.json"
 # L4 24 GB: batch 32 (Kaggle-ზე T4 16 GB — 24); 8 vCPU → 6 worker (აუდიო/სპექტროგრამა პროცესორზე)
@@ -275,9 +277,7 @@ def finalize():
 
 
 # L4-ის ზონები უპირატესობის რიგით: ჯერ აშშ (იაფი), მერე ევროპა. კვოტა (1 L4) ყველა რეგიონშია.
-PREFERRED_REGIONS = ["us-central1", "us-east4", "us-east1", "us-west1", "us-west4", "us-east5", "us-south1",
-                     "europe-west4", "europe-west1", "europe-west2", "europe-west3", "europe-west9",
-                     "northamerica-northeast1", "asia-southeast1"]
+PREFERRED_REGIONS = [r.strip() for r in cfg()["gcp"]["regions"].split(",") if r.strip()]
 
 
 def l4_zones() -> list[str]:

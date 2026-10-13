@@ -21,6 +21,8 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
 PY = ROOT / "training" / ".venv" / "bin" / "python"
 CTRL = ROOT / "data" / "local_train.json"
 CKPT_STEPS = 1400  # ≈30 წთ (2.56 წმ/ბატჩი, ბატჩზე 2 global_step)
@@ -64,7 +66,7 @@ def ckpt_info(p: Path):
 
 def best_ckpt(slot: str):
     """უახლესი გამართული checkpoint: [(step, epoch, path)] — მეტი ნაბიჯი = უახლესი."""
-    run = ROOT / "training" / "runs" / slot
+    run = cpath("runs") / slot
     cands = list((run / "local").glob("lightning_logs/version_*/checkpoints/local-*.ckpt"))
     cands += [run / "kaggle_out" / "final.ckpt"]
     good = []
@@ -77,7 +79,7 @@ def best_ckpt(slot: str):
 class Local:
     def __init__(self, slot: str):
         self.slot = slot
-        self.run = ROOT / "training" / "runs" / slot
+        self.run = cpath("runs") / slot
         self.dir = self.run / "local"
         self.dir.mkdir(parents=True, exist_ok=True)
         self.state_p = self.dir / "state.json"
@@ -253,7 +255,7 @@ class Local:
         if not cands:
             return
         info = ckpt_info(cands[-1])
-        meta = read_json(Path("/mnt/d/aivoice/designer/meta.json"), {}) or {}
+        meta = read_json(cpath("designer") / "meta.json", {}) or {}
         if not info or (meta.get("epoch") is not None and info[0] <= meta["epoch"]):
             return
         r = subprocess.run([str(PY), str(ROOT / "tools" / "export_designer.py"), str(cands[-1]),

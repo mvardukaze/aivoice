@@ -9,11 +9,14 @@ MMS „ღ“-ს მსაჯულად არ გამოდგა, მა�
 import json
 import time
 import urllib.request
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
 OUT = ROOT / "data" / "ghtest" / "rank.json"
-API = "http://127.0.0.1:8200/api/designer"
+API = api_url("/api/designer")
 SENTENCES = [
     "გამარჯობა! დღეს მშვენიერი ამინდია, არა?",
     "ოდესღაც, ძალიან დიდი ხნის წინ, ერთ პატარა სოფელში ცხოვრობდა მოხუცი მეთევზე.",

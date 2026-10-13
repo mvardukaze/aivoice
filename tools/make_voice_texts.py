@@ -11,10 +11,13 @@ import csv
 import json
 import random
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = Path("/mnt/d/aivoice/sources/cv27_ka/validated_sentences.tsv")
+sys.path.insert(0, str(ROOT))
+from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
+SRC = cpath("sources") / "cv27_ka" / "validated_sentences.tsv"
 GEO = re.compile(r"^[ა-ჰ\s,.!?:;„“\"'—–\-()]+$")
 CONS = "ბგდვზთკლმნპჟრსტფქღყშჩცძწჭხჯჰ"
 CLUSTER3 = re.compile(f"[{CONS}]{{3,}}")
