@@ -1,0 +1,10 @@
+# პანელი + ხმის შემქმნელი + ჩაწერა + Kaggle/HF ხელსაწყოები (.venv). install.sh აყენებს.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+piper-tts==1.8.0
+numpy>=1.26
+soundfile>=0.12
+kaggle==2.2.4
+huggingface_hub>=0.34
+faster-whisper>=1.1        # „ჩაწერის“ ჩანართის ხარისხის შემოწმება
+datacollective>=0.6        # მხოლოდ საბაზო მოდელის თავიდან წვრთნისთვის (Common Voice-ის ჩამოტვირთვა)

@@ -533,6 +533,7 @@ async function refresh() {
     if (!$("#tab-base").hidden || !$("#base").innerHTML) renderBase(base);
     renderDesigner();
     if (!$("#tab-settings").hidden) window.Settings?.render();
+    if (!$("#tab-train").hidden) window.Train?.render();
     if ($("#runs").closest("details").open) renderRuns(await api("/api/training"));
   } catch (e) { console.warn(e); }
 }

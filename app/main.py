@@ -24,6 +24,7 @@ from app.dashboard import router as dash_router
 from app.designer import router as designer_router
 from app.recorder import router as rec_router
 from app.settings import router as settings_router
+from app.train_api import router as train_router
 from app.textnorm import ka_text
 
 from app.config import ROOT, path as cpath  # noqa: E402
@@ -57,6 +58,7 @@ app.include_router(rec_router)
 app.include_router(dash_router)
 app.include_router(designer_router)
 app.include_router(settings_router)
+app.include_router(train_router)
 
 
 @app.middleware("http")

@@ -123,13 +123,20 @@ def job(slot) -> dict:
 
 
 def cmd_base(_):
+    """Kaggle-ის საბაზო dataset: piper_overlay.tar (ჩვენი შესწორებები) + LJSpeech checkpoint (საწყისი წერტილი)."""
+    import tarfile
     BASE_DIR.mkdir(parents=True, exist_ok=True)
-    for f in (ROOT / "kaggle" / "base").iterdir():
-        shutil.copy2(f, BASE_DIR / f.name)
-    for ck in (ROOT / "training" / "checkpoints").glob("*/*.clean.ckpt"):
-        if not (BASE_DIR / ck.name).exists():
-            shutil.copy2(ck, BASE_DIR / ck.name)
-    upload_dataset(BASE_DIR, BASE_SLUG, "aivoice base v2")
+    for old in BASE_DIR.glob("piper_tts-*.whl"):
+        old.unlink()
+    with tarfile.open(BASE_DIR / "piper_overlay.tar", "w") as t:
+        t.add(ROOT / "piper_overlay" / "piper", arcname="piper")
+    lj = cpath("runs").parent / "checkpoints" / "ljspeech-medium.clean.ckpt"
+    for c in [ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt", lj]:
+        if c.exists() and not (BASE_DIR / c.name).exists():
+            shutil.copy2(c, BASE_DIR / c.name)
+    if not (BASE_DIR / "ljspeech-medium.clean.ckpt").exists():
+        raise SystemExit("ljspeech-medium.clean.ckpt ვერ ვიპოვე — ჯერ: ./aivoice models pull")
+    upload_dataset(BASE_DIR, BASE_SLUG, "aivoice base")
 
 
 def flac(args):

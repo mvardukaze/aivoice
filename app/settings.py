@@ -158,9 +158,12 @@ def setup_status():
     tpy = C.ROOT / "training" / ".venv" / "bin" / "python"
     add("ხელსაწყოები", "წვრთნის გარემო (training/.venv)", "ok" if tpy.exists() else "warn",
         "" if tpy.exists() else "საჭიროა ხმის მომზადებისთვის/შემქმნელის ექსპორტისთვის — ./install.sh --training")
-    pg = C.ROOT / "training" / "piper1-gpl"
-    add("ხელსაწყოები", "Piper (ჩვენი შესწორებებით)", "ok" if (pg / "src").exists() else "warn",
-        "" if (pg / "src").exists() else "./install.sh --training კლონავს და patches/piper1-gpl.patch-ს ადებს")
+    # ჩვენი შესწორებები (piper_overlay/) დადებულია თუ არა წვრთნის გარემოს Piper-ზე
+    cands = list((C.ROOT / "training" / ".venv").glob("lib*/python3*/site-packages/piper/train/vits/dataset.py"))
+    cands += [C.ROOT / "training" / "piper1-gpl" / "src" / "piper" / "train" / "vits" / "dataset.py"]
+    patched = any(c.exists() and "aivoice: with DDP" in c.read_text(encoding="utf-8", errors="replace") for c in cands)
+    add("ხელსაწყოები", "Piper (ჩვენი შესწორებებით)", "ok" if patched else "warn",
+        "" if patched else "./install.sh --training ადებს piper_overlay/-ს ოფიციალურ Piper-ზე")
 
     des = C.path("designer") / "designer.onnx"
     add("მოდელები", "ხმის შემქმნელის მოდელი", "ok" if des.exists() else "missing",

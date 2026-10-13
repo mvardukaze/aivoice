@@ -19,7 +19,7 @@ CFG = json.loads('''__CONFIG__''')
 SLOT = CFG["slot"]
 IN = Path("/kaggle/input")
 WARM = next(p for p in IN.rglob(CFG["warmstart"]))  # საწყისი checkpoint — aivoice-base-ში ან ცალკე dataset-ში (init-*)
-BASE = next(p for p in IN.rglob("piper_tts-*.whl")).parent  # wheel + core.pyx
+OVERLAY = next(IN.rglob("piper_overlay.tar"))  # ჩვენი შესწორებები Piper-ის train/-ზე + core.pyx (repo: piper_overlay/)
 SLUG = SLOT.replace("_", "-")
 VOICE = next(p for p in IN.rglob("metadata.csv") if f"aivoice-{SLUG}" in str(p)).parent
 RESUME = next(iter(IN.rglob("resume.ckpt")), None)
@@ -60,37 +60,21 @@ def sh(cmd, **kw):
 
 
 status(status="installing")
-sh([sys.executable, "-m", "pip", "install", "-q", str(next(BASE.glob("piper_tts-*.whl"))),
+# ოფიციალური Piper (PyPI-ზე train/ უკვე შედის) + ჩვენი ფაილები ზემოდან — კომპილაცია არ სჭირდება
+sh([sys.executable, "-m", "pip", "install", "-q", "piper-tts==1.8.0",
     "lightning>=2,<3", "tensorboard", "tensorboardX", "jsonargparse[signatures]>=4.27.7",
     "onnx", "onnxscript", "pysilero-vad>=2.1,<3", "cython>=3", "librosa<1", "soundfile"])
 
+import tarfile  # noqa: E402
+
 import piper  # noqa: E402
 
-# DDP-ის შესწორება (wheel-ის ხელახლა ატვირთვის გარეშე): rank > 0-ზე piper_config არ იქმნება — setup() ჩავარდებოდა
-_ds = Path(piper.__file__).parent / "train" / "vits" / "dataset.py"
-_src = _ds.read_text()
-if "aivoice: with DDP" not in _src:
-    _src = _src.replace("    def setup(self, stage: str) -> None:\n        assert self.piper_config is not None\n",
-                        "    def setup(self, stage: str) -> None:\n        if self.piper_config is None:  # aivoice: with DDP\n"
-                        "            self.prepare_data()\n        assert self.piper_config is not None\n")
-    assert "aivoice: with DDP" in _src, "dataset.py patch failed"
-    _ds.write_text(_src)
-
-# resume-ზე warmstart აღარ: LightningCLI checkpoint-ის hparams-იდან warmstart_ckpt-საც აღადგენს, და on_fit_start
-# (რომელიც checkpoint-ის აღდგენის შემდეგ ეშვება) ნავარჯიშებ წონებს LJSpeech-ით გადაწერდა (2026-10-07)
-_lm = Path(piper.__file__).parent / "train" / "vits" / "lightning.py"
-_src = _lm.read_text()
-if "aivoice: resuming" not in _src:
-    _src = _src.replace("    def on_fit_start(self):\n        # Called once at the start of fit()\n",
-                        "    def on_fit_start(self):\n        # Called once at the start of fit()\n"
-                        "        if self.trainer.ckpt_path:  # aivoice: resuming\n"
-                        "            self._vocoder_warmstart_ckpt = None\n            self._warmstart_ckpt = None\n")
-    assert "aivoice: resuming" in _src, "lightning.py patch failed"
-    _lm.write_text(_src)
-
+with tarfile.open(OVERLAY) as t:
+    t.extractall(Path(piper.__file__).parent.parent)  # piper/train/... ჩანაცვლდება
 ma = Path(piper.__file__).parent / "train" / "vits" / "monotonic_align"
-shutil.copy(BASE / "core.pyx", ma / "core.pyx")
 sh(f"cd {ma} && cythonize -i core.pyx && mkdir -p monotonic_align && mv core*.so monotonic_align/")
+for marker, f in [("aivoice: with DDP", "train/vits/dataset.py"), ("aivoice: resuming", "train/vits/lightning.py")]:
+    assert marker in (Path(piper.__file__).parent / f).read_text(), f"overlay: {f}"
 
 # აუდიო: თუ Kaggle-მა audio.zip არ გახსნა — ვხსნით /kaggle/temp-ში
 AUDIO = VOICE / "audio"

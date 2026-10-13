@@ -9,5 +9,11 @@
  "warmstart": "init.ckpt",
  "audio_from_source": true,
  "trim_silence": false,
- "preview_speakers": []
+ "preview_speakers": [],
+ "design": "ქალი 1",
+ "inference": {
+  "noise_scale": 0.31,
+  "length_scale": 1.0,
+  "noise_w": 0.8
+ }
 }

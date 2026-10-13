@@ -1,6 +1,6 @@
 #!/bin/bash
 # Google Cloud-ის მანქანაზე ერთჯერადი მომზადება (tools/gcp_train.py push უშვებს, ssh-ით, root-ად).
-# მოელის /data/upload-ში: base_ka_v1.tar, piper_tts-*.whl, core.pyx, train_overlay.tar, resume.ckpt, job.json
+# მოელის /data/upload-ში: base_ka_v1.tar, piper_overlay.tar, resume.ckpt, job.json
 set -euo pipefail
 U=/data/upload
 mkdir -p /data/run
@@ -23,12 +23,11 @@ if [ ! -x /opt/aivoice/venv/bin/pip ]; then
   $PY -m venv --system-site-packages /opt/aivoice/venv
 fi
 V=/opt/aivoice/venv/bin
-$V/pip install -q $U/piper_tts-*.whl "lightning>=2,<3" tensorboard "jsonargparse[signatures]>=4.27.7" \
+$V/pip install -q "piper-tts==1.8.0" "lightning>=2,<3" tensorboard "jsonargparse[signatures]>=4.27.7" \
   onnx onnxscript "pysilero-vad>=2.1,<3" "cython>=3" "librosa<1" soundfile
-SITE=$($V/python -c "import piper, os; print(os.path.dirname(piper.__file__))")
-tar -xf $U/train_overlay.tar -C $SITE          # train/__main__.py, vits/dataset.py, vits/lightning.py, export_onnx.py
-MA=$SITE/train/vits/monotonic_align
-cp $U/core.pyx $MA/core.pyx
+SITE=$($V/python -c "import piper, os; print(os.path.dirname(os.path.dirname(piper.__file__)))")
+tar -xf $U/piper_overlay.tar -C $SITE          # piper/train/... (ჩვენი შესწორებები) + core.pyx
+MA=$SITE/piper/train/vits/monotonic_align
 (cd $MA && $V/cythonize -i core.pyx >/dev/null && mkdir -p monotonic_align && mv core*.so monotonic_align/)
 
 # 3. წვრთნის სერვისი — ჩართვისას (spot-ის შეწყვეტის შემდეგაც) თავისით აგრძელებს

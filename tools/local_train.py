@@ -26,7 +26,8 @@ from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
 PY = ROOT / "training" / ".venv" / "bin" / "python"
 CTRL = ROOT / "data" / "local_train.json"
 CKPT_STEPS = 1400  # ≈30 წთ (2.56 წმ/ბატჩი, ბატჩზე 2 global_step)
-BATCH, WORKERS, THREADS = 8, 1, 12  # 12 = CPUQuota 1200%; 1 worker — თითო ~2 GB RAM-ს იკავებს (3-ზე 9 GB-ს ზღვარს ასცდა)
+BATCH, WORKERS = 8, 1  # 1 worker — თითო ~2 GB RAM-ს იკავებს (3-ზე 9 GB-ს ზღვარს ასცდა)
+THREADS = int(cfg()["training"]["local_threads"])  # პროცესორის ნაკადები (aivoice.toml)
 DESIGNER_EVERY_H = 3
 # ფონემების ქეში (~190 ათასი პატარა ფაილი): /mnt/d-ზე (drvfs) პატარა ფაილები ძალიან ნელია, Linux-ის დისკი კი
 # ფიზიკურად C:-ზეა (ხურდება — მომხმარებლის მოთხოვნა 2026-10-08). ამიტომ ქეში RAM-შია (/dev/shm), D:-ზე კი
@@ -64,6 +65,16 @@ def ckpt_info(p: Path):
         return None
 
 
+def data_dir(j) -> Path:
+    """dataset: საბაზოსთვის dataset_dir (audio/*.flac), ხმისთვის source_dir (wav/*.wav, make_voice_dataset.py)."""
+    return Path(j.get("dataset_dir") or j["source_dir"])
+
+
+def audio_dir(j) -> Path:
+    d = data_dir(j)
+    return d / "audio" if (d / "audio").exists() else d / "wav"
+
+
 def best_ckpt(slot: str):
     """უახლესი გამართული checkpoint: [(step, epoch, path)] — მეტი ნაბიჯი = უახლესი."""
     run = cpath("runs") / slot
@@ -98,7 +109,7 @@ class Local:
 
     def metadata(self, j) -> Path:
         # Kaggle-ის kernel-ის მსგავსად: ბრჭყალები CSV-ს არღვევს
-        src = Path(j["dataset_dir"]) / "metadata.csv"
+        src = data_dir(j) / "metadata.csv"
         dst = self.dir / "metadata.csv"
         if not dst.exists() or dst.stat().st_mtime < src.stat().st_mtime:
             dst.write_text(src.read_text(encoding="utf-8").replace('"', ""), encoding="utf-8")
@@ -131,10 +142,12 @@ class Local:
     def start(self):
         j = self.job()
         best = best_ckpt(self.slot)
-        if not best:
-            self.save(running=False, error="checkpoint ვერ ვიპოვე")
+        init = Path(j["init_dir"]) / j.get("warmstart", "init.ckpt") if j.get("init_dir") else None
+        if not best and not (init and init.exists()):
+            self.save(running=False, error="checkpoint ვერ ვიპოვე (არც გასაგრძელებელი, არც საწყისი init.ckpt)")
             return
-        step, epoch, ckpt = best
+        # ახალი ხმა: ჯერ არაფერი უწვრთნია → საწყისი checkpoint-იდან (warmstart); სხვაგვარად — გაგრძელება
+        step, epoch, ckpt = best if best else (0, -1, None)
         if epoch + 1 >= j["max_epochs"]:
             self.save(running=False, done=True, epoch=epoch, step=step)
             return
@@ -143,7 +156,7 @@ class Local:
         cmd = [str(PY), "-m", "piper.train", "fit",
                "--data.voice_name", self.slot,
                "--data.csv_path", str(meta),
-               "--data.audio_dir", str(Path(j["dataset_dir"]) / "audio"),
+               "--data.audio_dir", str(audio_dir(j)),
                "--model.sample_rate", "22050",
                "--data.espeak_voice", "ka",
                "--data.cache_dir", str(cache),
@@ -158,19 +171,19 @@ class Local:
                "--trainer.accelerator", "cpu",
                "--trainer.devices", "1",
                "--trainer.max_epochs", str(j["max_epochs"]),
-               "--trainer.default_root_dir", str(self.dir),
-               "--ckpt_path", str(ckpt)]
+               "--trainer.default_root_dir", str(self.dir)]
+        cmd += ["--ckpt_path", str(ckpt)] if ckpt else ["--model.warmstart_ckpt", str(init)]
         env = {**os.environ, "CUDA_VISIBLE_DEVICES": "", "OMP_NUM_THREADS": str(THREADS),
                "MKL_NUM_THREADS": str(THREADS), "PIPER_CKPT_EVERY_STEPS": str(CKPT_STEPS)}
         if j.get("audio_from_source"):
             env["PIPER_AUDIO_FROM_SOURCE"] = "1"
         self.log = (self.dir / "train.log").open("a", encoding="utf-8")
-        self.log.write(f"\n==== {now()} resume {ckpt} (epoch {epoch}, step {step})\n")
+        self.log.write(f"\n==== {now()} {'resume ' + str(ckpt) if ckpt else 'start from ' + str(init)} (epoch {epoch + 1}, step {step})\n")
         self.log.flush()
         self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env,
                                      cwd=ROOT / "training", start_new_session=True)
         os.set_blocking(self.proc.stdout.fileno(), False)
-        self.save(running=True, pid=self.proc.pid, started=now(), resumed_from=str(ckpt),
+        self.save(running=True, pid=self.proc.pid, started=now(), resumed_from=str(ckpt or init),
                   epoch=epoch, step=step, error=None, done=False)
         self.check_config_later = True
 
@@ -227,7 +240,7 @@ class Local:
             self.save_cache()  # config.json ჩნდება prepare-ის შემდეგ — ქეში უკვე სრულია
             a = (read_json(self.dir / "config.json", {}) or {}).get("speaker_id_map")
             b = (read_json(self.run / "kaggle_out" / "config.json", {}) or {}).get("speaker_id_map")
-            if a != b:
+            if b and a != b:
                 self.stop("speaker_id_map არ ემთხვევა Kaggle-ის მოდელს")
                 self.save(error="speaker_id_map არ ემთხვევა — წვრთნა შეჩერდა", blocked=True)
                 return
@@ -249,6 +262,8 @@ class Local:
 
     def maybe_export_designer(self):
         """ხმის შემქმნელი ახალ ლოკალურ checkpoint-ზე — ახალი ეპოქის შემდეგ, არაუმეტეს ყოველ 3 სთ-ში."""
+        if (self.job().get("num_speakers") or 1) <= 1:  # მხოლოდ საბაზო (მრავალხმიანი) მოდელისთვის
+            return
         if time.time() - (self.state.get("designer_at_ts") or 0) < DESIGNER_EVERY_H * 3600:
             return
         cands = sorted(self.dir.glob("lightning_logs/version_*/checkpoints/local-*.ckpt"), key=lambda p: p.stat().st_mtime)

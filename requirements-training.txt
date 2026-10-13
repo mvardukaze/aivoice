@@ -1,0 +1,14 @@
+# ხმების მომზადება / ექსპორტი / შემოწმება (training/.venv). torch-ს install.sh ცალკე აყენებს (macOS / CUDA / CPU).
+# Piper-ის ოფიციალური პაკეტი — train/ შედის; ჩვენი შესწორებები piper_overlay/-დან ედება (install.sh)
+piper-tts==1.8.0
+lightning>=2.5,<3
+jsonargparse[signatures]>=4.27.7
+tensorboard
+tensorboardX
+onnx
+onnxscript
+pysilero-vad>=2.1,<3
+cython>=3
+librosa<1
+soundfile
+transformers>=4.45,<5      # MMS (ქართული ამომცნობი) — ხარისხის შემოწმება და რეიტინგი

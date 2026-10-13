@@ -351,3 +351,10 @@ kbd { font: 12px ui-monospace, monospace; padding: 1px 5px; border: 1px solid va
 .secret-in input { flex: 1; }
 .tabs button.attn::after { content: " •"; color: #c0392b; }
 @media (max-width: 700px) { .set-field, .secret-row { grid-template-columns: 1fr; } .set-field .muted { grid-column: 1; } }
+/* წვრთნა */
+.tr-new { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+.tr-new label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.tr-job { padding: 12px 0; border-top: 1px solid var(--border); }
+.tr-job:first-child { border-top: 0; }
+.tr-job .actions { flex-wrap: wrap; gap: 6px; }
+.tr-log { max-height: 280px; overflow: auto; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 12px; white-space: pre-wrap; }

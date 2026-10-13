@@ -130,16 +130,13 @@ def cmd_push():
     job = json.loads((ROOT / "data" / "kaggle_jobs" / f"{SLOT}.json").read_text())
     vm_job = {**VM_JOB, "num_speakers": job["num_speakers"], "max_epochs": job["max_epochs"]}
     with tempfile.TemporaryDirectory() as td:
-        ov = Path(td) / "train_overlay.tar"
-        src = ROOT / "training" / "piper1-gpl" / "src" / "piper"
-        with tarfile.open(ov, "w") as t:
-            for f in ("train/__main__.py", "train/export_onnx.py", "train/vits/dataset.py", "train/vits/lightning.py"):
-                t.add(src / f, arcname=f)
+        ov = Path(td) / "piper_overlay.tar"
+        with tarfile.open(ov, "w") as t:  # ჩვენი შესწორებები Piper-ის train/-ზე + core.pyx (repo: piper_overlay/)
+            t.add(ROOT / "piper_overlay" / "piper", arcname="piper")
         jp = Path(td) / "job.json"
         jp.write_text(json.dumps(vm_job))
         ssh("sudo mkdir -p /data/upload && sudo chown -R aivoice /data")
-        whl = next((ROOT / "kaggle" / "base").glob("piper_tts-*.whl"))
-        files = [(str(whl), whl.name), (str(ROOT / "kaggle" / "base" / "core.pyx"), "core.pyx"), (str(ov), ov.name),
+        files = [(str(ov), ov.name),
                  (str(jp), "job.json"), (str(ROOT / "gcp" / "setup_vm.sh"), "setup_vm.sh"),
                  (str(ROOT / "gcp" / "train_vm.sh"), "train_vm.sh"), (str(ckpt), "resume.ckpt")]
         files.append((str(tar), "base_ka_v1.tar"))

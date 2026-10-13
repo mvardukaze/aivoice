@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# aivoice — ერთი ბრძანება ყველაფრისთვის. ./aivoice help
+set -euo pipefail
+cd "$(dirname "$0")"
+PY=.venv/bin/python          # პანელი, Kaggle, Google Cloud, Hugging Face
+TPY=training/.venv/bin/python  # ხმის მომზადება, ექსპორტი, შემოწმება (./install.sh --training)
+
+need_training() { [ -x "$TPY" ] || { echo "საჭიროა წვრთნის გარემო: ./install.sh --training"; exit 1; }; }
+cfg() { $PY -c "import sys; sys.path.insert(0, '.'); from app.config import cfg; c = cfg(); print(c$1)"; }
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  serve)  # პანელი; „პარამეტრებიდან“ გადატვირთვისას (კოდი 3) თავიდან ეშვება
+    host="$(cfg '["server"]["host"]')"; port="$(cfg '["server"]["port"]')"
+    echo "პანელი: http://$host:$port  (გაჩერება: Ctrl+C)"
+    while true; do
+      set +e; .venv/bin/uvicorn app.main:app --host "$host" --port "$port" --proxy-headers; rc=$?; set -e
+      [ "$rc" = 3 ] || exit "$rc"
+      echo "… გადატვირთვა"
+    done ;;
+
+  models)  # Hugging Face: pull — საბაზო მოდელი, შემქმნელი, ხმები; push — ატვირთვა (Write token)
+    $PY tools/models.py "$@" ;;
+
+  train)   # ხმის წვრთნა: new | prepare | start --on kaggle|local | status | wait | stop | fetch | list
+    $PY tools/train_ctl.py "$@" ;;
+
+  voice)   # ხმის მომზადება შენახული ნარევიდან
+    need_training
+    sub="${1:-}"; shift || true
+    case "$sub" in
+      texts)   $PY tools/make_voice_texts.py "$@" ;;                    # წინადადებების სია
+      dataset) $TPY tools/make_voice_dataset.py "$@" ;;                 # --design "ქალი 1" --slot f_mix_01
+      init)    $TPY tools/fold_speaker.py "$@" ;;                       # --design "ქალი 1" --out <work>/init-<slot>/init.ckpt
+      previews) $TPY tools/make_previews.py "$@" ;;                     # <ckpt> --label ... --slot ...
+      *) echo "./aivoice voice texts|dataset|init|previews ..."; exit 1 ;;
+    esac ;;
+
+  designer) need_training; $TPY tools/export_designer.py "$@" ;;       # საბაზო checkpoint → ხმის შემქმნელის მოდელი
+  rank)     need_training; $TPY tools/mms_rank.py "$@" ;;              # ყველა ხმის/ნარევის რეიტინგი (MMS)
+  kaggle)   $PY tools/kaggle_train.py "$@" ;;                          # base | push <slot> | status | fetch | watch
+  gcp)      $PY tools/gcp_train.py "$@" ;;                             # create | push | status | fetch | watch | delete
+  local)    need_training; $TPY tools/local_train.py "$@" ;;           # ლოკალური (CPU) წვრთნის სერვისი
+
+  help|-h|--help|*)
+    cat <<'EOF'
+aivoice — ქართული სინთეზური ხმები
+
+  ./aivoice serve                     პანელი (http://127.0.0.1:8200)
+  ./aivoice models pull               საბაზო მოდელი + ხმები Hugging Face-იდან
+  ./aivoice models push               (მხოლოდ ავტორი) ატვირთვა Hugging Face-ზე
+
+  ახალი ხმა შენახული ნარევიდან (ხმის შემქმნელი → „შენახვა“) — ან პანელიდან: „წვრთნა“:
+  ./aivoice train new f_mix_02 --design "ქალი 2"     ხმის შექმნა ნარევიდან
+  ./aivoice train prepare f_mix_02                   ჩანაწერები + საწყისი checkpoint (ამ კომპიუტერზე)
+  ./aivoice train start f_mix_02 --on kaggle [--epochs 150] [--wait]   წვრთნა (kaggle | local)
+  ./aivoice train status [f_mix_02]                  სად არის, რამდენი დარჩა
+  ./aivoice train wait f_mix_02                      ლოდინი → შედეგი „ხმებში“
+  ./aivoice train stop f_mix_02                      გაჩერება
+  ./aivoice train list                               ყველა ხმა
+
+  სხვა: designer | rank | kaggle ... | gcp ... | local
+  დაყენება: ./install.sh [--training]  ·  დოკუმენტაცია: README.md
+EOF
+    ;;
+esac
