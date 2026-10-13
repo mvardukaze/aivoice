@@ -1,6 +1,6 @@
 """Common Voice-ის ყველა დინამიკის ანალიზი საერთო (multi-speaker) საბაზო მოდელისთვის.
 
-გამოყენება:  nice python3 tools/cv_corpus.py sources/cv17_ka [--min-min 5] [--per 12] [--workers 8]
+გამოყენება:  nice python3 tools/cv_corpus.py sources/cv27_ka [--min-min 5] [--per 12] [--workers 8]
 შედეგი:      <dir>/corpus.json
 
 ასაკი/სქესი არ გამოიყენება (Common Voice-ში ხშირად არასწორია). თითო დინამიკზე:

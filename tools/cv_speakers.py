@@ -1,6 +1,6 @@
 """Common Voice-ის დინამიკების ანალიზი: ვის რამდენი საათი ჩანაწერი აქვს.
 
-გამოყენება:  python tools/cv_speakers.py sources/cv17_ka
+გამოყენება:  python tools/cv_speakers.py sources/cv27_ka
 შედეგი:      <dir>/speakers.json (პანელი ამას კითხულობს)
 
 validated = საზოგადოების მიერ დადასტურებული კლიპები, other = ჯერ შეუმოწმებელი

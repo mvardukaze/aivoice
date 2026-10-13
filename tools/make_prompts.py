@@ -15,13 +15,17 @@ import csv
 import json
 import random
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 
 from piper.phonemize_espeak import EspeakPhonemizer
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "sources" / "cv17_ka" / "validated_sentences.tsv"
+sys.path.insert(0, str(ROOT))
+from app.config import path as cpath  # noqa: E402
+
+SRC = cpath("sources") / "cv27_ka" / "validated_sentences.tsv"
 OUT = ROOT / "data" / "prompts" / "ka_v1.json"
 ALLOWED = re.compile(r"^[ა-ჰ .,!?:;\-—–„“\"'()]+$")
 
