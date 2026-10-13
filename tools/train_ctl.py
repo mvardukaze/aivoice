@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools"))
-from app.config import cfg, path as cpath  # noqa: E402
+from app.config import path as cpath  # noqa: E402
 
 JOBS = ROOT / "data" / "kaggle_jobs"
 DESIGNS = ROOT / "data" / "designs"

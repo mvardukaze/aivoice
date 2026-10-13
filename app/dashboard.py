@@ -163,8 +163,7 @@ def data():
                          "hours": st.get("hours"), "speakers": st.get("speakers"),
                          "speaker": st.get("speaker"), "source": st.get("source"), "status": st.get("status")})
     sources = []
-    for name, path, label in [("cv27_ka", cpath("sources") / "cv27_ka" / "corpus.json", "Common Voice 27 (Mozilla Data Collective)"),
-                              ("cv17_ka", cpath("sources") / "cv17_ka" / "corpus.json", "Common Voice 17 (ძველი, CV27-ში შედის)")]:
+    for name, path, label in [("cv27_ka", cpath("sources") / "cv27_ka" / "corpus.json", "Common Voice 27 (Mozilla Data Collective)")]:
         if path.exists():
             sources.append({"name": name, "label": label, **_corpus_summary(str(path), path.stat().st_mtime)})
     return {"datasets": datasets, "sources": sources}

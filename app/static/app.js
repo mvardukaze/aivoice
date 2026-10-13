@@ -52,23 +52,6 @@ async function loadRoadmap() {
   return rm;
 }
 
-async function loadEnv(refresh = false) {
-  $("#env").innerHTML = `<p class="muted small">მოწმდება…</p>`;
-  const env = await api(`/api/env${refresh ? "?refresh=1" : ""}`);
-  const groups = {};
-  env.checks.forEach((c) => (groups[c.group] ||= []).push(c));
-  $("#env").innerHTML = Object.entries(groups).map(([g, list]) => `
-    <div class="env-group"><h3>${esc(g)}</h3>
-      ${list.map((c) => `
-        <div class="env-row">
-          <span class="mark ${c.ok ? "ok" : "no"}">${c.ok ? "✓" : "✗"}</span>
-          <span>${esc(c.name)}</span>
-          <span class="detail">${esc(c.detail)}</span>
-        </div>`).join("")}
-    </div>`).join("") + `<p class="muted small">დისკზე თავისუფალია ${env.disk_free_gb} GB</p>`;
-}
-$("#env-refresh").addEventListener("click", () => loadEnv(true));
-
 const RUN_STATUS = { training: "იწვრთნება", exporting: "ექსპორტი", done: "დასრულდა", failed: "შეცდომა",
                      paused: "შეჩერებულია", partial: "შემდეგ სესიას ელის", archived: "არქივი" };
 const DEVICE = { cpu: "CPU (ეს კომპიუტერი)", gpu: "GPU (ეს კომპიუტერი)", kaggle: "Kaggle GPU", gcp: "Google Cloud · L4" };
@@ -81,17 +64,18 @@ const etaClock = (h) => {
   return d.toLocaleString("ka-GE", { weekday: "short", hour: "2-digit", minute: "2-digit" });
 };
 
-function renderStats(ov, base) {
+function renderStats(ov, base, tj) {
   const ready = voices.filter((v) => v.status === "ready").length;
+  const testing = voices.filter((v) => v.status === "testing").length;
   const run = base.run || {};
-  const ds = base.dataset || {};
+  const busy = (tj?.jobs || []).filter(jobActive).length;
   const items = [
-    [`${ready}`, "მზა ხმა"],
-    [run.epoch != null ? `${epochShown(run)} / ${run.max_epochs}` : "—", "საბაზო მოდელი: ეპოქა"],
-    [ds.speakers ? `${ds.speakers} · ${ds.hours} სთ` : "—", "საბაზო მონაცემები"],
+    [`${ready}${testing ? ` + ${testing}` : ""}`, testing ? "მზა ხმა + სატესტო" : "მზა ხმა"],
+    [busy ? `${busy}` : "—", "მიმდინარე სამუშაო"],
+    [run.epoch != null ? `${epochShown(run)} ეპოქა` : "—", "საბაზო მოდელი"],
     run.device === "gcp" && run.status === "training"
       ? [`~${hm(run.eta_hours)}`, "დარჩა (Google Cloud L4)"]
-      : [`${ov.kaggle_week_hours} / ${ov.kaggle_week_limit} სთ`, "Kaggle ბოლო 7 დღეში"],
+      : [`${(+ov.kaggle_week_hours).toFixed(1)} / ${ov.kaggle_week_limit} სთ`, "Kaggle GPU ბოლო 7 დღეში"],
   ];
   $("#stats").innerHTML = items.map(([b, s]) => `<div class="stat"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join("");
 }
@@ -102,23 +86,33 @@ function progressPct(r) {
   return Math.min(100, ((e * n + (r.step_in_epoch || 0)) / ((r.max_epochs || 1) * n)) * 100);
 }
 
-function renderJobs(ov) {
-  const vname = Object.fromEntries(voices.map((v) => [v.id, v.name]));
-  vname.base_ka = "ქართული საბაზო მოდელი";
-  $("#jobs").innerHTML = ov.jobs.length ? ov.jobs.map((r) => `
+// აქტიური = რამე ეშვება (მომზადება, ატვირთვა, წვრთნა, ლოდინი) ან ყურადღებას ითხოვს (შეცდომა, სესია დასრულდა)
+const jobActive = (j) => j.busy || ["prepare", "uploading", "training", "partial", "failed"].includes(j.stage);
+const STAGE_KA = { new: "შექმნილია", prepare: "მზადდება", prepared: "მზადაა გასაშვებად", uploading: "იტვირთება", training: "იწვრთნება",
+  partial: "სესია დასრულდა", done: "დასრულდა", failed: "შეცდომა", stopped: "გაჩერებულია" };
+const TARGET_KA = { kaggle: "Kaggle", local: "ეს კომპიუტერი", gcp: "Google Cloud" };
+
+function renderJobs(tj) {
+  const jobs = (tj?.jobs || []).filter(jobActive);
+  $("#jobs").innerHTML = jobs.length ? jobs.map((j) => `
     <div class="job">
       <div class="run-head">
-        <div><b>${esc(vname[r.voice] || r.voice)}</b> <span class="muted small">${esc(DEVICE[r.device] || r.device || "")}${r.devices > 1 ? ` · ${r.devices}× GPU` : ""}</span></div>
-        <span class="badge ${r.status === "failed" ? "bad" : r.status === "paused" ? "planned" : "training"}">${RUN_STATUS[r.status] || r.status}</span>
+        <div><b>${esc(j.name)}</b> <span class="muted small">${j.kind === "base" ? "საბაზო მოდელი" : esc(j.slot)}${j.target ? " · " + esc(TARGET_KA[j.target] || j.target) : ""}</span></div>
+        <span class="badge ${j.stage === "failed" ? "bad" : "training"}">${esc(STAGE_KA[j.stage] || j.stage || "")}${j.busy ? " …" : ""}</span>
       </div>
-      <div class="bar"><span style="width:${progressPct(r).toFixed(1)}%"></span></div>
-      <div class="muted small">ეპოქა ${r.device === "gcp" ? epochShown(r) : r.epoch != null ? r.epoch + (r.device === "kaggle" ? 1 : 0) : 0} / ${r.max_epochs}
-        ${r.clips ? ` · ${r.clips.toLocaleString()} კლიპი` : ""}${r.num_speakers > 1 ? ` · ${r.num_speakers} დინამიკი` : ""}
-        ${r.device !== "kaggle" && r.eta_hours != null && r.status === "training" ? ` · დარჩა ~${r.eta_hours} სთ` : ""}
-        ${r.device === "kaggle" && r.kaggle_hours ? ` · Kaggle-ზე ${r.kaggle_hours} სთ` : ""}
-        ${r.kaggle_state && r.status === "training" ? ` · ${esc(r.kaggle_state.replace(/.*status /, "").replace(/"/g, ""))}` : ""}
-        ${r.error ? ` · <span class="err">${esc(r.error)}</span>` : ""}</div>
-    </div>`).join("") : `<div class="empty">ამჟამად არაფერი იწვრთნება.</div>`;
+      <div class="bar"><span style="width:${j.max_epochs ? Math.min(100, (j.epoch / j.max_epochs) * 100).toFixed(1) : 0}%"></span></div>
+      <div class="muted small">ეპოქა ${j.epoch} / ${j.max_epochs ?? "—"}${j.note ? " · " + esc(j.note) : ""}${j.error ? ` · <span class="err">${esc(j.error)}</span>` : ""}</div>
+    </div>`).join("") + `<div class="actions"><button class="ghost small" data-goto-tab="train">დეტალები — „წვრთნა“ →</button></div>`
+    : `<div class="empty">ამჟამად არაფერი მიმდინარეობს.</div>`;
+  $("#jobs").querySelector("[data-goto-tab]")?.addEventListener("click", () => document.querySelector('.tabs button[data-tab="train"]').click());
+}
+
+function renderLibrarySummary() {
+  const shown = voices.filter((v) => v.status !== "hidden");
+  $("#ov-voices").innerHTML = shown.length ? shown.map((v) => `
+    <div class="check-row"><span class="badge ${v.status}">${esc(STATUS[v.status] || v.status)}</span> <b>${esc(v.name)}</b>
+      <span class="muted small">${esc([v.gender, v.character].filter(Boolean).join(" · "))}</span></div>`).join("")
+    : `<div class="empty">ჯერ არცერთი — „⚙ პარამეტრები → მოდელები → ჩამოტვირთვა“.</div>`;
 }
 
 // ---------- voices ----------
@@ -198,7 +192,7 @@ function bindVoiceCards() {
 }
 
 const postJSON = (url, data) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-async function reloadVoices() { voices = await api("/api/voices"); renderVoices(); }
+async function reloadVoices() { voices = await api("/api/voices"); renderVoices(); renderLibrarySummary(); }
 window.reloadVoices = reloadVoices;
 
 // ---------- შემოწმება: ხმა ↔ ნარევი, ერთი და იგივე ფრაზები + MMS (tools/voice_check.py) ----------
@@ -395,119 +389,7 @@ $("#compare").addEventListener("click", async () => {
   }
 });
 
-// ---------- sources ----------
 const sampleAudio = new Audio();
-let sourceFilter = "";
-
-function snrClass(v) { return v == null ? "" : v >= 30 ? "good" : v >= 20 ? "mid" : "bad"; }
-
-function renderSources(sources) {
-  if (!sources.length) {
-    $("#sources").innerHTML = `<div class="card"><div class="empty">წყაროები ჯერ არ არის დამუშავებული.</div></div>`;
-    return;
-  }
-  const slotName = Object.fromEntries(voices.map((v) => [v.id, v.name]));
-  $("#sources").innerHTML = sources.map((src) => {
-    const sm = src.summary;
-    const slots = [...new Set(src.speakers.map((s) => s.slot).filter(Boolean))];
-    const list = src.speakers.filter((s) => !sourceFilter || s.slot === sourceFilter);
-    return `
-    <div class="card">
-      <h2>${esc(sm.source)}</h2>
-      <p class="muted">${sm.speakers} დინამიკი · ${sm.hours} საათი ·
-        1+ საათი აქვს ${sm.speakers_over["1"]}-ს, 2+ საათი — ${sm.speakers_over["2"]}-ს.
-        ქვემოთ კანდიდატებია (${src.speakers.length}), თითოს 8 შემთხვევითი კლიპით.</p>
-      <div class="chips">
-        <button class="chip" data-slot="" aria-pressed="${!sourceFilter}">ყველა</button>
-        ${slots.map((s) => `<button class="chip" data-slot="${s}" aria-pressed="${sourceFilter === s}">${esc(slotName[s] || s)}</button>`).join("")}
-      </div>
-      <div class="legend muted small">F0 — ხმის სიმაღლე (კაცი ~85–155 Hz, ქალი ~165–255 Hz) ·
-        SNR — ფონური ხმაურის სისუფთავე (30+ კარგი, &lt;20 ხმაურიანი) · ⚠ — კლიპებს შორის ტონი ძალიან იცვლება, შეიძლება ანგარიშზე რამდენიმე ადამიანი იწერდეს</div>
-      <div class="table-wrap"><table class="spk">
-        <thead><tr><th>დინამიკი</th><th class="num">საათი</th><th class="num">აუდიო</th><th>სქესი · ასაკი</th>
-          <th class="num">F0</th><th class="num">SNR</th><th>შეფასება</th><th>სლოტი</th><th>ნიმუშები</th></tr></thead>
-        <tbody>${list.map((s) => `
-          <tr class="${s.verdict === "bad" ? "rejected" : ""}">
-            <td class="mono">${esc(s.id)}</td>
-            <td class="num" title="დადასტურებული: ${s.validated_hours} სთ">${s.hours.toFixed(1)}</td>
-            <td class="num" title="კლიპები, რომლებიც აუდიო-არქივშია">${s.audio_clips ?? "—"}</td>
-            <td>${s.gender.startsWith("male") ? "კაცი" : s.gender.startsWith("female") ? "ქალი" : "—"} · ${esc(s.age_ka || "—")}</td>
-            <td class="num">${s.f0_median ? Math.round(s.f0_median) : "—"}${s.f0_spread > 3 ? ` <span title="F0-ის გაფანტულობა ${s.f0_spread} ნახევარტონი">⚠</span>` : ""}</td>
-            <td class="num"><span class="snr ${snrClass(s.snr_db)}">${s.snr_db ?? "—"}</span></td>
-            <td>${s.verdict === "good" ? `<span class="verdict good" title="${esc(s.verdict_note)}">✓ კარგი</span>`
-              : s.verdict === "bad" ? `<span class="verdict bad" title="${esc(s.verdict_note)}">✗ არ ვარგა</span>`
-              : s.verdict === "maybe" ? `<span class="verdict maybe" title="${esc(s.verdict_note)}">? საეჭვო</span>` : ""}</td>
-            <td>${s.verdict === "bad" ? "" : `${s.verdict === "good" ? "<b>" : '<span class="muted">'}${esc(slotName[s.slot] || "")}${s.verdict === "good" ? "</b>" : "</span>"}`}</td>
-            <td class="samples">${s.samples.map((x, i) =>
-              `<button class="play" data-src="/api/sample/${src.name}/${x.file}" title="${esc(x.text)}">${i + 1}</button>`).join("")}</td>
-          </tr>`).join("")}</tbody>
-      </table></div>
-      <p class="muted small" id="now-playing"></p>
-    </div>`;
-  }).join("");
-
-  $("#sources").querySelectorAll(".chip[data-slot]").forEach((c) =>
-    c.addEventListener("click", () => { sourceFilter = c.dataset.slot; renderSources(sources); }));
-  $("#sources").querySelectorAll(".play").forEach((b) =>
-    b.addEventListener("click", () => {
-      $("#sources").querySelectorAll(".play.on").forEach((x) => x.classList.remove("on"));
-      b.classList.add("on");
-      sampleAudio.src = b.dataset.src;
-      sampleAudio.play();
-      $("#now-playing").textContent = "▶ " + b.title;
-    }));
-}
-sampleAudio.addEventListener("ended", () => document.querySelectorAll(".play.on").forEach((x) => x.classList.remove("on")));
-
-// ---------- წვრთნები (მიმოხილვა → „ყველა წვრთნა“) ----------
-function renderRuns(data) {
-  const runs = data.runs || [];
-  const vname = Object.fromEntries(voices.map((v) => [v.id, v.name]));
-  vname.base_ka = "ქართული საბაზო მოდელი";
-  const q = data.queue || {};
-  const queueHtml = Object.keys(q).length ? `<div class="queue muted small">${Object.entries(q).map(([dev, list]) =>
-    `<div><b>${dev.toUpperCase()}</b> რიგი: ${list.map((s) => {
-      const r = runs.find((x) => x.voice === s);
-      const cls = r ? (r.status === "done" ? "q-done" : r.status === "failed" ? "q-fail" : "q-now") : "";
-      return `<span class="${cls}">${esc(vname[s] || s)}</span>`;
-    }).join(" → ")}</div>`).join("")}</div>` : "";
-  if (!runs.length) {
-    $("#runs").innerHTML = queueHtml + `<div class="empty">წვრთნა ჯერ არ დაწყებულა.</div>`;
-    return;
-  }
-  $("#runs").innerHTML = queueHtml + runs.map((r) => {
-    const n = r.steps_per_epoch || 1;
-    const pct = Math.min(100, (((r.epoch || 0) * n + (r.step_in_epoch || 0)) / ((r.max_epochs || 1) * n)) * 100);
-    const previews = [...(r.previews || [])].reverse().sort((a, b) => (b.reference ? 1 : 0) - (a.reference ? 1 : 0));
-    return `
-    <div class="run">
-      <div class="run-head">
-        <div><b>${esc(vname[r.voice] || r.voice)}</b> <span class="mono muted">${esc(r.voice)}</span></div>
-        <div><span class="badge ${r.status === "done" ? "ready" : r.status === "failed" || r.status === "paused" ? "planned" : "training"}">${RUN_STATUS[r.status] || r.status}</span>
-          <span class="badge planned">${esc((r.device || "").toUpperCase())} · batch ${r.batch}</span></div>
-      </div>
-      <div class="bar"><span style="width:${pct.toFixed(1)}%"></span></div>
-      <div class="muted small">epoch ${r.epoch ?? 0} / ${r.max_epochs} · ${r.clips} კლიპი ·
-        ${r.sec_per_step ? r.sec_per_step + " წმ/ნაბიჯი" : ""}
-        ${r.status === "training" && r.eta_hours != null ? ` · დარჩა ~${r.eta_hours} სთ` : ""}
-        ${r.error ? ` · <span class="err">${esc(r.error)}</span>` : ""}</div>
-      ${previews.length ? `<div class="previews">${previews.map((p) => `
-        <div class="prev-row"><span class="small">${p.reference ? `<b>${esc(p.label)}</b>` : `${p.final ? "<b>საბოლოო</b>" : esc(p.label || "#" + p.n)} · epoch ${p.epoch ?? "—"} · ${esc((p.time || "").slice(5, 16).replace("T", " "))}`}</span>
-          <span class="samples">${p.files.slice(0, 8).map((f, i) =>
-            `<button class="play" data-src="/api/preview/${esc(r.voice)}/${f.file}" title="${esc(f.text)}">${i + 1}</button>`).join("")}</span></div>`).join("")}</div>`
-        : `<p class="muted small">პირველი მოსასმენი ნიმუში ~45 წუთში გამოჩნდება.</p>`}
-    </div>`;
-  }).join("");
-  $("#runs").querySelectorAll(".play").forEach((b) => b.addEventListener("click", () => {
-    document.querySelectorAll(".play.on").forEach((x) => x.classList.remove("on"));
-    b.classList.add("on");
-    sampleAudio.onended = null;  // ხელით დაჭერა წყვეტს „▶ ყველა“-ს რიგს
-    sampleAudio.src = b.dataset.src;
-    sampleAudio.play();
-  }));
-}
-
-
 function bindPlays(root) {
   root.querySelectorAll(".play").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll(".play.on").forEach((x) => x.classList.remove("on"));
@@ -565,16 +447,17 @@ function renderBase(b) {
   $("#base").innerHTML = `
     <div class="card">
       <h2>ქართული საბაზო მოდელი</h2>
-      <p class="muted">${esc(b.note || "")}. მისი ამოცანაა ქართული გამოთქმის სწავლა ბევრ ხმაზე — მისგან შეიქმნება საბაზისო სინთეზური ხმა,
-        შემდეგ ქალისა და კაცის ხმები. ლიცენზიისგან თავისუფალია.</p>
+      <p class="muted">${esc(b.note || "")}. ქართული გამოთქმა ისწავლა ბევრ ხმაზე — მისგან იქმნება ხმის შემქმნელის ნარევები და
+        ცალკე ხმები (მაგ. „ქალი 1“). ლიცენზიისგან თავისუფალია.</p>
       <div class="kv">
         <div><span>საწყისი წერტილი</span><b>LJSpeech (ინგლისური, public domain)</b></div>
         <div><span>დინამიკი</span><b>${ds.speakers ?? "—"}</b></div>
         <div><span>მონაცემი</span><b>${ds.hours ?? "—"} სთ · ${(ds.clips || 0).toLocaleString()} კლიპი</b></div>
         <div><span>სად იწვრთნება</span><b>${whereTraining(r, job)}</b></div>
         <div><span>ეპოქა</span><b>${r?.epoch != null ? r.epoch + 1 : 0} / ${job.max_epochs || "—"}</b></div>
-        ${r?.device === "gcp" && r.eta_hours != null ? `<div><span>დასრულება</span><b>~${hm(r.eta_hours)} · ${esc(etaClock(r.eta_hours))}</b></div>` : ""}
-        <div><span>Kaggle-ზე სულ</span><b>${r?.kaggle_hours ?? 0} სთ · ბოლო 7 დღეში ${b.kaggle_week_hours}/${b.kaggle_week_limit}</b></div>
+        ${r?.device === "gcp" && r.eta_hours != null && r.status === "training" ? `<div><span>დასრულება</span><b>~${hm(r.eta_hours)} · ${esc(etaClock(r.eta_hours))}</b></div>` : ""}
+        <div><span>Kaggle-ზე სულ</span><b>${r?.kaggle_hours ?? 0} სთ</b></div>
+        ${r?.status === "done" && r.updated ? `<div><span>დასრულდა</span><b>${esc(r.updated.slice(0, 16).replace("T", " "))}</b></div>` : ""}
       </div>
       ${r ? `
         <div class="bar big"><span style="width:${progressPct(r).toFixed(1)}%"></span></div>
@@ -582,8 +465,8 @@ function renderBase(b) {
           ${r.kaggle_state && r.status === "training" && r.device !== "gcp" ? `<span class="muted"> · ${esc(r.kaggle_state.replace(/.*status /, "").replace(/"/g, ""))}</span>` : ""}
           ${r.session_started && r.device !== "gcp" ? `<span class="muted"> · მიმდინარე სესია დაიწყო ${esc(r.session_started.slice(5, 16).replace("T", " "))}</span>` : ""}
           ${r.error ? ` · <span class="err">${esc(r.error)}</span>` : ""}</p>
-        ${gcpLine(r)}
-        ${r.device === "gcp" ? "" : localLine(r.local)}`
+        ${r.status === "done" ? "" : gcpLine(r)}
+        ${r.device === "gcp" || r.status === "done" ? "" : localLine(r.local)}`
         : `<div class="empty">წვრთნა ჯერ არ დაწყებულა — dataset Kaggle-ზე იტვირთება.</div>`}
     </div>
 
@@ -601,14 +484,15 @@ function renderBase(b) {
         <p class="muted small">${ds.low ?? 0} დაბალი (კაცის ტიპის) · ${ds.high ?? 0} მაღალი (ქალის ტიპის) ხმა · დინამიკზე მედიანა ${ds.minutes_median ?? "—"} წთ</p>
         <div class="hist">${(ds.f0_hist || []).map((h) => `
           <div class="hcol" title="${h.from}–${h.to} Hz: ${h.n} დინამიკი"><span style="height:${(h.n / maxN * 100).toFixed(0)}%"></span><i>${h.from}</i></div>`).join("")}</div>
-        <p class="muted small">Hz — ხმის ძირითადი სიხშირე. საბაზისო სინთეზური ხმა ~150–170 Hz-ზე იქნება — არც კაცის, არც ქალის.</p>
+        <p class="muted small">Hz — ხმის ძირითადი სიხშირე. ~85–155 Hz — კაცის, ~165–255 Hz — ქალის ხმა.</p>
       </div>
       <div class="card">
         <h2>სესიები</h2>
         ${sessions.length ? `<table><thead><tr><th>დასრულდა</th><th class="num">საათი</th><th class="num">ეპოქა</th><th>შედეგი</th></tr></thead>
-          <tbody>${sessions.map((x) => `<tr><td>${esc((x.ended || "").slice(5, 16).replace("T", " "))}</td><td class="num">${x.hours ?? "—"}</td>
+          <tbody>${sessions.filter((x) => x.hours).map((x) => `<tr><td>${esc((x.ended || "").slice(5, 16).replace("T", " "))}</td><td class="num">${x.hours ?? "—"}</td>
             <td class="num">${x.epoch != null ? x.epoch + 1 : "—"}</td><td>${esc(RUN_STATUS[x.status] || x.status || "")}</td></tr>`).join("")}</tbody></table>`
           : `<div class="empty">დასრულებული სესია ჯერ არ არის.</div>`}
+        <p class="muted small">სესიები Kaggle-ზე; ბოლო ეტაპი (ეპოქა 27–72) — Google Cloud L4.</p>
       </div>
     </div>`;
   bindPlays($("#base"));
@@ -703,14 +587,14 @@ function renderData(d) {
 // ---------- განახლება ----------
 async function refresh(fromTab = false) {
   try {
-    const [ov, base] = await Promise.all([api("/api/overview"), api("/api/base")]);
-    renderStats(ov, base);
-    renderJobs(ov);
+    const [ov, base, tj] = await Promise.all([api("/api/overview"), api("/api/base"), api("/api/train/jobs").catch(() => null)]);
+    renderStats(ov, base, tj);
+    renderJobs(tj);
+    renderLibrarySummary();
     if (!$("#tab-base").hidden || !$("#base").innerHTML) renderBase(base);
     renderDesigner();
     if (fromTab && !$("#tab-settings").hidden) window.Settings?.render();  // ფორმა 60 წამში არ უნდა გასუფთავდეს
     if (!$("#tab-train").hidden) window.Train?.render();
-    if ($("#runs").closest("details").open) renderRuns(await api("/api/training"));
   } catch (e) { console.warn(e); }
 }
 setInterval(() => { if (!document.hidden) refresh(); }, 60000);
@@ -724,10 +608,6 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   updateNorm();
   loadRoadmap();
   await refresh(true);
-  const [runs, sources, data] = await Promise.all([api("/api/training"), api("/api/sources"), api("/api/data")]);
-  renderRuns(runs);
-  renderSources(sources);
-  renderData(data);
+  renderData(await api("/api/data"));
   window.Settings?.maybeFirstRun();
-  $("#env-box").addEventListener("toggle", (e) => { if (e.target.open && !$("#env").innerHTML) loadEnv(); }, { once: false });
 })();

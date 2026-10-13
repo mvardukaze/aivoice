@@ -19,7 +19,7 @@ import subprocess
 import threading
 import time
 import wave
-from pathlib import Path
+
 
 import numpy as np
 from fastapi import APIRouter, HTTPException

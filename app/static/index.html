@@ -46,15 +46,9 @@
         <p class="muted small" id="roadmap-updated"></p>
       </div>
       <div class="card">
-        <details id="env-box">
-          <summary><h2 class="inline">გარემო</h2> <span class="muted small">ხელსაწყოები და აპარატურა</span></summary>
-          <div class="card-head"><span></span><button class="ghost small" id="env-refresh">განახლება</button></div>
-          <div id="env"></div>
-        </details>
-        <details>
-          <summary><h2 class="inline">ყველა წვრთნა</h2> <span class="muted small">ნიმუშებით</span></summary>
-          <div id="runs"></div>
-        </details>
+        <h2>ბიბლიოთეკა</h2>
+        <div id="ov-voices" class="checks"></div>
+        <div class="actions"><button class="ghost small" onclick="document.querySelector('.tabs button[data-tab=voices]').click()">„ხმები“ →</button></div>
       </div>
     </div>
   </section>
@@ -163,20 +157,14 @@
   <!-- მონაცემები -->
   <section id="tab-data" class="tab" hidden>
     <div id="data"></div>
-    <div class="card">
-      <details>
-        <summary><h2 class="inline">Common Voice 17 — მოსმენილი კანდიდატები</h2> <span class="muted small">ძველი შერჩევა, თქვენი შეფასებებით</span></summary>
-        <div id="sources"></div>
-      </details>
-    </div>
   </section>
 </main>
 
-<script src="app.js?v=13"></script>
-<script src="rec.js?v=3"></script>
-<script src="designer.js?v=15"></script>
-<script src="settings.js?v=1"></script>
-<script src="train.js?v=1"></script>
-<script src="longform.js?v=1"></script>
+<script src="app.js?v=20"></script>
+<script src="rec.js?v=20"></script>
+<script src="designer.js?v=20"></script>
+<script src="settings.js?v=20"></script>
+<script src="train.js?v=20"></script>
+<script src="longform.js?v=20"></script>
 </body>
 </html>

@@ -18,10 +18,13 @@ window.Designer = (() => {
   let speakers = [], byName = {}, mix = {}, meta = null, inited = false, last = null;
   let audio = null;
   // ყველა ხმის მოსმენა (audition): რიგი, მიმდინარე ინდექსი, შეფასებები
-  let scan = {};  // tools/gh_scan.py: MMS-ის სიზუსტე და „ღ“
-  const ghN = (x) => x.gh_count ?? x.gh_hit;  // „ღ“-ების რაოდენობა MMS-ის ჩანაწერში (6-დან)
-  const scanScore = (n) => { const x = scan[n]; return x ? ghN(x) / 6 * 2 - x.cer : -9; };
-  const scanLabel = (n) => { const x = scan[n]; return x ? `ღ ${ghN(x)}/6 · შეცდომა ${Math.round(x.cer * 100)}%` : ""; };
+  let scan = {};  // tools/mms_rank.py: დინამიკი → MMS-ის შეცდომა (cer) — „ავტომატური რიგისთვის“
+  const loadScan = async () => {
+    const r = await api("/api/designer/rank").catch(() => null);
+    scan = Object.fromEntries((r?.rows || []).filter((x) => x && x.kind === "speaker").map((x) => [x.name, x]));
+  };
+  const scanScore = (n) => { const x = scan[n]; return x ? -x.cer : -9; };
+  const scanLabel = (n) => { const x = scan[n]; return x ? `MMS შეცდომა ${Math.round(x.cer * 100)}%` : ""; };
   let ratings = {}, aud = null, au = { queue: [], i: 0, playing: false, phrase: 1, order: "f0", skipBad: true, cache: {} };
 
   const f0color = (f) => {
@@ -47,7 +50,7 @@ window.Designer = (() => {
     $("#designer").innerHTML = `
       <div class="card">
         <div class="card-head"><h2>ხმის შემქმნელი</h2>
-          <span class="muted small">საბაზო მოდელი · ეპოქა ${meta.epoch != null ? meta.epoch + 1 : "—"} (შუალედური — ხარისხი ყოველ სესიაზე უმჯობესდება)</span></div>
+          <span class="muted small">საბაზო მოდელი · ეპოქა ${meta.epoch != null ? meta.epoch + 1 : "—"} </span></div>
         <p class="muted">აირჩიეთ რამდენიმე ხმა რუკაზე ან მზა ვარიანტით, ძრავებით დაალაგეთ წილები და მოუსმინეთ.
           ნარევი ახალი ხმაა — არცერთ რეალურ დინამიკს არ ეკუთვნის.</p>
         <div class="des-grid">
@@ -91,7 +94,6 @@ window.Designer = (() => {
         </div>
       </div>
       <div class="card" id="rank-card"></div>
-      <div class="card" id="gh-card"></div>
       <div class="card" id="aud-card">
         <div class="card-head"><h2>ყველა ხმის მოსმენა</h2><span class="muted small" id="aud-count"></span></div>
         <p class="muted small">რუკის ყველა ხმა ერთსა და იმავე ფრაზას ზედიზედ კითხულობს, თავისით გადადის შემდეგზე.
@@ -122,9 +124,8 @@ window.Designer = (() => {
     audio = $("#des-audio");
     aud = new Audio();
     ratings = await api("/api/designer/ratings").catch(() => ({}));
-    scan = await api("/api/designer/scan").catch(() => ({}));
+    await loadScan();
     bindAudition();
-    renderGh();
     renderRank();
     bindZoom();
     drawMap();
@@ -378,7 +379,7 @@ window.Designer = (() => {
     $("#aud-dislike").onclick = () => rateCur(-1);
     $("#aud-phrase").onchange = (e) => { au.phrase = +e.target.value; if (au.playing) audPlay(au.i); };
     $("#aud-order").onchange = async (e) => {  // ახალი რიგი — ყოველთვის თავიდან
-      if (e.target.value === "auto") scan = await api("/api/designer/scan").catch(() => scan);
+      if (e.target.value === "auto") await loadScan();
       au.order = e.target.value; buildQueue(); audRestart(); };
     $("#aud-skip").onchange = (e) => (au.skipBad = e.target.checked);
     $("#aud-mix-all").onclick = () => {
@@ -444,68 +445,6 @@ window.Designer = (() => {
       aud.src = r.url; aud.play();
     }));
     box.querySelectorAll("[data-rkmix]").forEach((b) => b.addEventListener("click", () => { mix[b.dataset.rkmix] = 50; renderMix(); drawMap(); }));
-  }
-
-  // ---------- „ღ“-ს ბრმა ტესტი: ჯერ ყური, მერე ავტომატური ამომცნობების პასუხი ----------
-  let gh = { answers: {} };
-  const GH_LEVELS = [[3, "საუკეთესო"], [2, "კარგი"], [1, "საშუალო"], [0, "ცუდი"]];
-  const lvName = (v) => (GH_LEVELS.find(([l]) => l === v) || [0, "—"])[1];
-  async function renderGh() {
-    const box = $("#gh-card");
-    const d = await api("/api/designer/ghtest").catch(() => null);
-    if (!d || !d.clips.length) { box.hidden = true; return; }
-    box.hidden = false;
-    if (!gh.loaded) { gh.answers = { ...(d.answers || {}) }; gh.loaded = true; }  // სერვერიდან მხოლოდ პირველად
-    const done = Object.keys(gh.answers).length;
-    const head = `<div class="card-head"><h2>„ღ“-ს ბრმა ტესტი</h2><span class="muted small">${done} / ${d.clips.length} შეფასებული</span></div>
-      <p class="muted small">20 ხმა ამბობს: <b>„${esc(d.text || "")}“</b> — აქ 4 „ღ“-ია (დღეს, ზღვაზე, ტალღები, აღარ). ნომრები შემთხვევითია — ვინ არის, არ ჩანს.
-        მოუსმინეთ და შეაფასეთ „ღ“-ები: საუკეთესო, კარგი, საშუალო თუ ცუდი. ბოლოს „შედარება“ გაჩვენებთ, რამდენად ემთხვევა თქვენს ყურს ავტომატური მსმენელი (MMS).</p>`;
-    if (d.compare) { box.innerHTML = head + ghCompare(d.compare); bindGhReset(); return; }
-    box.innerHTML = head + `<div class="gh-grid">${d.clips.map((c) => {
-        const v = gh.answers[c.id];
-        return `<div class="gh-item ${v >= 2 ? "yes" : v != null ? "no" : ""}">
-          <b>#${c.id}</b>
-          <button class="play" data-src="${c.url}">▶</button>
-          ${GH_LEVELS.map(([lv, t]) => `<button class="ghost small ${v === lv ? "on" : ""}" data-gh="${c.id}" data-v="${lv}">${t}</button>`).join("")}
-        </div>`; }).join("")}</div>
-      <div class="actions"><button class="primary" id="gh-submit" ${done < d.clips.length ? "disabled" : ""}>შედარება</button>
-        <span class="muted small">${d.ready ? "" : "ავტომატური შეფასება ჯერ მიმდინარეობს — შედარება მის დასრულებას დაელოდება."}</span></div>`;
-    box.querySelectorAll(".play").forEach((b) => b.addEventListener("click", () => { aud.src = b.dataset.src; aud.play(); }));
-    box.querySelectorAll("[data-gh]").forEach((b) => b.addEventListener("click", () => {
-      gh.answers[b.dataset.gh] = +b.dataset.v;
-      ghSave(false);
-      renderGh();
-    }));
-    const sub = $("#gh-submit");
-    if (sub) sub.onclick = async () => {
-      try {
-        await ghSave(true);
-        renderGh();
-      } catch (e) { alert(e.message); }
-    };
-  }
-  const ghSave = (final) => api("/api/designer/ghtest/answers", { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ answers: gh.answers, final }) }).catch((e) => alert("ვერ შეინახა: " + e.message));
-  function ghCompare(c) {
-    const mark = (v) => (v === true ? "✓" : v === false ? "✗" : "—");
-    return `<p><b>თანხვედრა თქვენს ყურთან:</b> ორ ჯგუფად — <b>${c.agree.mms}%</b>
-        <span class="muted small">(თქვენი „საუკეთესო/კარგი“ ↔ MMS-ის 3–4 „ღ“)</span>
-        · რიგის მსგავსება — <b>${c.rho ?? "—"}</b> <span class="muted small">(1 = სრული თანხვედრა, 0 = კავშირი არ არის)</span></p>
-      <div class="cmp-wrap"><table class="cmp gh-table">
-        <thead><tr><th>#</th><th>ხმა</th><th>თქვენ</th><th>MMS</th><th>რა დაწერა MMS-მა</th><th>MMS-ის ჯგუფი</th></tr></thead>
-        <tbody>${c.rows.map((r) => `<tr>
-          <td><button class="play" data-src="/api/designer/ghtest/audio/${String(r.id).padStart(2, "0")}.wav">#${r.id}</button></td>
-          <td class="small">${r.f0 ? Math.round(r.f0) + " Hz" : ""} <span class="muted">${esc(r.speaker)}</span></td>
-          <td>${r.user != null ? esc(lvName(r.user)) : "—"}</td>
-          <td class="${r.user == null ? "" : (r.user >= 2) === r.mms_gh ? "ok" : "bad"}">ღ ${r.mms_count ?? "—"}/4</td>
-          <td class="small">${esc(r.mms || "")}</td>
-          <td class="small muted">${esc(r.group || "")}</td>
-        </tr>`).join("")}</tbody></table></div>
-      <div class="actions"><button class="ghost small" id="gh-reset">თავიდან შეფასება</button></div>`;
-  }
-  function bindGhReset() {
-    $("#gh-card").querySelectorAll(".play").forEach((b) => b.addEventListener("click", () => { aud.src = b.dataset.src; aud.play(); }));
-    $("#gh-reset").onclick = async () => { gh.answers = {}; await ghSave(false); renderGh(); };
   }
 
   return { render: () => { if (!inited) init().catch((e) => ($("#designer").innerHTML = `<div class="card"><div class="empty">შეცდომა: ${esc(e.message)}</div></div>`)); } };

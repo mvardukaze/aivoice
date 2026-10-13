@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
+from app.config import cfg, path as cpath  # noqa: E402,F401
 PY = ROOT / "training" / ".venv" / "bin" / "python"
 CTRL = ROOT / "data" / "local_train.json"
 CKPT_STEPS = 1400  # ≈30 წთ (2.56 წმ/ბატჩი, ბატჩზე 2 global_step)

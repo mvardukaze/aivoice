@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
+from app.config import cfg, expand, path as cpath  # noqa: E402,F401
 G = str(expand(cfg()["gcp"]["gcloud"])) if "/" in cfg()["gcp"]["gcloud"] else cfg()["gcp"]["gcloud"]
 NAME = "aivoice-l4"
 ZONES = ["us-central1-a", "us-central1-b", "us-central1-c"]

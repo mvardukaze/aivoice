@@ -3,7 +3,7 @@ MMS „ღ“-ს მსაჯულად არ გამოდგა, მა�
 მომხმარებლის ყურთან კარგად ასახავს (2026-10-12). ტექსტი გახმოვანებამდე ka_text()-ით მზადდება („ოდეს-ღაც“).
 
     training/.venv/bin/python tools/mms_rank.py
-შედეგი: data/ghtest/rank.json — {key: {kind, name, f0, cer, per: [cer…], texts: […]}}; შეჩერების შემდეგ აგრძელებს.
+შედეგი: data/mms_rank.json — {key: {kind, name, f0, cer, per: [cer…], texts: […]}}; შეჩერების შემდეგ აგრძელებს.
 """
 
 import json
@@ -14,8 +14,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from app.config import api_url, cfg, expand, path as cpath  # noqa: E402,F401
-OUT = ROOT / "data" / "ghtest" / "rank.json"
+from app.config import api_url, path as cpath  # noqa: E402,F401
+OUT = ROOT / "data" / "mms_rank.json"
 API = api_url("/api/designer")
 SENTENCES = [
     "გამარჯობა! დღეს მშვენიერი ამინდია, არა?",

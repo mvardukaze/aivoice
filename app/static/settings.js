@@ -32,7 +32,8 @@ window.Settings = (() => {
       </div>` : ""}
 
       <div class="card" id="upd-card">
-        <div class="card-head"><h2>განახლება</h2><span class="muted small" id="upd-cur"></span></div>
+        <h2>განახლება</h2>
+        <div class="muted small" id="upd-cur"></div>
         <div id="upd-body" class="small muted">მოწმდება GitHub…</div>
         <pre class="tr-log" id="upd-log" hidden></pre>
       </div>

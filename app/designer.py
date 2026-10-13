@@ -268,89 +268,13 @@ def rate(r: Rating):
     return {"ok": True, "count": len(cur)}
 
 
-# ---------- „ღ“-ს ბრმა ტესტი (tools/gh_test.py): მომხმარებლის ყური ↔ ავტომატური ამომცნობები ----------
-GHT = ROOT / "data" / "ghtest"
-
-
-class GhAnswers(BaseModel):
-    answers: dict[str, int]  # "id" → 3 საუკეთესო, 2 კარგი, 1 საშუალო, 0 ცუდი
-    final: bool = False      # False — შუალედური შენახვა (ყოველ დაჭერაზე); True — „შედარება“
-
-
-def gh_compare(res: dict, ans: dict) -> dict:
-    """დონეები (0–3) ↔ MMS-ის „ღ“-ები (0–4): რიგის თანხვედრა (სპირმენი) + ორ ჯგუფად (კარგი ≥ 2 ↔ MMS ≥ 3)."""
-    rows, pairs = [], []
-    for r in res["rows"]:
-        a = ans.get(str(r["id"]))
-        rows.append({**r, "user": a})
-        if a is not None:
-            pairs.append((int(a), r.get("mms_count", 0)))
-    n = len(pairs) or 1
-    binary = round(sum((u >= 2) == (m >= 3) for u, m in pairs) / n * 100)
-
-    def ranks(v):
-        order = sorted(range(len(v)), key=lambda i: v[i])
-        rk = [0.0] * len(v)
-        i = 0
-        while i < len(v):
-            j = i
-            while j + 1 < len(v) and v[order[j + 1]] == v[order[i]]:
-                j += 1
-            for k in range(i, j + 1):
-                rk[order[k]] = (i + j) / 2
-            i = j + 1
-        return rk
-    rho = None
-    if len(pairs) > 2:
-        ru, rm = ranks([p[0] for p in pairs]), ranks([p[1] for p in pairs])
-        mu, mm = sum(ru) / len(ru), sum(rm) / len(rm)
-        cov = sum((a - mu) * (b - mm) for a, b in zip(ru, rm))
-        den = (sum((a - mu) ** 2 for a in ru) * sum((b - mm) ** 2 for b in rm)) ** 0.5
-        rho = round(cov / den, 2) if den else None
-    return {"rows": rows, "agree": {"mms": binary}, "rho": rho, "answered": len(pairs)}
-
-
-@router.get("/ghtest")
-def ghtest():
-    clips = read_json(GHT / "clips.json", [])
-    res = read_json(GHT / "results.json")
-    ans = read_json(GHT / "answers.json")
-    out = {"clips": [{"id": c["id"], "url": f"/api/designer/ghtest/audio/{c['id']:02d}.wav"} for c in clips],
-           "ready": res is not None, "text": (res or {}).get("text"), "answers": (ans or {}).get("answers")}
-    if res and ans and ans.get("answers") and ans.get("final"):  # „შედარების“ შემდეგ — შედარებაც
-        out["compare"] = gh_compare(res, ans["answers"])
-    return out
-
-
-@router.get("/ghtest/audio/{name}")
-def ghtest_audio(name: str):
-    p = GHT / "clips" / name
-    if not re.fullmatch(r"\d{2}\.wav", name) or not p.exists():
-        raise HTTPException(404)
-    return FileResponse(p, media_type="audio/wav")
-
-
-@router.post("/ghtest/answers")
-def ghtest_answers(a: GhAnswers):
-    res = read_json(GHT / "results.json")
-    if not res:
-        raise HTTPException(409, "ავტომატური შეფასება ჯერ არ დასრულებულა")
-    (GHT / "answers.json").write_text(json.dumps({"answers": a.answers, "final": a.final,
-                                                  "at": time.strftime("%Y-%m-%dT%H:%M:%S")}, ensure_ascii=False, indent=1),
-                                      encoding="utf-8")
-    return gh_compare(res, a.answers) if a.final else {"ok": True, "saved": len(a.answers)}
-
-
-@router.get("/scan")
-def scan():
-    """tools/gh_scan.py-ის შედეგი: დინამიკი → MMS-ის სიზუსტე (cer) და „ღ“-ს დაჭერა (gh_hit / gh_total)."""
-    return read_json(GHT / "scan.json", {}) or {}
+RANK = ROOT / "data" / "mms_rank.json"  # tools/mms_rank.py
 
 
 @router.get("/rank")
 def rank():
     """tools/mms_rank.py: ყველა ხმა და ნარევი, 5 წინადადება — საუკეთესოდან (ნაკლები შეცდომა) უარესისკენ."""
-    d = read_json(GHT / "rank.json", {}) or {}
+    d = read_json(RANK, {}) or {}
     rows = sorted(d.values(), key=lambda r: r["cer"])
     return {"sentences": ["გამარჯობა! დღეს მშვენიერი ამინდია, არა?",
                           "ოდესღაც, ძალიან დიდი ხნის წინ, ერთ პატარა სოფელში ცხოვრობდა მოხუცი მეთევზე.",
