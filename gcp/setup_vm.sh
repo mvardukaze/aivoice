@@ -48,7 +48,12 @@ RestartSec=60
 [Install]
 WantedBy=multi-user.target
 EOF
+# 4. უქმად დარჩენილი მანქანის გათიშვა (gcp/autostop.sh)
+install -m 755 $U/autostop.sh /opt/aivoice/autostop.sh
+printf '[Unit]\nDescription=aivoice: shut down idle VM after training\n[Service]\nExecStart=/opt/aivoice/autostop.sh\nRestart=always\n[Install]\nWantedBy=multi-user.target\n' \
+  > /etc/systemd/system/aivoice-autostop.service
 systemctl daemon-reload
+systemctl enable --now aivoice-autostop.service
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 $V/python -c "import torch, piper, lightning; print('torch', torch.__version__, 'cuda', torch.cuda.is_available(), 'lightning', lightning.__version__)"
 touch /data/ready

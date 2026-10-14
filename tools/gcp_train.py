@@ -157,7 +157,7 @@ def cmd_push():
         ssh("sudo mkdir -p /data/upload && sudo chown -R aivoice /data")
         files = [(str(ov), ov.name),
                  (str(jp), "job.json"), (str(ROOT / "gcp" / "setup_vm.sh"), "setup_vm.sh"),
-                 (str(ROOT / "gcp" / "train_vm.sh"), "train_vm.sh"),
+                 (str(ROOT / "gcp" / "train_vm.sh"), "train_vm.sh"), (str(ROOT / "gcp" / "autostop.sh"), "autostop.sh"),
                  (str(ckpt), "warmstart.ckpt" if fresh else "resume.ckpt")]
         files.append((str(tar), tar.name))
         # უკვე ატვირთული (იგივე ზომის) ფაილები გამოტოვდება — ატვირთვა ~3 MB/წმ-ია
