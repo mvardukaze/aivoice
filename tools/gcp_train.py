@@ -385,7 +385,7 @@ def cmd_watch():
                         export_designer(RUN / "gcp" / "latest.ckpt")
                         n = len(list((RUN / "previews").glob("k*")))
                         subprocess.run([TPY, str(ROOT / "tools" / "make_previews.py"), str(RUN / "gcp" / "latest.ckpt"),
-                                        "--label", f"Google Cloud #{n + 1 if SLOT != 'base_ka' else n - 1}", "--slot", SLOT],
+                                        "--label", f"Google Cloud #{n if SLOT != 'base_ka' else n - 1}", "--slot", SLOT],
                                        capture_output=True,
                                        env={"CUDA_VISIBLE_DEVICES": "", "PATH": "/usr/bin:/bin", "OMP_NUM_THREADS": "4"})
             except Exception as e:

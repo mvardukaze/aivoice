@@ -30,6 +30,8 @@ def main():
     run = cpath("runs") / a.slot
     job = json.loads((ROOT / "data" / "kaggle_jobs" / f"{a.slot}.json").read_text())
     cfg = run / "kaggle_out" / "config.json"
+    if not cfg.exists():  # Google Cloud-ზე მიმდინარე წვრთნა — config ჯერ მხოლოდ gcp/-შია
+        cfg = run / "gcp" / "config.json"
     cpath("tmp").mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=cpath("tmp")) as td:
         onnx = Path(td) / "m.onnx"
