@@ -11,7 +11,7 @@
   3. ქულა: MMS (მთავარი) + SNR + შიშინი — საუკეთესოები ჯერ.
   4. თითო დინამიკზე ზღვარი (თავად შეირჩევა, რომ ჯამი --hours იყოს) — ერთმა ხმამ dataset არ „მიითვისოს“;
      ≥ 3 წთ-ზე ნაკლები დინამიკი არ შედის (მისი „ანაბეჭდი“ კარგად ვერ ისწავლება).
---exclude-from: წინა შერჩევის ჩანაწერები გამოტოვდება (შემდეგი 40 სთ-ისთვის).
+--exclude-from: წინა შერჩევის ჩანაწერები გამოტოვდება; უკვე გაშვებული („launched“) შერჩევები — ყოველთვის.
 """
 
 import argparse
@@ -53,7 +53,9 @@ def main():
     dec = read_json(DECISIONS, {}) or {}
     rows = {r["spk"]: r for r in __import__("app.quality_api", fromlist=["summary"]).summary()["speakers"]}
     skip = set()
-    for name in a.exclude_from:
+    # უკვე გაშვებული შერჩევების ჩანაწერები ავტომატურად გამოტოვდება (შემდეგი 40 სთ — ახალი ჩანაწერებით)
+    launched = [f.stem for f in OUT.glob("*.json") if f.stem != a.name and json.loads(f.read_text(encoding="utf-8")).get("launched")]
+    for name in sorted(set(a.exclude_from) | set(launched)):
         skip |= set(json.loads((OUT / f"{name}.json").read_text(encoding="utf-8"))["clips"])
     per = {}
     for spk, clips in d["clips"].items():
@@ -94,7 +96,8 @@ def main():
              "mean_cer": round(sum(c["cer"] for cs in sel.values() for c in cs) / max(1, sum(len(cs) for cs in sel.values())), 4)}
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"{a.name}.json").write_text(json.dumps({
-        "name": a.name, "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "rules": RULES, "params": vars(a), "stats": stats,
+        "name": a.name, "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "base": sorted(launched)[-1] if launched else None,  # გაგრძელება: ამ მოდელის დინამიკების რიგი (build-selection) "rules": RULES, "params": vars(a), "stats": stats,
         "speakers": speakers, "clips": sorted(c["id"] for cs in sel.values() for c in cs)}, ensure_ascii=False, indent=1),
         encoding="utf-8")
     print(json.dumps(stats, ensure_ascii=False))

@@ -56,6 +56,12 @@ def main():
             if i % 2000 == 0:
                 print(f"  {i}/{len(todo)}", flush=True)
 
+    # გაგრძელება: წინა მოდელის დინამიკები (base: <შერჩევა>) იმავე რიგით პირველები — Piper-ი ID-ებს ასე ანიჭებს
+    base = sel.get("base")
+    if base:
+        order = json.loads((ROOT / "data" / "selections" / f"{base}.json").read_text(encoding="utf-8"))["speaker_order"]
+        rank = {s: i for i, s in enumerate(order)}
+        clips.sort(key=lambda c: (rank.get(info[c]["spk"], len(rank)), c))
     lines, spk_sec = [], {}
     for c in clips:
         stem = c.rsplit(".", 1)[0]

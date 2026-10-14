@@ -30,6 +30,7 @@ from .config import ROOT, path as cpath
 router = APIRouter(prefix="/api/quality")
 DIR = cpath("data_root") / "analysis" / "cv27"
 DECISIONS = ROOT / "data" / "dataset_decisions.json"
+SEL = ROOT / "data" / "selections"
 CORPUS = cpath("sources") / "cv27_ka" / "corpus.json"
 
 # ჩანაწერის წესები: (ველი, პირობა, ახსნა)
@@ -122,11 +123,23 @@ def load() -> dict:
     return data
 
 
+def launched_sets() -> dict[str, dict[str, float]]:
+    """გაშვებული შერჩევები: {სახელი: {დინამიკი: წუთები}}."""
+    out = {}
+    for f in sorted(SEL.glob("*.json")) if SEL.exists() else []:
+        d = read_json(f, {}) or {}
+        if d.get("launched"):
+            out[f.stem] = {s: v["minutes"] for s, v in d.get("speakers", {}).items()}
+    return out
+
+
 @router.get("")
 def summary():
     d = load()
+    sets = launched_sets()
     dec = read_json(DECISIONS, {}) or {}
-    rows = [{**r, "decision": dec.get(r["spk"], {}).get("decision", "auto")} for r in d["rows"]]
+    rows = [{**r, "decision": dec.get(r["spk"], {}).get("decision", "auto"),
+             "in_sets": {n: m[r["spk"]] for n, m in sets.items() if r["spk"] in m}} for r in d["rows"]]
     for r in rows:
         r["final"] = r["suggest"] if r["decision"] == "auto" else r["decision"]
     clips = [c for cs in d["clips"].values() for c in cs]
@@ -209,7 +222,6 @@ def stop():
 
 
 # ---------- შერჩევა (tools/select_best.py): შემთხვევითი შემოწმება, ცუდის ამოღება ----------
-SEL = ROOT / "data" / "selections"
 
 
 def _sel(name: str) -> tuple[Path, dict]:
