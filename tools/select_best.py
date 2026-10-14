@@ -97,7 +97,8 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"{a.name}.json").write_text(json.dumps({
         "name": a.name, "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "base": sorted(launched)[-1] if launched else None,  # გაგრძელება: ამ მოდელის დინამიკების რიგი (build-selection) "rules": RULES, "params": vars(a), "stats": stats,
+        # გაგრძელება: ამ მოდელის დინამიკების რიგი (build-selection)
+        "base": sorted(launched)[-1] if launched else None, "rules": RULES, "params": vars(a), "stats": stats,
         "speakers": speakers, "clips": sorted(c["id"] for cs in sel.values() for c in cs)}, ensure_ascii=False, indent=1),
         encoding="utf-8")
     print(json.dumps(stats, ensure_ascii=False))
