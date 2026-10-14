@@ -117,8 +117,14 @@ def _speakers_summary(path: str, mtime: float):
             "minutes_top": mins[:5], "minutes_median": mins[len(mins) // 2] if mins else 0}
 
 
+def base_slot() -> str:
+    """რომელ საბაზო მოდელს ვაჩვენებთ: Google Cloud-ზე ბოლოს გაშვებული (state.json → slot), ან base_ka."""
+    return (read_json(GCP_STATE, {}) or {}).get("slot") or BASE_SLOT
+
+
 @router.get("/base")
 def base():
+    BASE_SLOT = base_slot()  # noqa: N806
     job = read_json(ROOT / "data" / "kaggle_jobs" / f"{BASE_SLOT}.json", {}) or {}
     ds = Path(job.get("dataset_dir") or DDATA / "base_ka_v1")
     sp = ds / "speakers.json"
@@ -130,7 +136,7 @@ def base():
         "dataset": {**(read_json(ds / "stats.json", {}) or {}), **summary},
         "run": run_status(BASE_SLOT),
         "preview_speakers": {s: names.get(s, {}) for s in job.get("preview_speakers", [])},
-        "onnx_ready": (RUNS / BASE_SLOT / "kaggle_out" / f"{BASE_SLOT}.onnx").exists(),
+        "onnx_ready": (RUNS / BASE_SLOT / "kaggle_out" / f"{BASE_SLOT}.onnx").exists(), "slot": BASE_SLOT,
         "kaggle_week_hours": kaggle_week_hours(), "kaggle_week_limit": KAGGLE_WEEKLY_HOURS,
     }
 

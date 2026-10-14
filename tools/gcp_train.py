@@ -96,21 +96,25 @@ def cmd_create(slot: str | None = None):
         save_state(slot=slot)
     assert JOB.exists(), f"{JOB} არ არის"
     pub = KEY.with_suffix(".pub").read_text().strip()
-    for z in ZONES:
-        r = gc("compute", "instances", "create", NAME, "--zone", z,
-               "--machine-type", "g2-standard-8", "--provisioning-model", "SPOT",
-               "--instance-termination-action", "STOP", "--maintenance-policy", "TERMINATE",
-               "--image-family", "pytorch-2-9-cu129-ubuntu-2204-nvidia-580",
-               "--image-project", "deeplearning-platform-release",
-               "--boot-disk-size", "100GB", "--boot-disk-type", "pd-balanced",
-               "--no-service-account", "--no-scopes",
-               "--metadata", f"ssh-keys=aivoice:{pub}", check=False)
-        if r.returncode == 0:
-            save_state(zone=z, created=time.strftime("%Y-%m-%dT%H:%M:%S"), phase="created", slot=SLOT)
-            print("created in", z)
-            return
-        print(z, "→", (r.stderr or "").strip().splitlines()[-1:])
-    raise SystemExit("ვერცერთ ზონაში ვერ შეიქმნა (L4 spot ახლა არ არის) — მოგვიანებით სცადეთ")
+    zones = l4_zones() or ZONES
+    # ჯერ spot (იაფი) ყველა სასურველ ზონაში, მერე on-demand — L4 ხშირად ამოწურულია (STOCKOUT)
+    for spot in (True, False):
+        for z in zones:
+            opts = ["--provisioning-model", "SPOT", "--instance-termination-action", "STOP"] if spot else []
+            r = gc("compute", "instances", "create", NAME, "--zone", z,
+                   "--machine-type", "g2-standard-8", *opts, "--maintenance-policy", "TERMINATE",
+                   "--image-family", "pytorch-2-9-cu129-ubuntu-2204-nvidia-580",
+                   "--image-project", "deeplearning-platform-release",
+                   "--boot-disk-size", "100GB", "--boot-disk-type", "pd-balanced",
+                   "--no-service-account", "--no-scopes",
+                   "--metadata", f"ssh-keys=aivoice:{pub}", check=False)
+            if r.returncode == 0:
+                save_state(zone=z, created=time.strftime("%Y-%m-%dT%H:%M:%S"), phase="created", slot=SLOT,
+                           provisioning="spot" if spot else "on-demand", disk=NAME)
+                print("created in", z, "spot" if spot else "on-demand", flush=True)
+                return
+            print(z, "spot" if spot else "on-demand", "→", (r.stderr or "").strip().splitlines()[-1:], flush=True)
+    raise SystemExit("ვერცერთ ზონაში ვერ შეიქმნა (L4 ახლა არ არის) — მოგვიანებით სცადეთ")
 
 
 def wait_ssh(timeout=600):

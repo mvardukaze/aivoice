@@ -473,7 +473,9 @@ function localLine(l) {
     ${l.stopped ? ` (${esc(l.stopped.slice(5, 16).replace("T", " "))})` : ""}${l.error ? ` · <span class="err">${esc(l.error)}</span>` : ""}</p>` : "";
 }
 
+let baseSlot = "base_ka";
 function renderBase(b) {
+  baseSlot = b.slot || "base_ka";
   const r = b.run;
   const ds = b.dataset || {};
   const job = b.job || {};
@@ -486,7 +488,7 @@ function renderBase(b) {
   };
   $("#base").innerHTML = `
     <div class="card" data-pane="progress">
-      <h2>ქართული საბაზო მოდელი</h2>
+      <h2>ქართული საბაზო მოდელი${b.slot && b.slot !== "base_ka" ? ` <span class="badge training">${esc(b.slot)} — ახალი, ნულიდან</span>` : ""}</h2>
       <p class="muted">${esc(b.note || "")}. ქართული გამოთქმა ისწავლა ბევრ ხმაზე — მისგან იქმნება ხმის შემქმნელის ნარევები და
         ცალკე ხმები (მაგ. „ქალი 1“). ლიცენზიისგან თავისუფალია.</p>
       <div class="kv">
@@ -553,7 +555,7 @@ function renderPreviewMatrix(gens, spkLabel) {
   }));
   if (!phrases[prevPhrase]) prevPhrase = +Object.keys(phrases)[0];
   const cell = (g, sp) => g.files.find((f) => f.speaker === sp && phraseNo(f) === prevPhrase);
-  const src = (f) => `/api/preview/base_ka/${f.file}`;
+  const src = (f) => `/api/preview/${baseSlot}/${f.file}`;
   box.innerHTML = `
     <div class="chips">${Object.entries(phrases).map(([n, t]) =>
       `<button class="chip ${+n === prevPhrase ? "on" : ""}" data-phr="${n}" title="${esc(t)}">${n}. ${esc(t.slice(0, 24))}…</button>`).join("")}</div>
@@ -572,7 +574,7 @@ function renderPreviewMatrix(gens, spkLabel) {
   box.querySelectorAll("[data-gen]").forEach((b) => b.addEventListener("click", async () => {
     if (!(await UI.confirm(`წავშალო ნიმუშების თაობა „${b.dataset.label}“?`))) return;
     try {
-      await api(`/api/preview/base_ka/${b.dataset.gen}`, { method: "DELETE" });
+      await api(`/api/preview/${baseSlot}/${b.dataset.gen}`, { method: "DELETE" });
       renderPreviewMatrix(gens.filter((g) => g.files[0].file.split("/")[0] !== b.dataset.gen), spkLabel);
     } catch (e) { UI.toast(e.message, "error"); }
   }));
