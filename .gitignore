@@ -47,6 +47,7 @@ voices/catalog.json
 data/designs/
 data/kaggle_jobs/*
 !data/kaggle_jobs/base_ka.json
+!data/kaggle_jobs/base_ka_v2.json
 data/ghtest/answers.json
 data/lexicon.json
 data/mms_rank.progress.json

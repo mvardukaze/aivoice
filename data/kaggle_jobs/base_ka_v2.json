@@ -1,0 +1,18 @@
+{
+ "_note": "ქართული საბაზო მოდელი v2: LJSpeech (public domain) → Common Voice 27 (CC0), ხარისხით შერჩეული ~40 სთ (tools/select_best.py); ნულიდან",
+ "dataset_dir": "/mnt/d/aivoice/datasets/base_ka_v2",
+ "num_speakers": 600,
+ "_num_speakers_note": "600 — წინასწარ, მომავალი დინამიკებისთვის (შემდეგი 40 სთ): Piper-ი ID-ებს metadata-ში გამოჩენის რიგით ანიჭებს — ახალ dataset-ში ძველები იმავე რიგით პირველები უნდა იყვნენ",
+ "batch": 32,
+ "devices": 1,
+ "max_epochs": 160,
+ "warmstart": "ljspeech-medium.clean.ckpt",
+ "audio_from_source": true,
+ "trim_silence": false,
+ "preview_speakers": [
+  "cv_ec2611c88b",
+  "cv_472804bea2",
+  "cv_1e6e481633",
+  "cv_4dc613ce35"
+ ]
+}

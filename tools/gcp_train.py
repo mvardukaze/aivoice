@@ -1,4 +1,4 @@
-"""წვრთნა Google Cloud-ის L4-ზე ($300 საცდელი კრედიტი) — base_ka-ს გაგრძელება.
+"""წვრთნა Google Cloud-ის L4-ზე ($300 საცდელი კრედიტი): base_ka-ს გაგრძელება ან ახალი მოდელი (create base_ka_v2).
 
 გამოყენება (gcloud: aivoice.toml [gcp].gcloud, ანგარიში აქტიური, impersonation: aivoice-trainer SA):
     python3 tools/gcp_train.py create     # spot მანქანა g2-standard-8 (1× L4), us-central1 (a→b→c)
@@ -28,9 +28,12 @@ NAME = "aivoice-l4"
 ZONES = ["us-central1-a", "us-central1-b", "us-central1-c"]
 KEY = expand(cfg()["gcp"]["ssh_key"])
 STAGE = cpath("gcp")
-RUN = cpath("runs") / "base_ka"
-SLOT = "base_ka"
 STATE = STAGE / "state.json"
+# რომელ მოდელს ვწვრთნით — state.json-ის "slot" (create <slot>); ძველი გაშვებები: base_ka
+SLOT = (json.loads(STATE.read_text()).get("slot") if STATE.exists() else None) or "base_ka"
+RUN = cpath("runs") / SLOT
+JOB = ROOT / "data" / "kaggle_jobs" / f"{SLOT}.json"
+LJSPEECH = ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt"
 # L4 24 GB: batch 32 (Kaggle-ზე T4 16 GB — 24); 8 vCPU → 6 worker (აუდიო/სპექტროგრამა პროცესორზე)
 VM_JOB = {"batch": 32, "workers": 6, "ckpt_every_steps": 2000}
 
@@ -83,7 +86,15 @@ def scp(src: str, dst: str):
     subprocess.run(["scp", *ssh_base(h), "-q", src, f"aivoice@{h}:{dst}"], check=True)
 
 
-def cmd_create():
+def cmd_create(slot: str | None = None):
+    """create [slot] — ახალი მოდელისთვის ძველი state ინახება state.<slot>.json-ად."""
+    global SLOT, RUN, JOB
+    if slot and slot != SLOT:
+        if STATE.exists():
+            STATE.replace(STAGE / f"state.{SLOT}.json")
+        SLOT, RUN, JOB = slot, cpath("runs") / slot, ROOT / "data" / "kaggle_jobs" / f"{slot}.json"
+        save_state(slot=slot)
+    assert JOB.exists(), f"{JOB} არ არის"
     pub = KEY.with_suffix(".pub").read_text().strip()
     for z in ZONES:
         r = gc("compute", "instances", "create", NAME, "--zone", z,
@@ -95,7 +106,7 @@ def cmd_create():
                "--no-service-account", "--no-scopes",
                "--metadata", f"ssh-keys=aivoice:{pub}", check=False)
         if r.returncode == 0:
-            save_state(zone=z, created=time.strftime("%Y-%m-%dT%H:%M:%S"), phase="created")
+            save_state(zone=z, created=time.strftime("%Y-%m-%dT%H:%M:%S"), phase="created", slot=SLOT)
             print("created in", z)
             return
         print(z, "→", (r.stderr or "").strip().splitlines()[-1:])
@@ -123,12 +134,16 @@ def best_local_ckpt() -> Path:
 
 
 def cmd_push():
+    """dataset + Piper + checkpoint → მანქანა. ახალი მოდელი (job-ში "warmstart", ჯერ checkpoint არ აქვს) — LJSpeech-იდან."""
     wait_ssh()
-    tar = STAGE / "base_ka_v1.tar"
-    assert tar.exists(), "dataset-ის არქივი ჯერ არ არის მზად"
-    ckpt = best_local_ckpt()
-    job = json.loads((ROOT / "data" / "kaggle_jobs" / f"{SLOT}.json").read_text())
-    vm_job = {**VM_JOB, "num_speakers": job["num_speakers"], "max_epochs": job["max_epochs"]}
+    job = json.loads(JOB.read_text())
+    ds = Path(job["dataset_dir"]).name
+    tar = STAGE / f"{ds}.tar"
+    assert tar.exists(), f"dataset-ის არქივი ჯერ არ არის მზად: {tar}"
+    fresh = bool(job.get("warmstart")) and not (RUN / "gcp" / "latest.ckpt").exists() and SLOT != "base_ka"
+    ckpt = LJSPEECH if fresh else best_local_ckpt()
+    vm_job = {**VM_JOB, "num_speakers": job["num_speakers"], "max_epochs": job["max_epochs"], "dataset": ds,
+              "voice_name": SLOT, "fresh": fresh}
     with tempfile.TemporaryDirectory() as td:
         ov = Path(td) / "piper_overlay.tar"
         with tarfile.open(ov, "w") as t:  # ჩვენი შესწორებები Piper-ის train/-ზე + core.pyx (repo: piper_overlay/)
@@ -138,8 +153,9 @@ def cmd_push():
         ssh("sudo mkdir -p /data/upload && sudo chown -R aivoice /data")
         files = [(str(ov), ov.name),
                  (str(jp), "job.json"), (str(ROOT / "gcp" / "setup_vm.sh"), "setup_vm.sh"),
-                 (str(ROOT / "gcp" / "train_vm.sh"), "train_vm.sh"), (str(ckpt), "resume.ckpt")]
-        files.append((str(tar), "base_ka_v1.tar"))
+                 (str(ROOT / "gcp" / "train_vm.sh"), "train_vm.sh"),
+                 (str(ckpt), "warmstart.ckpt" if fresh else "resume.ckpt")]
+        files.append((str(tar), tar.name))
         # უკვე ატვირთული (იგივე ზომის) ფაილები გამოტოვდება — ატვირთვა ~3 MB/წმ-ია
         sizes = dict(l.split(" ", 1)[::-1] for l in ssh("cd /data/upload && stat -c '%s %n' * 2>/dev/null",
                                                         check=False).stdout.split("\n") if " " in l)
@@ -238,8 +254,13 @@ def remote_progress() -> dict:
 
 
 def export_designer(ckpt: Path):
-    r = subprocess.run([TPY, str(ROOT / "tools" / "export_designer.py"), str(ckpt),
-                        "--config", str(RUN / "kaggle_out" / "config.json"), "--source", "gcp"],
+    # ახალი მოდელი (base_ka_v2…) — ცალკე საქაღალდეში, რომ მიმდინარე ხმის შემქმნელი წვრთნის დროს არ შეიცვალოს
+    out = cpath("designer") if SLOT == "base_ka" else cpath("designer").parent / f"designer_{SLOT}"
+    cfgp = RUN / "kaggle_out" / "config.json"
+    if not cfgp.exists():
+        cfgp = RUN / "gcp" / "config.json"
+    r = subprocess.run([TPY, str(ROOT / "tools" / "export_designer.py"), str(ckpt), "--out", str(out),
+                        "--config", str(cfgp), "--source", "gcp"],
                        capture_output=True, text=True, env={"CUDA_VISIBLE_DEVICES": "", "PATH": "/usr/bin:/bin", "OMP_NUM_THREADS": "4"})
     print("designer:", (r.stdout.strip() or r.stderr.strip())[-200:], flush=True)
 
@@ -249,6 +270,7 @@ def finalize():
     cmd_fetch()
     src = RUN / "gcp" / "latest.ckpt"
     out = RUN / "kaggle_out"
+    out.mkdir(parents=True, exist_ok=True)
     if (out / "final.ckpt").exists():
         (out / "final.ckpt").replace(out / "final.prev.ckpt")
     src.replace(out / "final.ckpt")
@@ -257,6 +279,8 @@ def finalize():
                        env={"CUDA_VISIBLE_DEVICES": "", "PATH": "/usr/bin:/bin"}, cwd=ROOT / "training")
     print("onnx:", r.returncode, r.stderr[-300:], flush=True)
     import shutil
+    if not (out / "config.json").exists():
+        shutil.copy2(RUN / "gcp" / "config.json", out / "config.json")
     shutil.copy2(out / "config.json", str(out / f"{SLOT}.onnx") + ".json")
     p = state().get("progress", {})
     st_p = out / "status.json"
@@ -264,7 +288,7 @@ def finalize():
     st.update(status="done", epoch=p.get("epoch"), source="gcp", gpu="Google Cloud L4")
     st_p.write_text(json.dumps(st, ensure_ascii=False, indent=1))
     export_designer(out / "final.ckpt")  # status.json-ის შემდეგ — meta.json-ში სწორი ეპოქა ჩაიწეროს
-    subprocess.run([TPY, str(ROOT / "tools" / "make_previews.py"), str(out / "final.ckpt"), "--label", "საბოლოო"],
+    subprocess.run([TPY, str(ROOT / "tools" / "make_previews.py"), str(out / "final.ckpt"), "--label", "საბოლოო", "--slot", SLOT],
                    capture_output=True, env={"CUDA_VISIBLE_DEVICES": "", "PATH": "/usr/bin:/bin", "OMP_NUM_THREADS": "4"})
     sys.path.insert(0, str(ROOT / "tools"))
     import kaggle_train as kt
@@ -357,7 +381,8 @@ def cmd_watch():
                         export_designer(RUN / "gcp" / "latest.ckpt")
                         n = len(list((RUN / "previews").glob("k*")))
                         subprocess.run([TPY, str(ROOT / "tools" / "make_previews.py"), str(RUN / "gcp" / "latest.ckpt"),
-                                        "--label", f"Google Cloud #{n - 1}"], capture_output=True,
+                                        "--label", f"Google Cloud #{n + 1 if SLOT != 'base_ka' else n - 1}", "--slot", SLOT],
+                                       capture_output=True,
                                        env={"CUDA_VISIBLE_DEVICES": "", "PATH": "/usr/bin:/bin", "OMP_NUM_THREADS": "4"})
             except Exception as e:
                 save_state(error=str(e)[-300:])
@@ -366,5 +391,8 @@ def cmd_watch():
 
 
 if __name__ == "__main__":
+    if sys.argv[1] == "create" and len(sys.argv) > 2:
+        cmd_create(sys.argv[2])
+        sys.exit(0)
     {"create": cmd_create, "push": cmd_push, "status": cmd_status, "start": cmd_start,
      "fetch": cmd_fetch, "stop": cmd_stop, "delete": cmd_delete, "watch": cmd_watch}[sys.argv[1]]()

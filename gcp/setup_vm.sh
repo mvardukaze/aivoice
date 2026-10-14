@@ -1,15 +1,16 @@
 #!/bin/bash
 # Google Cloud-ის მანქანაზე ერთჯერადი მომზადება (tools/gcp_train.py push უშვებს, ssh-ით, root-ად).
-# მოელის /data/upload-ში: base_ka_v1.tar, piper_overlay.tar, resume.ckpt, job.json
+# მოელის /data/upload-ში: <dataset>.tar, piper_overlay.tar, resume.ckpt ან warmstart.ckpt, job.json
 set -euo pipefail
 U=/data/upload
 mkdir -p /data/run
 
-# 1. dataset
-if [ ! -f /data/base_ka_v1/metadata.csv ]; then
-  tar -xf $U/base_ka_v1.tar -C /data
+# 1. dataset (job.json → "dataset", ნაგულისხმევად base_ka_v1)
+DS=$(python3 -c "import json; print(json.load(open('$U/job.json')).get('dataset', 'base_ka_v1'))")
+if [ ! -f /data/$DS/metadata.csv ]; then
+  tar -xf $U/$DS.tar -C /data
 fi
-sed 's/"//g' /data/base_ka_v1/metadata.csv > /data/run/metadata.csv  # ბრჭყალები Piper-ის csv.reader-ს არღვევს
+sed 's/"//g' /data/$DS/metadata.csv > /data/run/metadata.csv  # ბრჭყალები Piper-ის csv.reader-ს არღვევს
 
 # 2. python: image-ის torch + ჩვენი piper (abi3 wheel) + შესწორებული train/*.py
 PY=$(for p in /opt/conda/bin/python /usr/bin/python3 /usr/local/bin/python3; do

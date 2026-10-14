@@ -6,7 +6,7 @@ set -uo pipefail
 [ -f /data/ready ] || { echo "setup ჯერ არ დასრულებულა"; exit 1; }
 V=/opt/aivoice/venv/bin
 J=/data/job.json
-jq() { $V/python -c "import json,sys; print(json.load(open('$J'))['$1'])"; }
+jq() { $V/python -c "import json,sys; print(json.load(open('$J')).get('$1', '$2'))"; }
 
 # უახლესი გამართული checkpoint (დაზიანებული — მაგ. შეწყვეტა ჩაწერისას — გამოტოვდება)
 CKPT=$($V/python - <<'EOF'
@@ -22,14 +22,16 @@ for p in glob.glob("/data/run/lightning_logs/version_*/checkpoints/local-*.ckpt"
 print(best[1] if best else "")
 EOF
 )
-[ -n "$CKPT" ] || { echo "checkpoint ვერ ვიპოვე"; exit 1; }
-echo "==== $(date -Is) resume $CKPT" >> /data/train.log
+# ახალი მოდელი: ჯერ checkpoint არ არის → LJSpeech-იდან (warmstart; Piper-ის შესწორება resume-ზე მას აღარ იყენებს)
+if [ -n "$CKPT" ]; then START=(--ckpt_path "$CKPT"); echo "==== $(date -Is) resume $CKPT" >> /data/train.log
+elif [ -f /data/upload/warmstart.ckpt ]; then START=(--model.warmstart_ckpt /data/upload/warmstart.ckpt); echo "==== $(date -Is) warmstart" >> /data/train.log
+else echo "checkpoint ვერ ვიპოვე"; exit 1; fi
 
 export PIPER_AUDIO_FROM_SOURCE=1 PIPER_CKPT_EVERY_STEPS=$(jq ckpt_every_steps)
 $V/python -m piper.train fit \
-  --data.voice_name base_ka \
+  --data.voice_name $(jq voice_name base_ka) \
   --data.csv_path /data/run/metadata.csv \
-  --data.audio_dir /data/base_ka_v1/audio \
+  --data.audio_dir /data/$(jq dataset base_ka_v1)/audio \
   --model.sample_rate 22050 \
   --data.espeak_voice ka \
   --data.cache_dir /data/run/cache \
@@ -45,7 +47,7 @@ $V/python -m piper.train fit \
   --trainer.devices 1 \
   --trainer.max_epochs $(jq max_epochs) \
   --trainer.default_root_dir /data/run \
-  --ckpt_path "$CKPT" >> /data/train.log 2>&1
+  "${START[@]}" >> /data/train.log 2>&1
 rc=$?
 echo "==== $(date -Is) exit $rc" >> /data/train.log
 if [ $rc -eq 0 ]; then
