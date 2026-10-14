@@ -43,8 +43,9 @@
         <div class="chips small">${Object.entries(t.why).sort((a, b) => b[1] - a[1]).map(([k, n]) =>
           `<span class="chip" title="${esc(data.rules[k] || k)}">${esc(data.rules[k] || k)}: ${n.toLocaleString()}</span>`).join("")}</div>` : ""}
       </div>
-      ${t.clips ? earCard() + speakersCard() : ""}`;
+      ${t.clips ? `<div id="sel-card" class="card"></div>` + earCard() + speakersCard() : ""}`;
     bind(box);
+    renderSel();
     clearTimeout(timer);
     if (running) timer = setTimeout(() => { if (!$("#tab-data").hidden && !st.open) { const y = window.scrollY; render().then(() => window.scrollTo(0, y)); } }, 30000);
   }
@@ -60,6 +61,60 @@
     const key = { bad: (x) => -x.bad_share, cer: (x) => -(x.cer || 0), hiss: (x) => -(x.hiss || -99), snr: (x) => x.snr || 0,
       min: (x) => -x.good_min, f0: (x) => x.f0 || 0 }[st.sort];
     return r.sort((a, b) => (key(a) - key(b)) * st.dir);
+  }
+
+  // ---------- შერჩეული (საუკეთესო ~40 სთ): შემთხვევითი მოსმენა; X — ჩანაწერის ამოღება, D — მთელი დინამიკის ----------
+  const SELN = "base_ka_v2";
+  const sel = { clips: [], i: 0, playing: false, stats: null, rej: 0 };
+  async function renderSel() {
+    const box = document.getElementById("sel-card");
+    if (!box) return;
+    if (!sel.stats) {
+      const d = await api(`/api/quality/selection/${SELN}`).catch(() => null);
+      if (!d) { box.hidden = true; return; }
+      Object.assign(sel, { clips: d.clips, stats: d.stats, rej: d.rejected, rejSpk: d.rejected_speakers.length });
+    }
+    const s = sel.stats, c = sel.clips[sel.i];
+    box.innerHTML = `
+      <div class="card-head"><h2>შერჩეული — საუკეთესო ${s.hours} სთ</h2><span class="muted small">${sel.i + 1} / ${sel.clips.length} შემთხვევითი</span></div>
+      <div class="kv"><div><span>ჩანაწერი</span><b>${s.clips.toLocaleString()}</b></div><div><span>დინამიკი</span><b>${s.speakers} (ახალი ${s.new_speakers})</b></div>
+        <div><span>დაბალი ხმა</span><b>${s.low_speakers} · ${s.low_hours} სთ</b></div><div><span>MMS საშუალოდ</span><b>${(s.mean_cer * 100).toFixed(1)}%</b></div>
+        <div><span>თქვენ ამოიღეთ</span><b>${sel.rej} ჩანაწერი · ${sel.rejSpk || 0} დინამიკი</b></div></div>
+      <p class="muted small">შემთხვევითი ჩანაწერები შერჩეულიდან, ზედიზედ. <kbd>X</kbd> — ეს ჩანაწერი ცუდია · <kbd>D</kbd> — მთელი დინამიკი ცუდია ·
+        <kbd>→</kbd> შემდეგი · <kbd>Space</kbd> პაუზა. (ეს კლავიშები მუშაობს, როცა „შერჩეული“ უკრავს.)</p>
+      <div class="ear-row">
+        <button class="primary small" id="sel-play">${sel.playing ? "❚❚ პაუზა" : "▶ შემთხვევითი მოსმენა"}</button>
+        <button class="ghost small" id="sel-next">▶▶</button>
+        <div class="ear-now">${c ? `<b class="mono">${c.spk}</b> <span class="muted small">MMS ${Math.round(c.cer * 100)}% · SNR ${c.snr} · ${c.dur} წმ</span>
+          <div class="small">${esc(c.text)}</div>` : "—"}</div>
+        <button class="ghost small" id="sel-x">✕ ჩანაწერი ცუდია</button>
+        <button class="ghost small danger" id="sel-d">დინამიკი ცუდია</button>
+      </div>`;
+    $("#sel-play").onclick = () => (sel.playing ? selPause() : selPlay());
+    $("#sel-next").onclick = () => selPlay(sel.i + 1);
+    $("#sel-x").onclick = () => selReject("clip");
+    $("#sel-d").onclick = () => selReject("spk");
+  }
+  function selPlay(i = sel.i) {
+    if (ear.playing) earPause();
+    sel.i = Math.max(0, Math.min(i, sel.clips.length - 1));
+    const c = sel.clips[sel.i];
+    if (!c) return;
+    sel.playing = true;
+    audio.src = `/api/quality/clip/${encodeURIComponent(c.id)}`;
+    audio.onended = () => { if (sel.playing) setTimeout(() => sel.playing && selPlay(sel.i + 1), 500); };
+    audio.play().catch(() => {});
+    renderSel();
+  }
+  function selPause() { sel.playing = false; audio.pause(); renderSel(); }
+  async function selReject(kind) {
+    const c = sel.clips[sel.i];
+    if (!c) return;
+    const r = await post(`/api/quality/selection/${SELN}/reject`, kind === "clip" ? { id: c.id } : { spk: c.spk }).catch((e) => { window.UI?.toast(e.message, "error"); });
+    if (!r) return;
+    sel.rej = r.rejected; sel.rejSpk = r.rejected_speakers;
+    if (kind === "spk") { sel.clips = sel.clips.filter((x, j) => j <= sel.i || x.spk !== c.spk); window.UI?.toast(`${c.spk} — ამოღებულია`, "ok", 2500); }
+    selPlay(sel.i + 1);
   }
 
   // ---------- ყურით გადარჩევა: თითო დინამიკის ტიპიური ჩანაწერი ზედიზედ; I — შევიდეს, X — ამოვრიცხოთ ----------
@@ -98,6 +153,7 @@
     document.querySelector(`tr[data-spk="${r.spk}"]`)?.classList.add("ear-on");
   }
   function earPlay(i = ear.i) {
+    if (sel.playing) { sel.playing = false; renderSel(); }
     ear.i = Math.max(0, Math.min(i, ear.queue.length - 1));
     const r = ear.queue[ear.i];
     if (!r) return;
@@ -125,6 +181,14 @@
     if ($("#tab-data")?.hidden || !document.querySelector(".ear-card") || document.querySelector("dialog[open]")
       || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return;
     const k = e.key.toLowerCase();
+    if (sel.playing) {  // „შერჩეულის“ მოსმენა
+      if (e.code === "Space") { e.preventDefault(); selPause(); }
+      else if (e.key === "ArrowRight") selPlay(sel.i + 1);
+      else if (e.key === "ArrowLeft") selPlay(sel.i - 1);
+      else if (k === "x" || k === "ხ") selReject("clip");
+      else if (k === "d" || k === "დ") selReject("spk");
+      return;
+    }
     if (e.code === "Space") { e.preventDefault(); ear.playing ? earPause() : earPlay(); }
     else if (e.key === "ArrowRight") earPlay(ear.i + 1);
     else if (e.key === "ArrowLeft") earPlay(ear.i - 1);

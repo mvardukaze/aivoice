@@ -206,3 +206,46 @@ def stop():
     if p and p.poll() is None:
         os.killpg(p.pid, signal.SIGTERM)  # შედეგები თითო ჩანაწერზე ინახება — შემდეგ ჯერზე გააგრძელებს
     return {"ok": True}
+
+
+# ---------- შერჩევა (tools/select_best.py): შემთხვევითი შემოწმება, ცუდის ამოღება ----------
+SEL = ROOT / "data" / "selections"
+
+
+def _sel(name: str) -> tuple[Path, dict]:
+    if not re.fullmatch(r"[\w-]+", name):
+        raise HTTPException(404)
+    f = SEL / f"{name}.json"
+    d = read_json(f)
+    if not d:
+        raise HTTPException(404, "შერჩევა ვერ მოიძებნა (./aivoice select)")
+    return f, d
+
+
+@router.get("/selection/{name}")
+def selection(name: str, n: int = 300, seed: int = 0):
+    import random
+    _, d = _sel(name)
+    rej = set(d.get("rejected", []))
+    idx = {c["id"]: c for cs in load()["clips"].values() for c in cs}
+    pool = [c for c in d["clips"] if c not in rej]
+    sample = random.Random(seed or None).sample(pool, min(n, len(pool)))
+    return {"stats": d["stats"], "rejected": len(rej), "rejected_speakers": d.get("rejected_speakers", []),
+            "clips": [{k: idx[c].get(k) for k in ("id", "spk", "text", "heard", "cer", "snr", "hiss", "dur")} for c in sample if c in idx]}
+
+
+class Reject(BaseModel):
+    id: str | None = None
+    spk: str | None = None
+    undo: bool = False
+
+
+@router.post("/selection/{name}/reject")
+def selection_reject(name: str, r: Reject):
+    f, d = _sel(name)
+    key, val = ("rejected", r.id) if r.id else ("rejected_speakers", r.spk)
+    cur = set(d.get(key, []))
+    (cur.discard if r.undo else cur.add)(val)
+    d[key] = sorted(cur)
+    f.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+    return {"ok": True, "rejected": len(d.get("rejected", [])), "rejected_speakers": len(d.get("rejected_speakers", []))}

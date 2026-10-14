@@ -43,6 +43,8 @@ case "$cmd" in
     if [ -x "$TPY" ]; then $TPY tools/voice_check.py "$@"; else $PY tools/voice_check.py --no-mms "$@"; fi ;;
   designer) need_training; $TPY tools/export_designer.py "$@" ;;       # საბაზო checkpoint → ხმის შემქმნელის მოდელი
   quality)  need_training; nice -n 10 $TPY tools/clip_quality.py "$@" ;;  # Common Voice-ის ჩანაწერების ხარისხი (MMS, შიშინი, ხმაური)
+  select)  $PY tools/select_best.py "$@" ;;                         # საუკეთესო ჩანაწერები ახალი dataset-ისთვის (--hours 40)
+  build-selection) nice -n 10 $PY tools/build_selection_dataset.py "$@" ;;  # შერჩევა → dataset (+ --tar Google Cloud-ისთვის)
   kaggle-mms) $PY tools/kaggle_mms.py "$@" ;;                      # MMS Common Voice-ის ჩანაწერებზე Kaggle-ზე: push | status | fetch | wait
   rank)     need_training; $TPY tools/mms_rank.py "$@" ;;              # ყველა ხმის/ნარევის რეიტინგი (MMS)
   kaggle)   $PY tools/kaggle_train.py "$@" ;;                          # base | push <slot> | status | fetch | watch
