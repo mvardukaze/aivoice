@@ -6,7 +6,7 @@ set -uo pipefail
 [ -f /data/ready ] || { echo "setup ჯერ არ დასრულებულა"; exit 1; }
 V=/opt/aivoice/venv/bin
 J=/data/job.json
-jq() { $V/python -c "import json,sys; print(json.load(open('$J')).get('$1', '$2'))"; }
+jq() { $V/python -c "import json,sys; print(json.load(open('$J')).get('$1', '${2:-}'))"; }
 
 # უახლესი გამართული checkpoint (დაზიანებული — მაგ. შეწყვეტა ჩაწერისას — გამოტოვდება)
 CKPT=$($V/python - <<'EOF'
