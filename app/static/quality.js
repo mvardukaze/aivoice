@@ -43,7 +43,7 @@
         <div class="chips small">${Object.entries(t.why).sort((a, b) => b[1] - a[1]).map(([k, n]) =>
           `<span class="chip" title="${esc(data.rules[k] || k)}">${esc(data.rules[k] || k)}: ${n.toLocaleString()}</span>`).join("")}</div>` : ""}
       </div>
-      ${t.clips ? speakersCard() : ""}`;
+      ${t.clips ? earCard() + speakersCard() : ""}`;
     bind(box);
     clearTimeout(timer);
     if (running) timer = setTimeout(() => { if (!$("#tab-data").hidden && !st.open) { const y = window.scrollY; render().then(() => window.scrollTo(0, y)); } }, 30000);
@@ -61,6 +61,77 @@
       min: (x) => -x.good_min, f0: (x) => x.f0 || 0 }[st.sort];
     return r.sort((a, b) => (key(a) - key(b)) * st.dir);
   }
+
+  // ---------- ყურით გადარჩევა: თითო დინამიკის ტიპიური ჩანაწერი ზედიზედ; I — შევიდეს, X — ამოვრიცხოთ ----------
+  const ear = { i: 0, playing: false, queue: [] };
+  function earCard() {
+    ear.queue = filtered().filter((r) => r.sample);
+    ear.i = Math.min(ear.i, Math.max(0, ear.queue.length - 1));
+    const r = ear.queue[ear.i];
+    return `<div class="card ear-card">
+      <div class="card-head"><h2>ყურით გადარჩევა</h2><span class="muted small">${ear.queue.length ? `${ear.i + 1} / ${ear.queue.length}` : "სია ცარიელია"} · ფილტრი და რიგი — ქვემოთა ცხრილისა</span></div>
+      <p class="muted small">თითო დინამიკის ერთი ტიპიური (კარგი) ჩანაწერი, ზედიზედ. კლავიშები: <kbd>I</kbd> შევიდეს · <kbd>X</kbd> ამოვრიცხოთ · <kbd>A</kbd> ავტო ·
+        <kbd>→</kbd> შემდეგი · <kbd>←</kbd> წინა · <kbd>Space</kbd> პაუზა. გადაწყვეტილების შემდეგ თავისით გადადის შემდეგზე.</p>
+      <div class="ear-row">
+        <button class="ghost small" id="ear-prev" aria-label="წინა">◀</button>
+        <button class="primary small" id="ear-play">${ear.playing ? "❚❚ პაუზა" : "▶ დაწყება"}</button>
+        <button class="ghost small" id="ear-next" aria-label="შემდეგი">▶▶</button>
+        <div class="ear-now" id="ear-now">${r ? earNow(r) : "—"}</div>
+        <div class="ear-dec">${r ? decSeg(r) : ""}</div>
+      </div>
+      <div class="bar"><span style="width:${ear.queue.length ? ((ear.i + 1) / ear.queue.length) * 100 : 0}%"></span></div>
+    </div>`;
+  }
+  const earNow = (r) => `<b class="mono">${r.spk}</b> ${r.current ? "" : `<span class="badge testing">ახალი</span>`}
+    <span class="muted small">${r.f0 ? Math.round(r.f0) + " Hz · " : ""}ცუდი ${pct(r.bad_share)} · კარგი ${r.good_min} წთ · ავტო: ${r.suggest === "include" ? "შევიდეს" : "ამოვრიცხოთ"}</span>`;
+  function earShow() {
+    const r = ear.queue[ear.i];
+    const card = document.querySelector(".ear-card");
+    if (!card || !r) return;
+    card.querySelector("#ear-now").innerHTML = earNow(r);
+    card.querySelector(".ear-dec").innerHTML = decSeg(r);
+    bindSeg(r.spk);
+    card.querySelector(".card-head .muted").textContent = `${ear.i + 1} / ${ear.queue.length} · ფილტრი და რიგი — ქვემოთა ცხრილისა`;
+    card.querySelector(".bar span").style.width = `${((ear.i + 1) / ear.queue.length) * 100}%`;
+    card.querySelector("#ear-play").textContent = ear.playing ? "❚❚ პაუზა" : "▶ დაწყება";
+    document.querySelectorAll("tr[data-spk].ear-on").forEach((x) => x.classList.remove("ear-on"));
+    document.querySelector(`tr[data-spk="${r.spk}"]`)?.classList.add("ear-on");
+  }
+  function earPlay(i = ear.i) {
+    ear.i = Math.max(0, Math.min(i, ear.queue.length - 1));
+    const r = ear.queue[ear.i];
+    if (!r) return;
+    ear.playing = true;
+    audio.src = `/api/quality/clip/${encodeURIComponent(r.sample)}`;
+    audio.onended = () => { if (ear.playing) setTimeout(() => ear.playing && earPlay(ear.i + 1), 600); };
+    audio.play().catch(() => {});
+    earShow();
+  }
+  function earPause() { ear.playing = false; audio.pause(); earShow(); }
+  async function earDecide(decision) {
+    const r = ear.queue[ear.i];
+    if (!r) return;
+    await setDecision(r.spk, decision);
+    if (ear.playing || decision !== "auto") earPlay(ear.i + 1); else earShow();
+  }
+  function bindEar() {
+    $("#ear-play")?.addEventListener("click", () => (ear.playing ? earPause() : earPlay()));
+    $("#ear-next")?.addEventListener("click", () => earPlay(ear.i + 1));
+    $("#ear-prev")?.addEventListener("click", () => earPlay(ear.i - 1));
+    const r = ear.queue[ear.i];
+    if (r) bindSeg(r.spk);
+  }
+  document.addEventListener("keydown", (e) => {
+    if ($("#tab-data")?.hidden || !document.querySelector(".ear-card") || document.querySelector("dialog[open]")
+      || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return;
+    const k = e.key.toLowerCase();
+    if (e.code === "Space") { e.preventDefault(); ear.playing ? earPause() : earPlay(); }
+    else if (e.key === "ArrowRight") earPlay(ear.i + 1);
+    else if (e.key === "ArrowLeft") earPlay(ear.i - 1);
+    else if (k === "i" || k === "შ") earDecide("include");
+    else if (k === "x" || k === "ხ") earDecide("exclude");
+    else if (k === "a" || k === "ა") earDecide("auto");
+  });
 
   // სვეტის სათაური — დაჭერით დალაგება; იგივეზე მეორედ — მიმართულება
   const th = (k, t, title = "") => `<th class="num q-sortable ${st.sort === k ? "on" : ""}" data-sort="${k}" title="${esc(title || "დალაგება")}">${t}${st.sort === k ? (st.dir === 1 ? " ↓" : " ↑") : ""}</th>`;
@@ -178,11 +249,12 @@
       await post("/api/quality/stop").catch(() => {});
       window.UI?.toast("ჩერდება — შემდეგ ჯერზე იქიდან გააგრძელებს", "info"); setTimeout(render, 2000);
     });
-    const re = () => { st.limit = 60; render(); };
+    const re = () => { st.limit = 60; ear.i = 0; render(); };
     $("#q-show")?.addEventListener("change", (e) => { st.show = e.target.value; re(); });
     $("#q-pitch")?.addEventListener("change", (e) => { st.pitch = e.target.value; re(); });
     $("#q-sort")?.addEventListener("change", (e) => { st.sort = e.target.value; re(); });
     $("#q-dir")?.addEventListener("click", () => { st.dir = -st.dir; re(); });
+    bindEar();
     box.querySelectorAll("th[data-sort]").forEach((h) => h.addEventListener("click", () => {
       if (st.sort === h.dataset.sort) st.dir = -st.dir; else { st.sort = h.dataset.sort; st.dir = 1; }
       re();

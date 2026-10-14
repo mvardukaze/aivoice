@@ -109,7 +109,10 @@ def load() -> dict:
         c = corpus.get(name, {})
         bad_share = round(1 - len(good) / len(s["clips"]), 3) if s["clips"] else 0
         good_min = round(sum(x["dur"] for x in good) / 60, 1)
-        rows.append({"spk": name, "current": s["current"], "n": len(s["clips"]), "bad_share": bad_share,
+        # ტიპიური ჩანაწერი ყურით გადარჩევისთვის: კარგი, ~5 წამიანი, ≥10-ასოიანი ტექსტით
+        pool = [x for x in good if len(x.get("text", "")) >= 10] or good or C
+        sample = min(pool, key=lambda x: abs(x.get("dur", 0) - 5))["id"] if pool else None
+        rows.append({"spk": name, "current": s["current"], "n": len(s["clips"]), "bad_share": bad_share, "sample": sample,
                      "good_min": good_min, "min": round(sum(x["dur"] for x in C) / 60, 1),
                      "cer": cer_med(C), "mms_n": sum(1 for x in C if x.get("cer") is not None), "snr": med("snr"), "hiss": med("hiss"), "speech_db": med("speech_db"),
                      "f0": c.get("f0_median"), "why": s["why"],
