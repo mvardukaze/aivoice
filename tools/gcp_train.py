@@ -145,7 +145,15 @@ def cmd_push():
     tar = STAGE / f"{ds}.tar"
     assert tar.exists(), f"dataset-ის არქივი ჯერ არ არის მზად: {tar}"
     fresh = bool(job.get("warmstart")) and not (RUN / "gcp" / "latest.ckpt").exists() and SLOT != "base_ka"
-    ckpt = LJSPEECH if fresh else best_local_ckpt()
+    # გაგრძელება სხვა მოდელიდან (job: "resume_from", მაგ. v2-ის final.ckpt) — ან უკვე ჩამოტვირთული უახლესი
+    if fresh:
+        ckpt = LJSPEECH
+    elif (RUN / "gcp" / "latest.ckpt").exists():
+        ckpt = RUN / "gcp" / "latest.ckpt"
+    elif job.get("resume_from"):
+        ckpt = Path(job["resume_from"])
+    else:
+        ckpt = best_local_ckpt()
     vm_job = {**VM_JOB, "num_speakers": job["num_speakers"], "max_epochs": job["max_epochs"], "dataset": ds,
               "voice_name": SLOT, "fresh": fresh}
     with tempfile.TemporaryDirectory() as td:

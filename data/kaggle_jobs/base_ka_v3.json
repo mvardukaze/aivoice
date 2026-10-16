@@ -1,0 +1,17 @@
+{
+ "_note": "ქართული საბაზო მოდელი v3: v2-ის გაგრძელება (ეპოქა 160 →), dataset v2 + მეორე 40 სთ (კითხვა/ძახილი, რ/ღ/ბ/ფ/პ ბგერათშეერთებები) ≈ 80 სთ",
+ "dataset_dir": "/mnt/d/aivoice/datasets/base_ka_v3",
+ "num_speakers": 600,
+ "batch": 32,
+ "devices": 1,
+ "max_epochs": 250,
+ "resume_from": "/mnt/d/aivoice/runs/base_ka_v2/kaggle_out/final.ckpt",
+ "audio_from_source": true,
+ "trim_silence": false,
+ "preview_speakers": [
+  "cv_ec2611c88b",
+  "cv_472804bea2",
+  "cv_1e6e481633",
+  "cv_4dc613ce35"
+ ]
+}

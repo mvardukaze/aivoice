@@ -39,10 +39,13 @@ def models() -> dict:
     """საბაზო მოდელები, რომლებიც შემქმნელისთვის დაექსპორტებულია (tools/export_designer.py).
     თითოს თავისი რუკა (დინამიკები), რეიტინგი და შეფასებები აქვს; ნარევები მოდელითაა მონიშნული."""
     out = {}
-    for slot, label, d, ds, rank, rat in (
-            ("base_ka", "ძველი (v1)", cpath("designer"), "base_ka_v1", "mms_rank.json", "designer_ratings.json"),
-            ("base_ka_v2", "ახალი (v2)", cpath("designer").parent / "designer_base_ka_v2", "base_ka_v2",
-             "mms_rank_base_ka_v2.json", "designer_ratings_base_ka_v2.json")):
+    entries = [("base_ka", "ძველი (v1)", cpath("designer"), "base_ka_v1", "mms_rank.json", "designer_ratings.json")]
+    for d in sorted(cpath("designer").parent.glob("designer_base_ka_v*")):  # designer_base_ka_v2, _v3 … (export_designer)
+        slot = d.name.removeprefix("designer_")
+        v = slot.rsplit("_", 1)[-1]
+        entries.append((slot, f"{'ახალი' if slot == max(p.name for p in d.parent.glob('designer_base_ka_v*')).removeprefix('designer_') else ''} ({v})".strip(),
+                        d, slot, f"mms_rank_{slot}.json", f"designer_ratings_{slot}.json"))
+    for slot, label, d, ds, rank, rat in entries:
         if (d / "meta.json").exists():
             meta = read_json(d / "meta.json", {}) or {}
             n = len((read_json(d / "config.json", {}) or {}).get("speaker_id_map", {}))
@@ -57,7 +60,7 @@ def active() -> str:
     a = (read_json(ACTIVE, {}) or {}).get("model")
     if a in ms:
         return a
-    return "base_ka_v2" if "base_ka_v2" in ms else next(iter(ms), "base_ka")
+    return sorted(ms)[-1] if ms else "base_ka"  # ნაგულისხმევად — უახლესი
 
 
 def M() -> dict:

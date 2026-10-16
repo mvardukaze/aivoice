@@ -31,15 +31,28 @@ RULES = {"cer_max": 0.10, "min_letters": 15, "snr_min": 30, "hiss_max": -15, "db
 
 def ok(c) -> bool:
     r = RULES
-    return (not c.get("bad") and c.get("cer") is not None and c["cer"] <= r["cer_max"]
+    short = len(c.get("text", "")) < 15
+    return (not c.get("bad") and c.get("cer") is not None and c["cer"] <= (0 if short else r["cer_max"])  # მოკლეზე — ზუსტი დამთხვევა
             and len(c.get("text", "")) >= r["min_letters"] and c.get("snr", 0) >= r["snr_min"]
             and c.get("hiss", 0) <= r["hiss_max"] and r["db"][0] <= c.get("speech_db", -99) <= r["db"][1]
             and r["cps"][0] <= c.get("cps", 0) <= r["cps"][1] and r["dur"][0] <= c.get("dur", 0) <= r["dur"][1])
 
 
+CONS = "ბგდვზთკლმნპჟრსტფქღყშჩცძწჭხჯჰ"
+HARD = "რღბფპ"  # მომხმარებლის ყურით და MMS-ით: თანხმოვნებთან ერთად ყველაზე ხშირად იკარგება/ირევა
+
+
+def clusters(text: str) -> int:
+    """რამდენი „რთული“ ბგერათშეერთებაა: რ/ღ/ბ/ფ/პ სხვა თანხმოვნის გვერდით (რჯ, ღრ, ფლ, ბრ, პრ…)."""
+    t = text.replace(" ", "")
+    return sum(1 for i in range(len(t) - 1) if (t[i] in HARD and t[i + 1] in CONS) or (t[i] in CONS and t[i + 1] in HARD))
+
+
 def score(c) -> float:
     """ნაკლები = უკეთესი. MMS წონით მთავარია (1% შეცდომა ≈ 5 dB ხმაური)."""
-    return c["cer"] * 500 - min(c["snr"], 60) + max(c["hiss"], -60) * 0.5
+    bonus = RULES.get("punct_bonus", 0) if c.get("text", "").rstrip().endswith(("?", "!")) else 0  # კითხვა/ძახილი — იშვიათია
+    bonus += min(5, clusters(c.get("text", ""))) * RULES.get("cluster_bonus", 0)
+    return c["cer"] * 500 - min(c["snr"], 60) + max(c["hiss"], -60) * 0.5 - bonus
 
 
 def main():
@@ -47,7 +60,13 @@ def main():
     ap.add_argument("--hours", type=float, default=40)
     ap.add_argument("--name", default="base_ka_v2")
     ap.add_argument("--exclude-from", nargs="*", default=[])
+    ap.add_argument("--min-letters", type=int, default=RULES["min_letters"], help="მოკლე ფრაზებიც (მაგ. 6)")
+    ap.add_argument("--dur-min", type=float, default=RULES["dur"][0])
+    ap.add_argument("--cps", type=float, nargs=2, default=RULES["cps"])
+    ap.add_argument("--punct-bonus", type=float, default=0, help="კითხვით/ძახილის წინადადებებს უპირატესობა (მაგ. 100)")
+    ap.add_argument("--cluster-bonus", type=float, default=0, help="რ/ღ/ბ/ფ/პ + თანხმოვანი — უპირატესობა თითოზე (მაგ. 8)")
     a = ap.parse_args()
+    RULES.update(min_letters=a.min_letters, dur=(a.dur_min, RULES["dur"][1]), cps=tuple(a.cps), punct_bonus=a.punct_bonus, cluster_bonus=a.cluster_bonus)
 
     d = load()
     dec = read_json(DECISIONS, {}) or {}
