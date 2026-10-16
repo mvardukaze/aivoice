@@ -20,18 +20,22 @@ from piper.train.vits.lightning import VitsModel
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from app.config import path as cpath  # noqa: E402,F401
-BASE = cpath("runs") / "base_ka" / "kaggle_out" / "final.ckpt"
+def base_ckpt(model: str) -> Path:
+    """ნარევის საბაზო მოდელის checkpoint (ნარევში "model": base_ka | base_ka_v2 …)."""
+    return cpath("runs") / model / "kaggle_out" / "final.ckpt"
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--design", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--base", default=str(BASE))
+    ap.add_argument("--base", default=None, help="ნაგულისხმევად — ნარევის მოდელის final.ckpt")
     a = ap.parse_args()
 
     design = next(d for p in (ROOT / "data" / "designs").glob("*.json")
                   if (d := json.loads(p.read_text(encoding="utf-8")))["name"] == a.design)
+    a.base = a.base or str(base_ckpt(design.get("model", "base_ka")))
+    print("საბაზო მოდელი:", a.base, flush=True)
     base = VitsModel.load_from_checkpoint(a.base, map_location="cpu", weights_only=False).eval()
     gm = base.model_g
     smap = json.loads((Path(a.base).parent / "config.json").read_text())["speaker_id_map"]

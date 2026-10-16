@@ -42,7 +42,7 @@ def main():
         voice = PiperVoice.load(onnx)
         smap = json.loads(cfg.read_text())["speaker_id_map"]
         prev = run / "previews"
-        n = len(list(prev.glob("k*"))) + 1
+        n = max((int(p.name[1:]) for p in prev.glob("k[0-9]*") if p.name[1:].isdigit()), default=0) + 1  # წაშლის შემდეგაც უნიკალური
         pdir = prev / f"k{n:02d}"
         pdir.mkdir(parents=True)
         files = []

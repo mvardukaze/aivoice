@@ -118,7 +118,7 @@ def cmd_new(a):
     if not any(v["id"] == a.slot for v in cat["voices"]):
         cat["voices"].append({"id": a.slot, "name": a.name or a.design, "gender": a.gender or "", "age": "", "character": "",
                               "status": "planned", "source": f"საკუთარი სინთეზური ხმა: ნარევი „{a.design}“", "license": "own",
-                              "base": "base_ka"})
+                              "base": d.get("model", "base_ka")})
         cat_p.write_text(json.dumps(cat, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     ctl(a.slot, stage="new", target=None, note="შექმნილია — შემდეგი: prepare")
     print(f"✓ {a.slot} შექმნილია. შემდეგი ნაბიჯი: ./aivoice train prepare {a.slot}")

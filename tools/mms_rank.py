@@ -81,7 +81,11 @@ def main():
     items = []
     if args.kind in ("all", "speaker"):
         items += [("speaker", s["name"], {s["name"]: 1}, s.get("f0")) for s in get(f"{API}/speakers")["speakers"]]
-    designs = get(f"{API}/designs")
+    # აქტიური საბაზო მოდელის რეიტინგის ფაილი და მისი ნარევები (შემქმნელი → მოდელის გადამრთველი)
+    global OUT
+    mi = get(f"{API}/models")
+    OUT = ROOT / "data" / next(m["rank_file"] for m in mi["models"] if m["active"])
+    designs = [d for d in get(f"{API}/designs") if d.get("model", "base_ka") == mi["active"]]
     if args.kind in ("all", "mix"):
         items += [("mix", d["name"], d["weights"], d.get("f0_estimate")) for d in designs]
     epoch = (get(f"{API}/status").get("meta") or {}).get("epoch")

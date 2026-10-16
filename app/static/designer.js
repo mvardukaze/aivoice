@@ -15,7 +15,7 @@ window.Designer = (() => {
     "ზღვის ღრმა ტალღებმა ნავი ნაპირისკენ გააქანა.",
   ];
 
-  let speakers = [], byName = {}, mix = {}, meta = null, inited = false, last = null;
+  let speakers = [], byName = {}, mix = {}, meta = null, inited = false, last = null, models = { models: [] }, keysBound = false;
   let audio = null;
   // ყველა ხმის მოსმენა (audition): რიგი, მიმდინარე ინდექსი, შეფასებები
   let scan = {};  // tools/mms_rank.py: დინამიკი → MMS-ის შეცდომა (cer) — „ავტომატური რიგისთვის“
@@ -44,13 +44,14 @@ window.Designer = (() => {
       $("#designer").innerHTML = `<div class="card"><h2>ხმის შემქმნელი</h2><div class="empty">საბაზო მოდელი ჯერ არ არის მზად შემქმნელისთვის.</div></div>`;
       return;
     }
-    const d = await api("/api/designer/speakers");
-    speakers = d.speakers; meta = d.meta;
+    const [d, mi] = await Promise.all([api("/api/designer/speakers"), api("/api/designer/models")]);
+    speakers = d.speakers; meta = d.meta; models = mi;
     byName = Object.fromEntries(speakers.map((s) => [s.name, s]));
     $("#designer").innerHTML = `
       <div class="card" data-pane="mix">
         <div class="card-head"><h2>ხმის შემქმნელი</h2>
-          <span class="muted small">საბაზო მოდელი · ეპოქა ${meta.epoch != null ? meta.epoch + 1 : "—"} </span></div>
+          <div class="model-switch" role="group" aria-label="საბაზო მოდელი">${models.models.map((m) =>
+            `<button data-model="${esc(m.slot)}" class="${m.active ? "on" : ""}" title="${m.voices} ხმა · ეპოქა ${m.epoch + 1}">${esc(m.label)} <span class="muted small">${m.voices} ხმა</span></button>`).join("")}</div></div>
         <p class="muted small help">აირჩიეთ ხმები რუკაზე ან მზა ვარიანტით, დაალაგეთ წილები და მოუსმინეთ. ნარევი ახალი ხმაა — არცერთ რეალურ დინამიკს არ ეკუთვნის.</p>
         <div class="des-grid">
           <div>
@@ -121,6 +122,12 @@ window.Designer = (() => {
         <div id="des-list"></div>
       </div>`;
     audio = $("#des-audio");
+    document.querySelectorAll("[data-model]").forEach((b) => b.addEventListener("click", async () => {
+      if (b.classList.contains("on")) return;
+      await api("/api/designer/model", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: b.dataset.model }) });
+      mix = {}; UI.toast(`ხმის შემქმნელი: ${b.textContent.trim()}`, "ok", 2500);
+      init().catch((e) => UI.toast(e.message, "error"));
+    }));
     aud = new Audio();
     ratings = await api("/api/designer/ratings").catch(() => ({}));
     await loadScan();
@@ -256,21 +263,31 @@ window.Designer = (() => {
   }
 
   async function loadDesigns() {
-    const list = await api("/api/designer/designs");
-    $("#des-list").innerHTML = list.length ? list.map((d) => `
-      <div class="des-item">
+    const all = await api("/api/designer/designs");
+    const act = models.models.find((m) => m.active)?.slot;
+    const list = all.filter((d) => d.model === act), other = all.filter((d) => d.model !== act);
+    const label = (slot) => models.models.find((m) => m.slot === slot)?.label || slot;
+    const item = (d, foreign) => `
+      <div class="des-item${foreign ? " foreign" : ""}">
         <div><b>${esc(d.name)}</b> <span class="muted small">${d.f0_estimate ? `≈ ${d.f0_estimate} Hz · ` : ""}${Object.keys(d.weights).length} ხმის ნარევი ·
-          შექმნილია ${esc((d.created || "").slice(0, 16).replace("T", " "))} · ეპოქა ${d.model_epoch != null ? d.model_epoch + 1 : "—"}</span></div>
+          შექმნილია ${esc((d.created || "").slice(0, 16).replace("T", " "))} · ${esc(label(d.model))}, ეპოქა ${d.model_epoch != null ? d.model_epoch + 1 : "—"}</span></div>
         <div class="des-actions">
-          <button class="ghost small" data-load="${esc(d.id)}">ჩატვირთვა</button>
+          <button class="ghost small" data-load="${esc(d.id)}" ${foreign ? `title="იგივე ხმები ამ მოდელზე — ჟღერადობა განსხვავებული იქნება"` : ""}>${foreign ? "ამ მოდელზე მოსმენა" : "ჩატვირთვა"}</button>
           <button class="ghost small" data-del="${esc(d.id)}">წაშლა</button>
         </div>
-      </div>`).join("") : `<div class="empty">ჯერ არცერთი ხმა არ არის შენახული.</div>`;
+      </div>`;
+    $("#des-list").innerHTML = (list.length ? list.map((d) => item(d, false)).join("") : `<div class="empty">ამ მოდელზე ჯერ არცერთი ნარევი არ არის შენახული.</div>`)
+      + (other.length ? `<details class="des-other"><summary class="muted small">სხვა მოდელის ნარევები (${other.length}) — შეგიძლიათ ამ მოდელზე მოუსმინოთ</summary>
+          ${other.map((d) => item(d, true)).join("")}</details>` : "");
     $("#des-list").querySelectorAll("[data-load]").forEach((b) => b.addEventListener("click", () => {
-      const d = list.find((x) => x.id === b.dataset.load);
-      mix = Object.fromEntries(Object.entries(d.weights).map(([k, v]) => [k, Math.round(v * 100)]));
+      const d = all.find((x) => x.id === b.dataset.load);
+      const w = Object.entries(d.weights).filter(([k]) => byName[k]);
+      if (!w.length) { UI.toast("ამ ნარევის ხმები ამ მოდელში არ არის", "warn"); return; }
+      if (w.length < Object.keys(d.weights).length) UI.toast(`${Object.keys(d.weights).length - w.length} ხმა ამ მოდელში არ არის — გამოტოვებულია`, "warn");
+      mix = Object.fromEntries(w.map(([k, v]) => [k, Math.round(v * 100)]));
       $("#des-len").value = (1 / d.length_scale).toFixed(2); $("#des-noise").value = d.noise_scale;
       $("#des-len-o").textContent = (1 / d.length_scale).toFixed(2); $("#des-noise-o").textContent = (+d.noise_scale).toFixed(2);
+      if (window.UI?.setSub) UI.setSub("designer", "mix");
       renderMix(); drawMap(); play();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }));
@@ -387,6 +404,8 @@ window.Designer = (() => {
       UI.setSub("designer", "mix");
       renderMix(); drawMap(); play(); window.scrollTo({ top: 0, behavior: "smooth" });
     };
+    if (keysBound) return;  // მოდელის გადართვისას init თავიდან ეშვება — კლავიშები მხოლოდ ერთხელ
+    keysBound = true;
     document.addEventListener("keydown", (e) => {
       if ($("#tab-designer")?.hidden || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) || document.querySelector("dialog[open]") || UI.getSub("designer") !== "audition") return;
       if (e.code === "Space") { e.preventDefault(); $("#aud-play").click(); }

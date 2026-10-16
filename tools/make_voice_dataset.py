@@ -24,7 +24,11 @@ from app.config import path as cpath  # noqa: E402,F401
 sys.path.insert(0, str(ROOT))
 from app.textnorm import ka_text  # noqa: E402
 
-DES = cpath("designer")
+def designer_dir(model: str) -> Path:
+    """ნარევის საბაზო მოდელის შემქმნელი (app/designer.py → models())."""
+    return cpath("designer") if model == "base_ka" else cpath("designer").parent / f"designer_{model}"
+
+
 SR = 22050
 STRIP = str.maketrans("", "", ".,!?;:„“\"'—–-() ")
 
@@ -56,6 +60,8 @@ def main():
 
     design = next(d for p in (ROOT / "data" / "designs").glob("*.json")
                   if (d := json.loads(p.read_text(encoding="utf-8")))["name"] == a.design)
+    DES = designer_dir(design.get("model", "base_ka"))
+    print("საბაზო მოდელი:", DES, flush=True)
     out = cpath("datasets") / a.slot
     (out / "wav").mkdir(parents=True, exist_ok=True)
     meta_des = json.loads((DES / "meta.json").read_text())

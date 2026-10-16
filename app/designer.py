@@ -25,15 +25,46 @@ from .textnorm import ka_text
 
 from .config import ROOT, path as cpath
 
-DES = cpath("designer")  # იწერება tools/export_designer.py-ით
 DESIGNS = ROOT / "data" / "designs"
 CACHE = cpath("cache") / "designer"
-BASE_SPEAKERS = cpath("datasets") / "base_ka_v1" / "speakers.json"
 SR = 22050
+ACTIVE = ROOT / "data" / "designer_model.json"  # რომელი საბაზო მოდელით მუშაობს შემქმნელი (პანელიდან იცვლება)
 
 router = APIRouter(prefix="/api/designer")
 _lock = threading.Lock()
-_state = {"mtime": None}
+_state: dict = {}  # მოდელი → ჩატვირთული მდგომარეობა
+
+
+def models() -> dict:
+    """საბაზო მოდელები, რომლებიც შემქმნელისთვის დაექსპორტებულია (tools/export_designer.py).
+    თითოს თავისი რუკა (დინამიკები), რეიტინგი და შეფასებები აქვს; ნარევები მოდელითაა მონიშნული."""
+    out = {}
+    for slot, label, d, ds, rank, rat in (
+            ("base_ka", "ძველი (v1)", cpath("designer"), "base_ka_v1", "mms_rank.json", "designer_ratings.json"),
+            ("base_ka_v2", "ახალი (v2)", cpath("designer").parent / "designer_base_ka_v2", "base_ka_v2",
+             "mms_rank_base_ka_v2.json", "designer_ratings_base_ka_v2.json")):
+        if (d / "meta.json").exists():
+            meta = read_json(d / "meta.json", {}) or {}
+            n = len((read_json(d / "config.json", {}) or {}).get("speaker_id_map", {}))
+            out[slot] = {"slot": slot, "label": label, "dir": d, "speakers": cpath("datasets") / ds / "speakers.json",
+                         "rank": ROOT / "data" / rank, "ratings": ROOT / "data" / rat,
+                         "epoch": meta.get("epoch"), "voices": n}
+    return out
+
+
+def active() -> str:
+    ms = models()
+    a = (read_json(ACTIVE, {}) or {}).get("model")
+    if a in ms:
+        return a
+    return "base_ka_v2" if "base_ka_v2" in ms else next(iter(ms), "base_ka")
+
+
+def M() -> dict:
+    ms = models()
+    if not ms:
+        raise HTTPException(409, "საბაზო მოდელი ჯერ არ არის დაექსპორტებული შემქმნელისთვის")
+    return ms[active()]
 
 
 def read_json(p: Path, default=None):
@@ -69,33 +100,54 @@ def map_layout(emb: np.ndarray, f0s: list) -> np.ndarray:
 
 def state():
     """მოდელი იტვირთება პირველ მოთხოვნაზე და თავიდან — როცა ახალი სესიის შემდეგ ხელახლა დაექსპორტდება."""
-    meta_p = DES / "meta.json"
-    if not meta_p.exists():
-        raise HTTPException(409, "საბაზო მოდელი ჯერ არ არის დაექსპორტებული შემქმნელისთვის")
+    m = M()
+    des = m["dir"]
+    meta_p = des / "meta.json"
     mtime = meta_p.stat().st_mtime
     with _lock:
-        if _state["mtime"] != mtime:
+        st = _state.setdefault(m["slot"], {"mtime": None})
+        if st["mtime"] != mtime:
             from piper import PiperVoice
-            voice = PiperVoice.load(DES / "designer.onnx", DES / "config.json")
-            emb = np.load(DES / "embeddings.npy")
-            cfg = read_json(DES / "config.json", {})
+            voice = PiperVoice.load(des / "designer.onnx", des / "config.json")
+            emb = np.load(des / "embeddings.npy")
+            cfg = read_json(des / "config.json", {})
             smap = cfg.get("speaker_id_map", {})
-            names = [None] * len(smap)
-            for n, i in smap.items():
-                names[i] = n
-            info = read_json(BASE_SPEAKERS, {}) or {}
-            xy = map_layout(emb, [(info.get(n) or {}).get("f0_median") for n in names])
-            unit = emb / (np.linalg.norm(emb, axis=1, keepdims=True) + 1e-9)
-            _state.update(mtime=mtime, voice=voice, emb=emb, unit=unit, names=names, smap=smap,
-                          info=info, xy=xy, meta=read_json(meta_p, {}))
-        return _state
+            # v2-ს 600 ადგილი აქვს (მომავალი ხმებისთვის) — რუკაზე მხოლოდ ნასწავლი დინამიკები
+            names = [n for n, _ in sorted(smap.items(), key=lambda x: x[1])]
+            used = emb[[smap[n] for n in names]]
+            info = read_json(m["speakers"], {}) or {}
+            xy = map_layout(used, [(info.get(n) or {}).get("f0_median") for n in names])
+            unit = used / (np.linalg.norm(used, axis=1, keepdims=True) + 1e-9)
+            st.update(mtime=mtime, voice=voice, emb=emb, unit=unit, names=names, smap=smap,
+                      info=info, xy=xy, meta=read_json(meta_p, {}), slot=m["slot"])
+        return st
 
 
 @router.get("/status")
 def status():
-    meta = read_json(DES / "meta.json")
-    return {"ready": meta is not None, "meta": meta,
+    ms = models()
+    meta = read_json(ms[active()]["dir"] / "meta.json") if ms else None
+    return {"ready": meta is not None, "meta": meta, "model": active() if ms else None,
             "designs": len(list(DESIGNS.glob("*.json"))) if DESIGNS.exists() else 0}
+
+
+@router.get("/models")
+def list_models():
+    a = active()
+    return {"active": a, "models": [{k: v for k, v in m.items() if k in ("slot", "label", "epoch", "voices")}
+                                    | {"active": k == a, "rank_file": m["rank"].name} for k, m in models().items()]}
+
+
+class ModelIn(BaseModel):
+    model: str
+
+
+@router.post("/model")
+def set_model(b: ModelIn):
+    if b.model not in models():
+        raise HTTPException(404, "ასეთი მოდელი არ არის")
+    ACTIVE.write_text(json.dumps({"model": b.model}), encoding="utf-8")
+    return {"ok": True, "active": b.model}
 
 
 @router.get("/speakers")
@@ -207,8 +259,12 @@ class Design(BaseModel):
 
 @router.get("/designs")
 def designs():
-    return [read_json(p) for p in sorted(DESIGNS.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)] \
+    """ყველა ნარევი; "model" — რომელ საბაზო მოდელზეა შექმნილი (ძველებს ველი არ აქვთ → base_ka)."""
+    out = [read_json(p) for p in sorted(DESIGNS.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)] \
         if DESIGNS.exists() else []
+    for d in out:
+        d.setdefault("model", "base_ka")
+    return out
 
 
 @router.post("/designs")
@@ -219,7 +275,7 @@ def save_design(d: Design):
     did = re.sub(r"[^a-z0-9]+", "_", d.name.lower()).strip("_") or "voice"
     did = f"{did}_{int(time.time())}"
     rec = {"id": did, **d.model_dump(), "weights": info["weights"], "nearest": info["nearest"],
-           "f0_estimate": info["f0_estimate"], "model_epoch": s["meta"].get("epoch"),
+           "f0_estimate": info["f0_estimate"], "model_epoch": s["meta"].get("epoch"), "model": s["slot"],
            "created": time.strftime("%Y-%m-%dT%H:%M:%S")}
     (DESIGNS / f"{did}.json").write_text(json.dumps(rec, ensure_ascii=False, indent=1), encoding="utf-8")
     return rec
@@ -235,7 +291,6 @@ def delete_design(did: str):
 
 
 # ---------- ყველა ხმის მოსმენა: შეფასებები (👍 / 👎), Claude-საც ეს ფაილი ეხმარება ნარევის შერჩევაში ----------
-RATINGS = ROOT / "data" / "designer_ratings.json"
 
 
 class Rating(BaseModel):
@@ -247,7 +302,7 @@ class Rating(BaseModel):
 
 @router.get("/ratings")
 def ratings():
-    return read_json(RATINGS, {}) or {}
+    return read_json(M()["ratings"], {}) or {}
 
 
 @router.post("/ratings")
@@ -256,26 +311,25 @@ def rate(r: Rating):
     if r.name not in s["smap"]:
         raise HTTPException(404, "ასეთი დინამიკი არ არის")
     with _lock:
-        cur = read_json(RATINGS, {}) or {}
+        cur = read_json(M()["ratings"], {}) or {}
         if r.rating == 0:
             cur.pop(r.name, None)
         else:
             cur[r.name] = {"rating": r.rating, "phrase": r.phrase, "note": r.note,
                            "model_epoch": s["meta"].get("epoch"), "at": time.strftime("%Y-%m-%dT%H:%M:%S")}
-        tmp = RATINGS.with_suffix(".tmp")
+        tmp = M()["ratings"].with_suffix(".tmp")
         tmp.write_text(json.dumps(cur, ensure_ascii=False, indent=1), encoding="utf-8")
-        tmp.replace(RATINGS)
+        tmp.replace(M()["ratings"])
     return {"ok": True, "count": len(cur)}
 
 
-RANK = ROOT / "data" / "mms_rank.json"  # tools/mms_rank.py
 
 
 @router.get("/rank")
 def rank():
     """tools/mms_rank.py: ყველა ხმა და ნარევი, 5 წინადადება — საუკეთესოდან (ნაკლები შეცდომა) უარესისკენ."""
-    d = read_json(RANK, {}) or {}
-    names = {x.get("name") for x in designs()}
+    d = read_json(M()["rank"], {}) or {}
+    names = {x.get("name") for x in designs() if x["model"] == active()}
     rows = sorted((r for r in d.values() if r["kind"] != "mix" or r["name"] in names), key=lambda r: r["cer"])
     return {"sentences": ["გამარჯობა! დღეს მშვენიერი ამინდია, არა?",
                           "ოდესღაც, ძალიან დიდი ხნის წინ, ერთ პატარა სოფელში ცხოვრობდა მოხუცი მეთევზე.",
@@ -283,7 +337,7 @@ def rank():
                           "ზღვის ღრმა ტალღებმა ნავი ნაპირისკენ გააქანა.",
                           "მწვრთნელმა ბავშვებს წყალში ცურვა ასწავლა."],
             "rows": rows, "total": len(rows), "job": rank_job(),
-            "model_epoch": (read_json(DES / "meta.json") or {}).get("epoch")}
+            "model_epoch": M()["epoch"], "model": active()}
 
 
 # ---------- რეიტინგის გაშვება პანელიდან (./aivoice rank) ----------
@@ -335,8 +389,8 @@ def rank_stop():
 def rank_clear(kind: str = "all"):
     if _rank["proc"] and _rank["proc"].poll() is None:
         raise HTTPException(409, "ჯერ გააჩერეთ მიმდინარე შეფასება")
-    d = read_json(RANK, {}) or {}
+    d = read_json(M()["rank"], {}) or {}
     d = {k: v for k, v in d.items() if kind != "all" and v["kind"] != kind}
-    RANK.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+    M()["rank"].write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
     RANK_PROGRESS.unlink(missing_ok=True)
     return {"ok": True, "left": len(d)}
