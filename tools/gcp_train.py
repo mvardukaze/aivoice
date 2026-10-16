@@ -98,7 +98,9 @@ def cmd_create(slot: str | None = None):
     pub = KEY.with_suffix(".pub").read_text().strip()
     zones = l4_zones() or ZONES
     # ჯერ spot (იაფი) ყველა სასურველ ზონაში, მერე on-demand — L4 ხშირად ამოწურულია (STOCKOUT)
-    for spot in (True, False):
+    # spot ხშირად წყდება — ნაგულისხმევად ჩვეულებრივი (on-demand); spot მხოლოდ aivoice.toml [gcp] spot = "1"-ით
+    modes = (True, False) if str(cfg()["gcp"].get("spot", "0")) == "1" else (False,)
+    for spot in modes:
         for z in zones:
             opts = ["--provisioning-model", "SPOT", "--instance-termination-action", "STOP"] if spot else []
             r = gc("compute", "instances", "create", NAME, "--zone", z,
