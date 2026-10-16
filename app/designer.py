@@ -236,10 +236,15 @@ def suggest(mode: str = "neutral", k: int = 4, seed: int | None = None):
     s = state()
     rng = np.random.default_rng(seed if seed is not None else int(time.time() * 1000) % 2**32)
     pool = [(n, s["info"].get(n, {}).get("f0_median")) for n in s["names"]]
-    pool = [(n, f) for n, f in pool if f and (s["info"].get(n, {}).get("minutes") or 0) >= 10]
+    # საკმარისად ნასწავლი ხმები: v1-ში ≥ 10 წთ; v2-ში თითო ხმას ≤ 8 წთ აქვს (შერჩევის ზღვარი) → ≥ 5 წთ
+    mins = [s["info"].get(n, {}).get("minutes") or 0 for n, _ in pool]
+    thr = 10 if max(mins, default=0) > 20 else 5
+    pool = [(n, f) for n, f in pool if f and (s["info"].get(n, {}).get("minutes") or 0) >= thr]
     if mode == "neutral":
         low = sorted([p for p in pool if 120 <= p[1] < 160], key=lambda p: -p[1])[:30]
         high = sorted([p for p in pool if 165 <= p[1] < 205], key=lambda p: p[1])[:30]
+        if len(low) < 2 or len(high) < 2:
+            raise HTTPException(409, "საკმარისი ხმა ვერ მოიძებნა")
         pick = [low[i] for i in rng.choice(len(low), 2, replace=False)] + [high[i] for i in rng.choice(len(high), 2, replace=False)]
     else:
         cand = [p for p in pool if (mode == "female" and p[1] >= 175) or (mode == "male" and p[1] < 140) or mode == "random"]
