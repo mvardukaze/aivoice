@@ -78,19 +78,21 @@ window.Designer = (() => {
               <label class="slider"><span>ტემპი</span><input type="range" id="des-len" min="0.8" max="1.25" step="0.01" value="1" title="მეტი = უფრო სწრაფი"><output id="des-len-o">1.00</output></label>
               <label class="slider"><span>ინტონაცია</span><input type="range" id="des-noise" min="0.3" max="0.9" step="0.01" value="0.667"><output id="des-noise-o">0.67</output></label>
             </div>
+            <div class="des-player">
+              <label class="lbl" for="des-text">ტექსტი</label>
+              <textarea id="des-text" rows="3">${esc(PHRASES[0])}</textarea>
+              <div class="chips">${PHRASES.map((p, i) => `<button class="chip" data-ph="${i}">${esc(p.slice(0, 22))}…</button>`).join("")}</div>
+              <div class="actions">
+                <button class="primary" id="des-play">${UI.icon("play", 14)} მოსმენა</button>
+                <span class="muted small" id="des-info"></span>
+              </div>
+              <audio id="des-audio" controls preload="none"></audio>
+              <div class="des-save">
+                <input id="des-name" maxlength="60" placeholder="ხმის სახელი, მაგ. „ნეიტრალური 1“">
+                <button class="ghost" id="des-save-btn">შენახვა</button>
+              </div>
+            </div>
           </div>
-        </div>
-        <label class="lbl" for="des-text">ტექსტი</label>
-        <textarea id="des-text" rows="2">${esc(PHRASES[0])}</textarea>
-        <div class="chips">${PHRASES.map((p, i) => `<button class="chip" data-ph="${i}">${esc(p.slice(0, 26))}…</button>`).join("")}</div>
-        <div class="actions">
-          <button class="primary" id="des-play">${UI.icon("play", 14)} მოსმენა</button>
-          <span class="muted small" id="des-info"></span>
-        </div>
-        <audio id="des-audio" controls preload="none"></audio>
-        <div class="des-save">
-          <input id="des-name" maxlength="60" placeholder="ხმის სახელი, მაგ. „ნეიტრალური 1“">
-          <button class="ghost" id="des-save-btn">შენახვა</button>
         </div>
       </div>
       <div class="card" id="rank-card" data-pane="rank"></div>

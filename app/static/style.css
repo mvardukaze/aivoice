@@ -926,3 +926,8 @@ tr.ear-on td { background: var(--accent-soft, rgba(79,70,229,.08)); }
 .model-switch button.on .muted { color: rgba(255,255,255,.8); }
 .des-other { margin-top: 10px; }
 .des-item.foreign { opacity: .85; }
+.des-player { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.des-player textarea { width: 100%; }
+.des-player audio { width: 100%; margin-top: 6px; }
+.des-player .des-save { display: flex; gap: 8px; margin-top: 8px; }
+.des-player .des-save input { flex: 1; min-width: 0; }
