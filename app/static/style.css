@@ -931,3 +931,5 @@ tr.ear-on td { background: var(--accent-soft, rgba(79,70,229,.08)); }
 .des-player audio { width: 100%; margin-top: 6px; }
 .des-player .des-save { display: flex; gap: 8px; margin-top: 8px; }
 .des-player .des-save input { flex: 1; min-width: 0; }
+.rk-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+.rk-sort:hover, .rk-sort.on { color: var(--accent, #4f46e5); }

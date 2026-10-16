@@ -464,7 +464,7 @@ window.Designer = (() => {
   }
 
   // ---------- რეიტინგი (tools/mms_rank.py): ყველა ხმა და ნარევი, 5 წინადადება, საუკეთესოდან უარესისკენ ----------
-  let rk = { data: null, lo: 0, hi: 400, kind: "all", show: 40, sent: 0 };
+  let rk = { data: null, lo: 0, hi: 400, kind: "all", show: 40, sent: 0, by: -1 };  // by: -1 — საშუალოთი, 0–4 — წინადადებით
   async function renderRank() {
     const box = $("#rank-card");
     rk.data = await api("/api/designer/rank").catch(() => null);
@@ -480,6 +480,7 @@ window.Designer = (() => {
     }
     const rows = rk.data.rows.filter((r) => (rk.kind === "all" || r.kind === rk.kind)
       && (r.kind === "mix" || ((r.f0 || 0) >= rk.lo && (r.f0 || 0) <= rk.hi)));
+    if (rk.by >= 0) rows.sort((a, b) => a.per[rk.by] - b.per[rk.by] || a.cer - b.cer);  // ვინ ამბობს საუკეთესოდ ამ წინადადებას
     const pct = (x) => Math.round(x * 100);
     const cls = (x) => (x <= 0.12 ? "ok" : x <= 0.25 ? "" : "bad");
     box.innerHTML = `
@@ -493,7 +494,7 @@ window.Designer = (() => {
         <label>მოსასმენი წინადადება <select id="rk-sent">${S.map((t, i) => `<option value="${i}" ${i === rk.sent ? "selected" : ""}>${i + 1}. ${esc(t.slice(0, 30))}…</option>`).join("")}</select></label>
       </div>
       <div class="cmp-wrap"><table class="cmp rank-table">
-        <thead><tr><th>#</th><th></th><th>ხმა / ნარევი</th><th>საშუალო</th>${S.map((t, i) => `<th title="${esc(t)}">${i + 1}</th>`).join("")}<th></th></tr></thead>
+        <thead><tr><th>#</th><th></th><th>ხმა / ნარევი</th><th class="rk-sort ${rk.by === -1 ? "on" : ""}" data-by="-1" title="დალაგება საშუალოთი">საშუალო${rk.by === -1 ? " ↑" : ""}</th>${S.map((t, i) => `<th class="rk-sort ${rk.by === i ? "on" : ""}" data-by="${i}" title="დალაგება ამ წინადადებით: ${esc(t)}">${i + 1}${rk.by === i ? " ↑" : ""}</th>`).join("")}<th></th></tr></thead>
         <tbody>${rows.slice(0, rk.show).map((r, i) => `<tr class="${r.kind === "mix" ? "mixrow" : ""}">
           <td>${i + 1}</td>
           <td><button class="play" data-rk="${esc(r.kind)}|${esc(r.name)}" aria-label="მოსმენა">${UI.icon("play", 12)}</button></td>
@@ -505,6 +506,9 @@ window.Designer = (() => {
         </tr>`).join("")}</tbody></table></div>
       ${rows.length > rk.show ? `<div class="actions"><button class="ghost small" id="rk-more">კიდევ 40 (${rows.length - rk.show} დარჩა)</button></div>` : ""}`;
     bindRankControls(box, job);
+    box.querySelectorAll("th[data-by]").forEach((h) => h.addEventListener("click", () => {
+      rk.by = +h.dataset.by; if (rk.by >= 0) rk.sent = rk.by; rk.show = 40; renderRank();
+    }));
     $("#rk-kind").value = rk.kind;
     $("#rk-kind").onchange = (e) => { rk.kind = e.target.value; renderRank(); };
     $("#rk-lo").onchange = (e) => { rk.lo = +e.target.value || 0; renderRank(); };
