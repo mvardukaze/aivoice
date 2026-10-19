@@ -664,6 +664,16 @@ tr.rejected td { opacity: .5; }
 .tr-new button { justify-self: start; }
 #tr-new-msg { grid-column: 1 / -1; }
 .tr-job { padding: 16px 0; border-top: 1px solid var(--border); }
+.tr-base > summary h2 { margin: 0; }
+.tr-base-form { display: grid; gap: 14px; margin-top: 12px; }
+.tr-base-form fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px 12px; margin: 0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.tr-base-form legend { font-size: 13px; font-weight: 600; color: var(--text-2); padding: 0 6px; }
+.tr-base-form fieldset > p, .tr-base-form .tr-checks { flex-basis: 100%; margin: 0; }
+.tr-base-form .tr-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; padding-left: 24px; }
+.tr-base-form select { max-width: 100%; }
+.tr-base-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.tr-base-foot label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
 .tr-job:first-child { border-top: 0; padding-top: 4px; }
 .tr-job .run-head b { font-size: 15px; }
 .tr-job .actions { flex-wrap: wrap; gap: 8px; margin-top: 12px; }

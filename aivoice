@@ -43,6 +43,7 @@ case "$cmd" in
     if [ -x "$TPY" ]; then $TPY tools/voice_check.py "$@"; else $PY tools/voice_check.py --no-mms "$@"; fi ;;
   designer) need_training; $TPY tools/export_designer.py "$@" ;;       # საბაზო checkpoint → ხმის შემქმნელის მოდელი
   quality)  need_training; nice -n 10 $TPY tools/clip_quality.py "$@" ;;  # Common Voice-ის ჩანაწერების ხარისხი (MMS, შიშინი, ხმაური)
+  base)    $PY tools/base_ctl.py "$@" ;;                            # საბაზო მოდელი: options | new | prepare | start --on gcp|local | status | stop
   select)  $PY tools/select_best.py "$@" ;;                         # საუკეთესო ჩანაწერები ახალი dataset-ისთვის (--hours 40)
   build-selection) nice -n 10 $PY tools/build_selection_dataset.py "$@" ;;  # შერჩევა → dataset (+ --tar Google Cloud-ისთვის)
   kaggle-mms) $PY tools/kaggle_mms.py "$@" ;;                      # MMS Common Voice-ის ჩანაწერებზე Kaggle-ზე: push | status | fetch | wait
@@ -71,6 +72,12 @@ aivoice — ქართული სინთეზური ხმები
   ./aivoice train stop f_mix_02                      გაჩერება
   ./aivoice train list                               ყველა ხმა
   ./aivoice check f_mix_02                           ხმის შემოწმება (ნარევთან შედარება, MMS)
+
+  საბაზო მოდელი (ან პანელიდან: „წვრთნა“ → „საბაზო მოდელი“; ყველგან --dry-run — მხოლოდ გეგმა):
+  ./aivoice base new base_ka_v4 --mode continue --from base_ka_v3 --hours 40 --short --punct --clusters
+  ./aivoice base prepare base_ka_v4                  dataset (+ არქივი Google Cloud-ისთვის)
+  ./aivoice base start base_ka_v4 --on gcp           Google Cloud L4 (ან --on local — GPU ≥ 12 GB)
+  ./aivoice base status | stop base_ka_v4
 
   სხვა: designer | rank | kaggle ... | gcp ... | local
   დაყენება: ./install.sh [--training]  ·  დოკუმენტაცია: README.md

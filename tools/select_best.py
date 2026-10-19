@@ -65,6 +65,7 @@ def main():
     ap.add_argument("--cps", type=float, nargs=2, default=RULES["cps"])
     ap.add_argument("--punct-bonus", type=float, default=0, help="კითხვით/ძახილის წინადადებებს უპირატესობა (მაგ. 100)")
     ap.add_argument("--cluster-bonus", type=float, default=0, help="რ/ღ/ბ/ფ/პ + თანხმოვანი — უპირატესობა თითოზე (მაგ. 8)")
+    ap.add_argument("--include-launched", action="store_true", help="ახალი მოდელი ნულიდან: გაშვებული შერჩევების ჩანაწერებიც")
     a = ap.parse_args()
     RULES.update(min_letters=a.min_letters, dur=(a.dur_min, RULES["dur"][1]), cps=tuple(a.cps), punct_bonus=a.punct_bonus, cluster_bonus=a.cluster_bonus)
 
@@ -73,7 +74,8 @@ def main():
     rows = {r["spk"]: r for r in __import__("app.quality_api", fromlist=["summary"]).summary()["speakers"]}
     skip = set()
     # უკვე გაშვებული შერჩევების ჩანაწერები ავტომატურად გამოტოვდება (შემდეგი 40 სთ — ახალი ჩანაწერებით)
-    launched = [f.stem for f in OUT.glob("*.json") if f.stem != a.name and json.loads(f.read_text(encoding="utf-8")).get("launched")]
+    launched = [] if a.include_launched else [
+        f.stem for f in OUT.glob("*.json") if f.stem != a.name and json.loads(f.read_text(encoding="utf-8")).get("launched")]
     for name in sorted(set(a.exclude_from) | set(launched)):
         skip |= set(json.loads((OUT / f"{name}.json").read_text(encoding="utf-8"))["clips"])
     per = {}
