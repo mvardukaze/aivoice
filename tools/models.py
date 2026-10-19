@@ -53,8 +53,15 @@ def token(write=False) -> str | None:
     return None
 
 
+_REPO = None  # pull/push-ის დროს: საჯარო ან პირადი რეპოზიტორია
+
+
+def public_repo() -> str:
+    return cfg()["hf"].get("public_repo") or "mvarduka/aivoice-voices"
+
+
 def repo() -> str:
-    r = cfg()["hf"]["models_repo"]
+    r = _REPO or cfg()["hf"]["models_repo"]
     if not r:
         raise SystemExit("Hugging Face-ის რეპოზიტორია არ არის მითითებული: პანელი → პარამეტრები → Hugging Face")
     return r
@@ -101,6 +108,33 @@ def local_files(base: bool) -> list[tuple[Path, str]]:
             out += [(m, f"voices/{v['model']}"), (Path(str(m) + ".json"), f"voices/{v['model']}.json")]
     if base:
         out += base_files()
+    return out
+
+
+def public_files(base: bool) -> list[tuple[Path, str]]:
+    """საჯარო რეპოზიტორია — მხოლოდ ის, რაც ნამდვილ ადამიანებს არ შეიცავს (tools/public_voices.py, public_ckpt.py):
+    სინთეზური ხმის შემქმნელი(ები), მათი ნარევები და რეიტინგი, მზა ხმები, ლექსიკონი; --base: საჯარო checkpoint + LJSpeech."""
+    out = []
+    for d in sorted(cpath("designer").parent.glob("designer_*_public")):
+        out += [(d / f, f"{d.name}/{f}") for f in ("designer.onnx", "embeddings.npy", "config.json", "meta.json", "speakers.json")]
+        slot = d.name.removeprefix("designer_")
+        r = ROOT / "data" / f"mms_rank_{slot}.json"
+        if r.exists():
+            out.append((r, f"rank/{r.name}"))
+    for p in sorted(DESIGNS.glob("*.json")) if DESIGNS.exists() else []:
+        if str(json.loads(p.read_text(encoding="utf-8")).get("model", "")).endswith("_public"):
+            out.append((p, f"designs/{p.name}"))
+    if LEXICON.exists():
+        out.append((LEXICON, "lexicon/lexicon.json"))
+    for v in catalog()["voices"]:
+        if v.get("status") in SHARED_STATUS and v.get("model"):
+            m = ROOT / "voices" / v["model"]
+            out += [(m, f"voices/{v['model']}"), (Path(str(m) + ".json"), f"voices/{v['model']}.json")]
+    if base:
+        for ko in sorted(cpath("runs").glob("*_public/kaggle_out")):
+            out += [(ko / "final.ckpt", f"{ko.parent.name}/final.ckpt"), (ko / "config.json", f"{ko.parent.name}/config.json")]
+        out.append((ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt",
+                    "ljspeech/ljspeech-medium.clean.ckpt"))
     return out
 
 
@@ -270,14 +304,20 @@ def _save_hashes(cache):
 
 def cmd_push(a):
     from huggingface_hub import HfApi
+    global _REPO
     t = token(write=True)
     if not t:
         raise SystemExit("საჭიროა Hugging Face Write token (პანელი → პარამეტრები → ანგარიშები)")
     api = HfApi(token=t)
-    api.create_repo(repo(), private=True, exist_ok=True)
+    pub = getattr(a, "public", False)
+    if pub:
+        _REPO = public_repo()
+        if getattr(a, "data", False):
+            raise SystemExit("ხარისხის მონაცემები (ნამდვილი ჩანაწერები) საჯარო რეპოზიტორიაში არ იტვირთება")
+    api.create_repo(repo(), private=not pub, exist_ok=True)
     rem, cache = remote_index(api, t), _hashes()
     n = 0
-    files = local_files(base=a.base) + (data_files() if getattr(a, "data", False) else [])
+    files = public_files(base=a.base) if pub else local_files(base=a.base) + (data_files() if getattr(a, "data", False) else [])
     if getattr(a, "data", False):
         n += push_clips(api, rem)
     for src, dst in files:
@@ -348,8 +388,16 @@ def pull_clips(r, t, force=False) -> int:
 def fetch_file(f: str, dst: Path) -> Path:
     """ერთი ფაილი რეპოზიტორიიდან (მაგ. kaggle_train.py-სთვის LJSpeech checkpoint)."""
     from huggingface_hub import hf_hub_download
-    print(f"  ↓ {f} (Hugging Face: {repo()})", flush=True)
-    p = hf_hub_download(repo(), f, token=token())
+    p = None
+    for r in (public_repo(), cfg()["hf"]["models_repo"]):  # ჯერ საჯარო (token არ სჭირდება), მერე პირადი
+        try:
+            print(f"  ↓ {f} (Hugging Face: {r})", flush=True)
+            p = hf_hub_download(r, f, token=token())
+            break
+        except Exception as e:  # noqa: BLE001
+            print(f"    {r}: {str(e)[:80]}", flush=True)
+    if p is None:
+        raise SystemExit(f"{f} ვერ ჩამოიტვირთა Hugging Face-იდან")
     dst.parent.mkdir(parents=True, exist_ok=True)
     tmp = dst.with_name(dst.name + ".part")
     shutil.copy2(p, tmp)
@@ -369,6 +417,8 @@ def target_for(f: str, base: bool, data: bool = False) -> Path | None:
         return LEXICON
     if top == "rank":
         return ROOT / "data" / (rest or "mms_rank.json")
+    if top.startswith("designer_") and top.endswith("_public"):
+        return cpath("designer").parent / top / rest
     if top.startswith("designer_base_ka_v"):
         slot = top.removeprefix("designer_")
         return cpath("datasets") / slot / "speakers.json" if rest == "speakers.json" else cpath("designer").parent / top / rest
@@ -384,17 +434,42 @@ def target_for(f: str, base: bool, data: bool = False) -> Path | None:
 
 
 def cmd_pull(a):
+    """ჯერ საჯარო რეპოზიტორია (token არ სჭირდება), მერე პირადი — თუ token და წვდომა არის."""
+    global _REPO
+    _REPO = public_repo()
+    print(f"საჯარო: {repo()}", flush=True)
+    try:
+        _pull(a, token(), required=False, data=False)
+    except SystemExit as e:
+        print("  ", e)
+    _REPO = None
+    if not token():
+        print("პირადი რეპოზიტორია გამოტოვებულია — Read token არ არის (ნამდვილი ხმები და საბაზოს გაუმჯობესება მხოლოდ ავტორის წვდომით)")
+        return
+    print(f"პირადი: {repo()}", flush=True)
+    _pull(a, token(), required=False, data=getattr(a, "data", False))
+
+
+def _pull(a, t, required=True, data=False):
     from huggingface_hub import HfApi, hf_hub_download
-    t = token()
     api = HfApi(token=t)
-    rem, cache = remote_index(api, t), _hashes()
+    try:
+        rem = remote_index(api, t)
+    except Exception as e:  # noqa: BLE001 — 401/403: წვდომა არ არის
+        if required:
+            raise
+        print(f"  წვდომა არ არის ({str(e)[:80]}) — გამოტოვებულია")
+        return
+    cache = _hashes()
     if not rem:
-        raise SystemExit(f"რეპოზიტორია {repo()} ცარიელია ან წვდომა არ არის — საჭიროა Hugging Face Read token "
-                         "(პარამეტრები → ანგარიშები) და ავტორის მიცემული წვდომა")
+        if required:
+            raise SystemExit(f"რეპოზიტორია {repo()} ცარიელია ან წვდომა არ არის — საჭიროა Hugging Face Read token "
+                             "(პარამეტრები → ანგარიშები) და ავტორის მიცემული წვდომა")
+        print("  ცარიელია ან წვდომა არ არის — გამოტოვებულია")
+        return
     cat = catalog()
     known = {v["id"]: v for v in cat["voices"]}
     n = 0
-    data = getattr(a, "data", False)
     if data and CLIPS_TAR in rem:
         n += pull_clips(rem[CLIPS_TAR], t, a.force)
     for f, r in sorted(rem.items()):
@@ -450,6 +525,7 @@ def main():
     p.add_argument("--data", action="store_true", help="ხარისხის მონაცემებიც (~4.5 GB) — საბაზოს გასაუმჯობესებლად")
     p.add_argument("--force", action="store_true", help="ამ კომპიუტერზე შეცვლილი პარამეტრებიც გადაიწეროს")
     p = sub.add_parser("push")
+    p.add_argument("--public", action="store_true", help="საჯარო რეპოზიტორიაში — მხოლოდ სინთეზური ხმები და მზა ხმები")
     p.add_argument("--base", action="store_true", help="საბაზო checkpoint-ებიც")
     p.add_argument("--data", action="store_true", help="ხარისხის მონაცემებიც (clips/ → tar, მხოლოდ შეცვლისას)")
     p = sub.add_parser("status")
