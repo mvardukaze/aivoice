@@ -102,9 +102,15 @@ def map_layout(emb: np.ndarray, f0s: list) -> np.ndarray:
     return xy
 
 
-def state():
+def state(slot: str | None = None):
     """მოდელი იტვირთება პირველ მოთხოვნაზე და თავიდან — როცა ახალი სესიის შემდეგ ხელახლა დაექსპორტდება."""
-    m = M()
+    if slot:  # კონკრეტული მოდელი (მაგ. რეიტინგი ახალ მოდელზე) — აქტიურის შეცვლის გარეშე
+        ms = models()
+        if slot not in ms:
+            raise HTTPException(404, "ასეთი მოდელი არ არის")
+        m = ms[slot]
+    else:
+        m = M()
     des = m["dir"]
     meta_p = des / "meta.json"
     mtime = meta_p.stat().st_mtime
@@ -173,8 +179,8 @@ def traits_info():
 
 
 @router.get("/speakers")
-def speakers():
-    s = state()
+def speakers(model: str | None = None):
+    s = state(model)
     tr = traits()
     out = []
     for i, n in enumerate(s["names"]):
@@ -203,6 +209,7 @@ def mix_vector(s, weights: dict[str, float]) -> tuple[np.ndarray, dict]:
 
 class SynthReq(BaseModel):
     weights: dict[str, float]
+    model: str | None = None  # ცარიელი — აქტიური მოდელი
     text: str = Field(min_length=1, max_length=1000)
     length_scale: float = 1.0
     noise_scale: float = 0.667
@@ -211,7 +218,7 @@ class SynthReq(BaseModel):
 
 @router.post("/synth")
 def synth(req: SynthReq):
-    s = state()
+    s = state(req.model)
     g, info = mix_vector(s, req.weights)
     params = [min(1.0, max(0.2, req.noise_scale)), min(1.4, max(0.7, req.length_scale)), min(1.2, max(0.3, req.noise_w_scale))]
     key = hashlib.sha1(json.dumps([s["meta"].get("exported"), info["weights"], ka_text(req.text), params]).encode()).hexdigest()[:16]

@@ -234,6 +234,17 @@ def _sel(name: str) -> tuple[Path, dict]:
     return f, d
 
 
+@router.get("/selections")
+def selections():
+    """შერჩევები (data/selections): სტატისტიკა, გაშვებულია თუ არა — „შერჩეულის“ ბარათის სიისთვის."""
+    out = []
+    for f in sorted(SEL.glob("*.json")) if SEL.exists() else []:
+        d = read_json(f, {}) or {}
+        out.append({"name": f.stem, "stats": d.get("stats"), "launched": d.get("launched"), "created": d.get("created"),
+                    "model": d.get("model"), "parts": d.get("parts")})
+    return out
+
+
 @router.get("/selection/{name}")
 def selection(name: str, n: int = 300, seed: int = 0):
     import random

@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from app.config import api_url, cfg, path as cpath  # noqa: E402,F401
 OUT = ROOT / "data" / "mms_rank.json"
+MODEL = None  # main()-ში
 API = api_url("/api/designer")
 SENTENCES = [
     "გამარჯობა! დღეს მშვენიერი ამინდია, არა?",
@@ -41,7 +42,7 @@ def synth(weights, text):
     for i in range(20):
         try:
             req = urllib.request.Request(f"{API}/synth", method="POST", headers={"Content-Type": "application/json"},
-                                         data=json.dumps({"weights": weights, "text": text}).encode())
+                                         data=json.dumps({"weights": weights, "text": text, "model": MODEL}).encode())
             url = json.loads(urllib.request.urlopen(req, timeout=180).read())["url"]
             return cpath("cache") / "designer" / url.rsplit("/", 1)[-1]
         except OSError:
@@ -77,18 +78,20 @@ def main():
     ap = argparse.ArgumentParser(prog="./aivoice rank")
     ap.add_argument("--kind", choices=("all", "speaker", "mix"), default="all")
     ap.add_argument("--fresh", action="store_true", help="არჩეული ტიპის ძველი შედეგები თავიდან")
+    ap.add_argument("--model", default=None, help="საბაზო მოდელი (მაგ. base_ka_v3); ნაგულისხმევად — შემქმნელში აქტიური")
     args = ap.parse_args()
+    global OUT, MODEL
+    mi = get(f"{API}/models")
+    MODEL = args.model or mi["active"]
+    minfo = next(m for m in mi["models"] if m["slot"] == MODEL)
+    OUT = ROOT / "data" / minfo["rank_file"]
     items = []
     if args.kind in ("all", "speaker"):
-        items += [("speaker", s["name"], {s["name"]: 1}, s.get("f0")) for s in get(f"{API}/speakers")["speakers"]]
-    # აქტიური საბაზო მოდელის რეიტინგის ფაილი და მისი ნარევები (შემქმნელი → მოდელის გადამრთველი)
-    global OUT
-    mi = get(f"{API}/models")
-    OUT = ROOT / "data" / next(m["rank_file"] for m in mi["models"] if m["active"])
-    designs = [d for d in get(f"{API}/designs") if d.get("model", "base_ka") == mi["active"]]
+        items += [("speaker", s["name"], {s["name"]: 1}, s.get("f0")) for s in get(f"{API}/speakers?model={MODEL}")["speakers"]]
+    designs = [d for d in get(f"{API}/designs") if d.get("model", "base_ka") == MODEL]
     if args.kind in ("all", "mix"):
         items += [("mix", d["name"], d["weights"], d.get("f0_estimate")) for d in designs]
-    epoch = (get(f"{API}/status").get("meta") or {}).get("epoch")
+    epoch = minfo.get("epoch")
     done = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     names = {d["name"] for d in designs}
     done = {k: v for k, v in done.items() if v["kind"] != "mix" or v["name"] in names}  # წაშლილი ნარევები

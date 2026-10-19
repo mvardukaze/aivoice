@@ -302,6 +302,14 @@ def finalize():
     st.update(status="done", epoch=p.get("epoch"), source="gcp", gpu="Google Cloud L4")
     st_p.write_text(json.dumps(st, ensure_ascii=False, indent=1))
     export_designer(out / "final.ckpt")  # status.json-ის შემდეგ — meta.json-ში სწორი ეპოქა ჩაიწეროს
+    if SLOT != "base_ka":
+        # ახალი მოდელი: სქესი/ასაკი ტემბრით (წამები) და რეიტინგი (~30 წთ, ფონზე, პანელის API-თ)
+        env = {"CUDA_VISIBLE_DEVICES": "", "PATH": "/usr/bin:/bin", "OMP_NUM_THREADS": "4"}
+        r = subprocess.run([TPY, str(ROOT / "tools" / "voice_traits.py"), "--model", SLOT], capture_output=True, text=True, env=env)
+        print("traits:", (r.stdout or r.stderr).strip()[-200:], flush=True)
+        log = (cpath("runs") / "_rank.log").open("a", encoding="utf-8")
+        subprocess.Popen(["nice", "-n", "10", TPY, str(ROOT / "tools" / "mms_rank.py"), "--model", SLOT], cwd=ROOT,
+                         stdout=log, stderr=subprocess.STDOUT, start_new_session=True, env={**env, "OMP_NUM_THREADS": "8"})
     subprocess.run([TPY, str(ROOT / "tools" / "make_previews.py"), str(out / "final.ckpt"), "--label", "საბოლოო", "--slot", SLOT],
                    capture_output=True, env={"CUDA_VISIBLE_DEVICES": "", "PATH": "/usr/bin:/bin", "OMP_NUM_THREADS": "4"})
     sys.path.insert(0, str(ROOT / "tools"))

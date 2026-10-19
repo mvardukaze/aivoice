@@ -129,6 +129,9 @@ const curVoice = () => voices.find((v) => v.id === $("#voice-select").value);
 const hue = (s) => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
 const initial = (s) => [...String(s || "?").trim()][0] || "?";
 
+// საბაზო მოდელის მოკლე სახელი: base_ka → v1, base_ka_v3 → v3
+const baseLabel = (b) => (b === "base_ka" ? "v1" : (b || "").replace(/^base_ka_/, ""));
+
 function voiceCard(v) {
   if (editing === v.id) return voiceEditCard(v);
   const d = v.defaults;
@@ -147,7 +150,8 @@ function voiceCard(v) {
         ])}
       </div>
       <div class="voice-tags"><span class="badge ${v.status}">${STATUS[v.status] || v.status}</span>
-        ${[v.gender, v.age].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div>
+        ${[v.gender, v.age].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("")}
+        ${v.base ? `<span class="tag" title="რომელ საბაზო მოდელზეა შექმნილი">საბაზო ${esc(baseLabel(v.base))}</span>` : ""}</div>
       ${v.character ? `<div class="meta">${esc(v.character)}</div>` : ""}
       <div class="meta small">${esc(v.source)}${v.size_mb ? ` · ${v.sample_rate} Hz, ${v.size_mb} MB` : ""}</div>
       ${d ? `<div class="norm-line small" title="ნორმა">ტემპი <b>${d.length_scale}</b> · ინტონაცია <b>${d.noise_scale}</b> · რიტმი <b>${d.noise_w_scale}</b> · ხმამაღლობა <b>${d.volume}</b></div>` : ""}

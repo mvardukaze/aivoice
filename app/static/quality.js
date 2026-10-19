@@ -66,11 +66,17 @@
   }
 
   // ---------- შერჩეული (საუკეთესო ~40 სთ): შემთხვევითი მოსმენა; X — ჩანაწერის ამოღება, D — მთელი დინამიკის ----------
-  const SELN = "base_ka_v2";
-  const sel = { clips: [], i: 0, playing: false, stats: null, rej: 0 };
+  let SELN = null;  // არჩეული შერჩევა (data/selections) — ნაგულისხმევად უახლესი
+  const sel = { clips: [], i: 0, playing: false, stats: null, rej: 0, list: [] };
   async function renderSel() {
     const box = document.getElementById("sel-card");
     if (!box) return;
+    if (!sel.list.length) {
+      sel.list = await api("/api/quality/selections").catch(() => []);
+      if (!sel.list.length) { box.hidden = true; return; }
+      const pick = () => { try { return localStorage.getItem("sel-name"); } catch { return null; } };
+      SELN = sel.list.find((x) => x.name === pick())?.name || sel.list.filter((x) => x.launched).map((x) => x.name).sort().pop() || sel.list[sel.list.length - 1].name;
+    }
     if (!sel.stats) {
       const d = await api(`/api/quality/selection/${SELN}`).catch(() => null);
       if (!d) { box.hidden = true; return; }
@@ -78,7 +84,9 @@
     }
     const s = sel.stats, c = sel.clips[sel.i];
     box.innerHTML = `
-      <div class="card-head"><h2>შერჩეული — საუკეთესო ${s.hours} სთ</h2><span class="muted small">${sel.i + 1} / ${sel.clips.length} შემთხვევითი</span></div>
+      <div class="card-head"><h2>შერჩეული — ${s.hours} სთ</h2>
+        <label class="small">შერჩევა <select id="sel-name">${sel.list.map((x) => `<option value="${esc(x.name)}" ${x.name === SELN ? "selected" : ""}>${esc(x.name)}${x.launched ? " · გაშვებული" : ""}${x.stats ? ` · ${x.stats.hours} სთ` : ""}</option>`).join("")}</select></label></div>
+      <div class="muted small">${sel.i + 1} / ${sel.clips.length} შემთხვევითი ჩანაწერი</div>
       <div class="kv"><div><span>ჩანაწერი</span><b>${s.clips.toLocaleString()}</b></div><div><span>დინამიკი</span><b>${s.speakers} (ახალი ${s.new_speakers})</b></div>
         <div><span>დაბალი ხმა</span><b>${s.low_speakers} · ${s.low_hours} სთ</b></div><div><span>MMS საშუალოდ</span><b>${(s.mean_cer * 100).toFixed(1)}%</b></div>
         <div><span>თქვენ ამოიღეთ</span><b>${sel.rej} ჩანაწერი · ${sel.rejSpk || 0} დინამიკი</b></div></div>
@@ -92,6 +100,11 @@
         <button class="ghost small" id="sel-x">✕ ჩანაწერი ცუდია</button>
         <button class="ghost small danger" id="sel-d">დინამიკი ცუდია</button>
       </div>`;
+    $("#sel-name").onchange = (e) => {
+      SELN = e.target.value; try { localStorage.setItem("sel-name", SELN); } catch {}
+      if (sel.playing) selPause();
+      Object.assign(sel, { stats: null, clips: [], i: 0 }); renderSel();
+    };
     $("#sel-play").onclick = () => (sel.playing ? selPause() : selPlay());
     $("#sel-next").onclick = () => selPlay(sel.i + 1);
     $("#sel-x").onclick = () => selReject("clip");
