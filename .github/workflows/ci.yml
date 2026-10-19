@@ -1,0 +1,65 @@
+# CI: დაყენება (./install.sh) + პანელის გაშვება და შემოწმება macOS-ზე (Apple Silicon) და Linux-ზე.
+# მოდელები (Hugging Face, პირადი) აქ არ ჩამოიტვირთება — პანელი მათ გარეშეც უნდა ჩაირთოს და უპასუხოს.
+# ./install.sh --training (torch) აქ არ ეშვება — მძიმეა.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: install + panel (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]   # macos-latest = Apple Silicon (arm64)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System packages (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg espeak-ng python3-venv
+
+      - name: Install (./install.sh)
+        run: ./install.sh --data "$RUNNER_TEMP/aivoice-data"
+
+      - name: Text normalization tests
+        run: .venv/bin/python tests/test_textnorm.py
+
+      - name: Start panel
+        run: |
+          nohup ./aivoice serve > "$RUNNER_TEMP/serve.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null http://127.0.0.1:8200/ && { echo "panel up after ${i}s"; exit 0; }
+            sleep 1
+          done
+          echo "panel did not start"; cat "$RUNNER_TEMP/serve.log"; exit 1
+
+      - name: Smoke checks
+        run: |
+          set -euo pipefail
+          B=http://127.0.0.1:8200
+          check() { echo "== GET $1"; curl -sf "$B$1" -o "$RUNNER_TEMP/out" -w "%{http_code} %{content_type}\n"; head -c 300 "$RUNNER_TEMP/out"; echo; }
+          check /
+          grep -qi "<html" "$RUNNER_TEMP/out"
+          check /api/voices
+          .venv/bin/python -c "import json,sys; json.load(open(sys.argv[1]))" "$RUNNER_TEMP/out"
+          check /api/setup/status
+          check /api/settings
+          check /api/designer/status
+          echo "== POST /api/textnorm"
+          out="$(curl -sf -X POST "$B/api/textnorm" -H 'Content-Type: application/json' -d '{"text":"15 ლარი"}')"
+          echo "$out"
+          .venv/bin/python -c "import json,sys; t=json.loads(sys.argv[1])['text']; assert t=='თხუთმეტი ლარი', t" "$out"
+
+      - name: Panel log
+        if: always()
+        run: cat "$RUNNER_TEMP/serve.log" || true
