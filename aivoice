@@ -47,6 +47,8 @@ case "$cmd" in
   select)  $PY tools/select_best.py "$@" ;;                         # საუკეთესო ჩანაწერები ახალი dataset-ისთვის (--hours 40)
   build-selection) nice -n 10 $PY tools/build_selection_dataset.py "$@" ;;  # შერჩევა → dataset (+ --tar Google Cloud-ისთვის)
   kaggle-mms) $PY tools/kaggle_mms.py "$@" ;;                      # MMS Common Voice-ის ჩანაწერებზე Kaggle-ზე: push | status | fetch | wait
+  public-voices) need_training; $TPY tools/public_voices.py "$@" ;;  # საჯარო შემქმნელი: 80 სინთეზური ხმა
+  public-ckpt)   need_training; $TPY tools/public_ckpt.py "$@" ;;    # საჯარო საბაზო checkpoint (სინთეზური ხმების ცხრილით)
   traits)  need_training; $TPY tools/voice_traits.py "$@" ;;         # სქესი/ასაკი ტემბრით (ხმის შემქმნელის ფილტრი)
   rank)     need_training; $TPY tools/mms_rank.py "$@" ;;              # ყველა ხმის/ნარევის რეიტინგი (MMS)
   kaggle)   $PY tools/kaggle_train.py "$@" ;;                          # base | push <slot> | status | fetch | watch
