@@ -55,6 +55,5 @@ data/mms_rank.progress.json
 data/mms_rank.json
 data/dataset_decisions.json
 data/mms_rank*.json
-data/voice_traits_*.json
 data/designer_model.json
 data/designer_ratings*.json
