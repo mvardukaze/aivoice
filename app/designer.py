@@ -43,14 +43,18 @@ def models() -> dict:
     for d in sorted(cpath("designer").parent.glob("designer_base_ka_v*")):  # designer_base_ka_v2, _v3 … (export_designer)
         slot = d.name.removeprefix("designer_")
         v = slot.rsplit("_", 1)[-1]
-        newest = slot == max(p.name for p in d.parent.glob("designer_base_ka_v*")).removeprefix("designer_")
+        if slot.endswith("_public"):  # მხოლოდ სინთეზური ხმები (tools/public_voices.py)
+            entries.append((slot, f"{slot.split('_')[-2]} საჯარო", d, slot, f"mms_rank_{slot}.json", f"designer_ratings_{slot}.json"))
+            continue
+        newest = slot == max(p.name for p in d.parent.glob("designer_base_ka_v*") if not p.name.endswith("_public")).removeprefix("designer_")
         entries.append((slot, f"ახალი ({v})" if newest else v,
                         d, slot, f"mms_rank_{slot}.json", f"designer_ratings_{slot}.json"))
     for slot, label, d, ds, rank, rat in entries:
         if (d / "meta.json").exists():
             meta = read_json(d / "meta.json", {}) or {}
             n = len((read_json(d / "config.json", {}) or {}).get("speaker_id_map", {}))
-            out[slot] = {"slot": slot, "label": label, "dir": d, "speakers": cpath("datasets") / ds / "speakers.json",
+            sp = d / "speakers.json" if (d / "speakers.json").exists() else cpath("datasets") / ds / "speakers.json"
+            out[slot] = {"slot": slot, "label": label, "dir": d, "speakers": sp,
                          "rank": ROOT / "data" / rank, "ratings": ROOT / "data" / rat,
                          "epoch": meta.get("epoch"), "voices": n}
     return out
@@ -61,7 +65,8 @@ def active() -> str:
     a = (read_json(ACTIVE, {}) or {}).get("model")
     if a in ms:
         return a
-    return sorted(ms)[-1] if ms else "base_ka"  # ნაგულისხმევად — უახლესი
+    real = sorted(k for k in ms if not k.endswith("_public"))
+    return real[-1] if real else (next(iter(ms)) if ms else "base_ka")  # ნაგულისხმევად — უახლესი (არა საჯარო)
 
 
 def M() -> dict:
@@ -268,7 +273,7 @@ def suggest(mode: str = "neutral", k: int = 4, seed: int | None = None):
     pool = [(n, s["info"].get(n, {}).get("f0_median")) for n in s["names"]]
     # საკმარისად ნასწავლი ხმები: v1-ში ≥ 10 წთ; v2-ში თითო ხმას ≤ 8 წთ აქვს (შერჩევის ზღვარი) → ≥ 5 წთ
     mins = [s["info"].get(n, {}).get("minutes") or 0 for n, _ in pool]
-    thr = 10 if max(mins, default=0) > 20 else 5
+    thr = 10 if max(mins, default=0) > 20 else 5 if max(mins, default=0) > 0 else 0  # საჯარო (სინთეზური) — წუთები არ აქვს
     pool = [(n, f) for n, f in pool if f and (s["info"].get(n, {}).get("minutes") or 0) >= thr]
     if mode == "neutral":
         low = sorted([p for p in pool if 120 <= p[1] < 160], key=lambda p: -p[1])[:30]
