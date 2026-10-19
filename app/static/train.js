@@ -60,7 +60,7 @@ window.Train = (() => {
 
   // ---------------- საბაზო მოდელი (backend: tools/base_ctl.py) ----------------
   const R = () => baseOpts.rates;
-  // ≈ დრო/ფასი Google Cloud L4-ზე: ბატჩი/ეპოქა ≈ ჩანაწერები / 32, ≈ 0.8 ბატჩი/წმ, ≈ $0.9/სთ
+  // ≈ დრო/ფასი Google Cloud L4-ზე: ბატჩი/ეპოქა ≈ ჩანაწერები / 32, ≈ 0.92 ბატჩი/წმ, ≈ $0.9/სთ
   function estimate(clips, epochs) {
     const per = Math.max(1, Math.round((clips * 0.99) / R().batch));
     const h = (epochs * per) / R().batch_per_s / 3600;
