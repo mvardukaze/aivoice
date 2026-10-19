@@ -1,7 +1,7 @@
 """მოდელების სინქრონიზაცია Hugging Face-თან პანელიდან (tools/models.py).
 
 /api/models/status   — რეპოზიტორია ↔ ეს კომპიუტერი (ფაილების სია)
-/api/models/{action} — pull / push (base: საბაზო checkpoint-ებიც) — ცალკე პროცესად, ლოგი: <runs>/_models/ctl.log
+/api/models/{action} — pull / push (base: საბაზო checkpoint-ებიც; data: ხარისხის მონაცემებიც, ~4.5 GB) — ცალკე პროცესად, ლოგი: <runs>/_models/ctl.log
 /api/models/log      — ლოგი + მიმდინარეობს თუ არა
 """
 
@@ -44,6 +44,7 @@ def status():
 
 class SyncIn(BaseModel):
     base: bool = False
+    data: bool = False  # ხარისხის მონაცემები (Common Voice-ის ანალიზი) — საბაზო მოდელის გასაუმჯობესებლად
 
 
 @router.post("/{action}")
@@ -53,9 +54,10 @@ def sync(action: str, s: SyncIn):
     if _pid():
         raise HTTPException(409, "სინქრონიზაცია უკვე მიმდინარეობს")
     RUN.mkdir(parents=True, exist_ok=True)
-    args = [str(ROOT / "aivoice"), "models", action] + (["--base"] if s.base else [])
+    flags = (["--base"] if s.base else []) + (["--data"] if s.data else [])
+    args = [str(ROOT / "aivoice"), "models", action, *flags]
     log = (RUN / "ctl.log").open("w", encoding="utf-8")
-    log.write(f"==== ./aivoice models {action}{' --base' if s.base else ''}\n")
+    log.write(f"==== ./aivoice models {' '.join([action, *flags])}\n")
     log.flush()
     p = subprocess.Popen(args, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
                          start_new_session=True, env={**os.environ, "PYTHONUNBUFFERED": "1"})

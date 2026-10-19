@@ -1,7 +1,8 @@
 """წვრთნა Kaggle-ის უფასო GPU-ზე (T4 ×2), ამ კომპიუტერიდან მართვით.
 
 გამოყენება (პროექტის .venv-ით — kaggle CLI იქ არის):
-    .venv/bin/python tools/kaggle_train.py base            # wheel + core.pyx + საწყისი checkpoint-ები → aivoice-base
+    .venv/bin/python tools/kaggle_train.py base            # piper_overlay + LJSpeech checkpoint → aivoice-base2
+                                                           # (push ამას თავად აკეთებს, თუ ანგარიშზე ჯერ არ არის)
     .venv/bin/python tools/kaggle_train.py push <slot>     # dataset (ერთხელ) + resume (თუ არის) + წვრთნის გაშვება
     .venv/bin/python tools/kaggle_train.py status <slot>
     .venv/bin/python tools/kaggle_train.py fetch <slot>    # შედეგი → training/runs/<slot>/, ნიმუშები პანელზე
@@ -9,7 +10,7 @@
                                                            # დასრულებისას fetch, 12 სთ-ის ლიმიტზე — შემდეგი სესია
 
 წვრთნის პარამეტრები: data/kaggle_jobs/<slot>.json (თუ არ არის — ერთი ხმა datasets/<slot>-იდან, ნათიადან).
-ყველაფერი პირადია (is_private). ავტორიზაცია: ~/.kaggle/access_token.
+Kaggle-ზე ყველაფერი პირადია (is_private). ავტორიზაცია: ~/.kaggle/access_token.
 
 კვოტა (30 GPU-სთ/კვირა): ახალი სესია მხოლოდ მაშინ იწყება, თუ ბოლო 7 დღის სესიები + 11 სთ + მარაგი
 ლიმიტში ეტევა (მოძრავი ფანჯარა — Kaggle-ის აღდგენის დღე ზუსტად არ ვიცით, ასე ნებისმიერ შემთხვევაში
@@ -122,6 +123,38 @@ def job(slot) -> dict:
     return j
 
 
+LJ_CKPT = ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt"
+
+
+def base_dataset_exists() -> bool | None:
+    """დამხმარე dataset (BASE_SLUG) ამ Kaggle-ის ანგარიშზეა? None — ვერ შევამოწმეთ (ქსელი/token)."""
+    try:
+        r = subprocess.run([str(KAGGLE), "datasets", "list", "--mine", "-s", BASE_SLUG, "--csv"],
+                           capture_output=True, text=True, timeout=120)
+        ref = f"{user()}/{BASE_SLUG}"
+    except (OSError, subprocess.TimeoutExpired, StopIteration):
+        return None
+    if r.returncode != 0:
+        return None
+    return any(l.split(",", 1)[0].strip() == ref for l in r.stdout.splitlines())
+
+
+def ensure_base():
+    """ახალ ანგარიშზე დამხმარე dataset ჯერ არ არის — ვაწყობთ და ვტვირთავთ (cmd_base), LJSpeech checkpoint-ი
+    საჭიროებისას Hugging Face-იდან მოდის. შემდეგ ველოდებით, სანამ Kaggle დაამუშავებს."""
+    have = base_dataset_exists()
+    if have is not False:
+        if have is None:
+            print(f"! ვერ შევამოწმე, არის თუ არა {BASE_SLUG} Kaggle-ზე — ვაგრძელებ", flush=True)
+        return
+    print(f"Kaggle: დამხმარე dataset {user()}/{BASE_SLUG} ჯერ არ არის — ვქმნი (ერთხელ, ~800 MB)", flush=True)
+    if not LJ_CKPT.exists() and not (cpath("runs").parent / "checkpoints" / LJ_CKPT.name).exists():
+        import models
+        models.fetch_file("ljspeech/" + LJ_CKPT.name, LJ_CKPT)
+    cmd_base(None)
+    wait_dataset_ready(f"{user()}/{BASE_SLUG}")
+
+
 def cmd_base(_):
     """Kaggle-ის საბაზო dataset: piper_overlay.tar (ჩვენი შესწორებები) + LJSpeech checkpoint (საწყისი წერტილი)."""
     import tarfile
@@ -131,7 +164,7 @@ def cmd_base(_):
     with tarfile.open(BASE_DIR / "piper_overlay.tar", "w") as t:
         t.add(ROOT / "piper_overlay" / "piper", arcname="piper")
     lj = cpath("runs").parent / "checkpoints" / "ljspeech-medium.clean.ckpt"
-    for c in [ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt", lj]:
+    for c in [LJ_CKPT, lj]:
         if c.exists() and not (BASE_DIR / c.name).exists():
             shutil.copy2(c, BASE_DIR / c.name)
     if not (BASE_DIR / "ljspeech-medium.clean.ckpt").exists():
@@ -165,6 +198,7 @@ def cmd_push(a):
     slot = a.slot
     j = job(slot)
     u = user()
+    ensure_base()  # ახალი ანგარიში: დამხმარე dataset ავტომატურად იქმნება
     d, clips = prepare_voice_dataset(slot, j)
 
     # დიდი dataset-ი მხოლოდ მაშინ იტვირთება, როცა metadata შეიცვალა

@@ -1,6 +1,7 @@
 """წვრთნა Google Cloud-ის L4-ზე ($300 საცდელი კრედიტი): base_ka-ს გაგრძელება ან ახალი მოდელი (create base_ka_v2).
 
-გამოყენება (gcloud: aivoice.toml [gcp].gcloud, ანგარიში აქტიური, impersonation: aivoice-trainer SA):
+გამოყენება (gcloud: aivoice.toml [gcp].gcloud; ანგარიში — `gcloud auth login` ან service account-ის impersonation;
+პროექტი — aivoice.toml [gcp].project ან `gcloud config set project …`; დაყენება: README → „Google Cloud“):
     python3 tools/gcp_train.py create     # spot მანქანა g2-standard-8 (1× L4), us-central1 (a→b→c)
     python3 tools/gcp_train.py push       # dataset + piper + checkpoint → მანქანა, setup, წვრთნის ჩართვა
     python3 tools/gcp_train.py status     # მანქანის მდგომარეობა + წვრთნის ბოლო სტრიქონები
@@ -38,8 +39,11 @@ LJSPEECH = ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspee
 VM_JOB = {"batch": 32, "workers": 6, "ckpt_every_steps": 2000}
 
 
+PROJECT = str(cfg()["gcp"].get("project") or "").strip()  # ცარიელი — gcloud-ის ნაგულისხმევი (gcloud config set project)
+
+
 def gc(*args, check=True, capture=True):
-    r = subprocess.run([G, *args, "--quiet"], capture_output=capture, text=True)
+    r = subprocess.run([G, *args, "--quiet", *(["--project", PROJECT] if PROJECT else [])], capture_output=capture, text=True)
     if check and r.returncode != 0:
         raise RuntimeError(f"gcloud {' '.join(args[:3])}: {(r.stderr or '')[-600:]}")
     return r
@@ -86,6 +90,14 @@ def scp(src: str, dst: str):
     subprocess.run(["scp", *ssh_base(h), "-q", src, f"aivoice@{h}:{dst}"], check=True)
 
 
+def pubkey() -> str:
+    """SSH გასაღები მანქანისთვის — პირველ გაშვებაზე იქმნება (aivoice.toml [gcp].ssh_key)."""
+    if not KEY.with_suffix(".pub").exists():
+        KEY.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "aivoice", "-f", str(KEY)], check=True)
+    return KEY.with_suffix(".pub").read_text().strip()
+
+
 def cmd_create(slot: str | None = None):
     """create [slot] — ახალი მოდელისთვის ძველი state ინახება state.<slot>.json-ად."""
     global SLOT, RUN, JOB
@@ -95,7 +107,7 @@ def cmd_create(slot: str | None = None):
         SLOT, RUN, JOB = slot, cpath("runs") / slot, ROOT / "data" / "kaggle_jobs" / f"{slot}.json"
         save_state(slot=slot)
     assert JOB.exists(), f"{JOB} არ არის"
-    pub = KEY.with_suffix(".pub").read_text().strip()
+    pub = pubkey()
     zones = l4_zones() or ZONES
     # ჯერ spot (იაფი) ყველა სასურველ ზონაში, მერე on-demand — L4 ხშირად ამოწურულია (STOCKOUT)
     # spot ხშირად წყდება — ნაგულისხმევად ჩვეულებრივი (on-demand); spot მხოლოდ aivoice.toml [gcp] spot = "1"-ით
@@ -338,7 +350,7 @@ def relocate():
     snap = f"{NAME}-snap"
     gc("compute", "snapshots", "delete", snap, check=False)
     gc("compute", "snapshots", "create", snap, "--source-disk", st.get("disk", NAME), "--source-disk-zone", old_zone)
-    pub = KEY.with_suffix(".pub").read_text().strip()
+    pub = pubkey()
     for z in l4_zones():
         if z == old_zone:
             continue

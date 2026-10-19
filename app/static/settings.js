@@ -72,11 +72,12 @@ window.Settings = (() => {
 
       <div class="card" id="models-card" data-pane="models">
         <div class="card-head"><h2>მოდელები (Hugging Face)</h2><span class="muted small mono" id="mdl-repo"></span></div>
-        <p class="muted small help">ხმები და ნარევები საერთო პირად რეპოზიტორიაშია. „ჩამოტვირთვა“ მოიტანს ახალს, „ატვირთვა“ გაგზავნის თქვენსას.</p>
+        <p class="muted small help">ხმები და ნარევები საერთო საჯარო რეპოზიტორიაშია (Hugging Face). „ჩამოტვირთვა“ მოიტანს ახალს, „ატვირთვა“ გაგზავნის თქვენსას (Write token).</p>
         <details class="hint"><summary>${UI.icon("help", 14)} დაწვრილებით</summary>
           <p class="muted small">„ჩამოტვირთვა“ აქ შეცვლილ პარამეტრებს არ გადაწერს. „ატვირთვა“ აგზავნის მხოლოდ შეცვლილს და საჭიროებს Write token-ს.
           „დამალული“ ხმები არ იტვირთება.</p></details>
         <label class="check small"><input type="checkbox" id="mdl-base"> საბაზო checkpoint-ებიც (~1.8 GB — საჭიროა ახალი ხმის მოსამზადებლად)</label>
+        <label class="check small"><input type="checkbox" id="mdl-data"> + ხარისხის მონაცემები (~4.5 GB) — საბაზოს გასაუმჯობესებლად</label>
         <div class="actions">
           <button class="primary small" data-mdl="pull">${UI.icon("download", 14)} ჩამოტვირთვა</button>
           <button class="ghost small" data-mdl="push">${UI.icon("download", 14).replace('class="ico"', 'class="ico flip"')} ატვირთვა</button>
@@ -181,9 +182,10 @@ window.Settings = (() => {
 
   function bindModels() {
     document.querySelectorAll("[data-mdl]").forEach((b) => b.addEventListener("click", async () => {
-      const base = $("#mdl-base").checked;
-      if (b.dataset.mdl === "push" && !(await UI.confirm("ატვირთვა საერთო რეპოზიტორიაში" + (base ? " (საბაზო checkpoint-ებიც)" : "") + "?", { okText: "ატვირთვა" }))) return;
-      try { await post(`/api/models/${b.dataset.mdl}`, { base }); pollModels(); }
+      const base = $("#mdl-base").checked, data = $("#mdl-data").checked;
+      const extra = [base && "საბაზო checkpoint-ებიც", data && "ხარისხის მონაცემებიც"].filter(Boolean).join(", ");
+      if (b.dataset.mdl === "push" && !(await UI.confirm("ატვირთვა საერთო რეპოზიტორიაში" + (extra ? ` (${extra})` : "") + "?", { okText: "ატვირთვა" }))) return;
+      try { await post(`/api/models/${b.dataset.mdl}`, { base, data }); pollModels(); }
       catch (err) { UI.toast(err.message, "error"); }
     }));
     $("#mdl-check").onclick = checkModels;
@@ -218,7 +220,7 @@ window.Settings = (() => {
     if (s.error) { box.innerHTML = `<span class="err">${esc(s.error)}</span>`; return; }
     const groups = {};
     s.files.forEach((f) => (groups[f.path.split("/")[0]] ||= []).push(f));
-    const NAME = { designer: "ხმის შემქმნელი", designs: "ნარევები", voices: "ხმები", base_ka: "საბაზო მოდელი", ljspeech: "LJSpeech (საწყისი)" };
+    const NAME = { designer: "ხმის შემქმნელი", designs: "ნარევები", voices: "ხმები", base_ka: "საბაზო მოდელი", ljspeech: "LJSpeech (საწყისი)", cv27: "ხარისხის მონაცემები (Common Voice)", data: "ყურით შემოწმება" };
     box.innerHTML = Object.entries(groups).map(([g, fs]) => {
       const cnt = {};
       fs.forEach((f) => (cnt[f.state] = (cnt[f.state] || 0) + 1));

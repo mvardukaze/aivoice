@@ -8,6 +8,29 @@
 
 ყველაფერი იმართება ვებ-პანელიდან (`./aivoice serve`) ან ბრძანებებით (`./aivoice help`).
 
+## დასაწყისი
+
+```bash
+git clone https://github.com/mvardukaze/aivoice.git && cd aivoice
+./install.sh
+./aivoice serve            # → http://127.0.0.1:8200 → ⚙ პარამეტრები → მოდელები → ↓ ჩამოტვირთვა
+```
+
+კოდი ([GitHub](https://github.com/mvardukaze/aivoice)) და მოდელები ([Hugging Face](https://huggingface.co/mvarduka/aivoice-models))
+საჯაროა. ჩამოტვირთვის შემდეგ **მაშინვე** შეგიძლიათ: მზა ხმებით გახმოვანება (ემოციები, გრძელი ტექსტი → MP3/WAV + SRT),
+ხმის შემქმნელში ახალი ნარევების აწყობა და შენახვა, ლექსიკონი. თუ ჩამოტვირთვა წერს „gated“ — ერთხელ გახსენით
+რეპოზიტორიის გვერდი, დააჭირეთ *Agree and access* (უფასო ანგარიში, დასტური ავტომატურია) და ჩაწერეთ Read token
+(„პარამეტრები → ანგარიშები“).
+
+ანგარიშები საჭიროა მხოლოდ შესაბამისი ფუნქციისთვის:
+
+| რისთვის | ანგარიში | ფასი |
+|---|---|---|
+| ახალი ხმის შექმნა ნარევიდან („წვრთნა“) | **Kaggle** token — kaggle.com → Settings → API → *Generate New Token* (+ ტელეფონის ვერიფიკაცია GPU-სთვის) | უფასო (30 GPU-სთ/კვირა) |
+| საბაზო მოდელის შექმნა / გაუმჯობესება | **Google Cloud** (იხ. [ქვემოთ](#google-cloud--საბაზო-მოდელის-წვრთნა)) + `./aivoice models pull --base --data` | ფასიანი, ≈ $0.9/სთ (საცდელი კრედიტი $300) |
+| Common Voice-ის ნედლი არქივის ჩამოტვირთვა | **Mozilla Data Collective** API key | უფასო |
+| თქვენი ხმების/ნარევების ატვირთვა საერთო რეპოზიტორიაში | Hugging Face **Write** token (ავტორის მოწვევით) | უფასო |
+
 ---
 
 ## დაყენება
@@ -33,13 +56,16 @@ macOS-ზე `install.sh` Homebrew-ით აყენებს Python 3.12-ს,
 2. **ანგარიშები** — გასაღებები პირდაპირ პანელში ჩაიწერება (უკან არასოდეს ჩანს, ინახება მხოლოდ ამ კომპიუტერზე):
    - **Kaggle** — უფასო GPU წვრთნისთვის (კვირაში 30 სთ): kaggle.com → Settings → API → *Generate New Token*.
      GPU-სთვის Kaggle ტელეფონის ვერიფიკაციას ითხოვს.
-   - **Hugging Face** — მოდელების ჩამოსატვირთად: huggingface.co → Settings → Access Tokens (*Read*).
-     რეპოზიტორიაზე წვდომას ავტორი გაძლევთ; მისი სახელი ჩაწერეთ „პარამეტრები → Hugging Face“.
+   - **Hugging Face** — რეპოზიტორია (`mvarduka/aivoice-models`, ნაგულისხმევი) საჯაროა. token საჭიროა მხოლოდ
+     ასატვირთად (*Write*) ან თუ რეპოზიტორია „gated“-ია (*Read*, იხ. „დასაწყისი“).
+   - **Kaggle**-ის პირველ წვრთნაზე პანელი თქვენს ანგარიშზე თავად ქმნის დამხმარე dataset-ს (`aivoice-base2`:
+     Piper-ის შესწორებები + LJSpeech checkpoint, ~800 MB, ერთხელ).
 3. **მოდელები** — „⚙ პარამეტრები → მოდელები → ↓ ჩამოტვირთვა“ (ხმის შემქმნელი, ხმები, ნარევები, ~200 MB).
-   ახალი ხმის მოსამზადებლად მონიშნეთ „+ საბაზო checkpoint-ები“ (~1.8 GB). იგივე ბრძანებით:
+   ახალი ხმის მოსამზადებლად მონიშნეთ „+ საბაზო checkpoint-ები“ (~1.8 GB); საბაზოს გასაუმჯობესებლად —
+   „+ ხარისხის მონაცემები“ (~4.5 GB: Common Voice-ის ჩანაწერები, CC0, და მათი ხარისხის ანალიზი). იგივე ბრძანებით:
    ```bash
-   ./aivoice models pull [--base]
-   ./aivoice models push           # თქვენი ახალი ხმები და ნარევები → საერთო რეპოზიტორია (Write token)
+   ./aivoice models pull [--base] [--data]
+   ./aivoice models push [--base] [--data]   # თქვენი ახალი ხმები და ნარევები → საერთო რეპოზიტორია (Write token)
    ```
 
 ### ხმების ბიბლიოთეკა — „ხმები“
@@ -57,7 +83,7 @@ macOS-ზე `install.sh` Homebrew-ით აყენებს Python 3.12-ს,
 ### განახლება
 „⚙ პარამეტრები → განახლება“: ახალი ვერსიისას ჩანართზე ნიშანი ჩნდება; „განახლება და გადატვირთვა“ ჩამოტვირთავს კოდს,
 საჭიროებისას ბიბლიოთეკებსაც, და პანელს თავიდან ჩატვირთავს. ბრძანებით: `./aivoice update` (შემოწმება), `./aivoice update apply`.
-კერძო რეპოზიტორიისთვის კომპიუტერზე GitHub-ში შესვლა საჭიროა (`gh auth login` ან GitHub Desktop).
+რეპოზიტორია საჯაროა — GitHub-ის ანგარიში განახლებისთვის საჭირო არ არის.
 
 ---
 
@@ -103,6 +129,29 @@ macOS-ზე `install.sh` Homebrew-ით აყენებს Python 3.12-ს,
 ./aivoice base status base_ka_v4 · ./aivoice base stop base_ka_v4
 # ყველა ბრძანებას აქვს --dry-run — აჩვენებს გეგმას, არაფერს ქმნის და არ უშვებს
 ```
+სხვა კომპიუტერზე ჯერ: `./aivoice models pull --base --data` (საბაზო checkpoint-ები + ხარისხის მონაცემები) და `./install.sh --training`.
+
+### Google Cloud — საბაზო მოდელის წვრთნა
+საჭიროა მხოლოდ საბაზო მოდელისთვის (ხმებისთვის — Kaggle, უფასოდ). **ფასიანია:** L4 GPU ≈ **$0.9/სთ** (on-demand,
+აშშ-ის რეგიონები); გაგრძელება (~90 ეპოქა) ≈ 1–2 დღე, ნულიდან — 3–4 დღე. პანელი წინასწარ აჩვენებს სავარაუდო დროს და ფასს.
+მანქანა **დასრულებისას თავისით იშლება**, უქმად დარჩენისას კი თავისით ითიშება (`gcp/autostop.sh`) — მაინც შეამოწმეთ
+console.cloud.google.com → Compute Engine → VM instances, რომ ზედმეტი არაფერი დარჩეს.
+
+1. **პროექტი**: [console.cloud.google.com](https://console.cloud.google.com) → ზედა მენიუ → *New project* (ID დაიმახსოვრეთ).
+2. **ბილინგი**: *Billing* → ანგარიშის დამატება (ახალ ანგარიშს **$300 საცდელი კრედიტი** აქვს 90 დღით) → პროექტზე მიბმა.
+   GPU-სთვის საცდელი ანგარიში ხშირად უნდა გადაიყვანოთ სრულზე (*Upgrade* — კრედიტი რჩება).
+3. **API**: *APIs & Services → Library* → **Compute Engine API** → *Enable*.
+4. **GPU კვოტა**: *IAM & Admin → Quotas* → მოძებნეთ და მოითხოვეთ **1**:
+   „GPUs (all regions)“ (`GPUS_ALL_REGIONS`) და „NVIDIA L4 GPUs“ (`NVIDIA_L4_GPUS`) სასურველ რეგიონებში —
+   `us-central1`, `us-east4`, `us-east1`, `us-west1` (იაფი), შემდეგ `europe-west4`. დასტური — წუთებიდან 1–2 დღემდე.
+5. **gcloud**: [cloud.google.com/sdk/docs/install](https://cloud.google.com/sdk/docs/install) (macOS: `brew install --cask google-cloud-sdk`).
+6. **შესვლა**: `gcloud auth login`
+7. **პროექტი ნაგულისხმევად**: `gcloud config set project <პროექტის-ID>`
+8. **პანელში**: „⚙ პარამეტრები → gcp“: *gcloud ბრძანება* (თუ PATH-ში არ არის, მაგ. `~/google-cloud-sdk/bin/gcloud`) და
+   სურვილისამებრ *Google Cloud პროექტი* (თუ ცარიელია — მე-7 ნაბიჯისა). „შემოწმება“ აჩვენებს: gcloud, ანგარიში, პროექტი,
+   Compute Engine API, L4 კვოტა (მხოლოდ კითხულობს — ფასიანი არაფერი ეშვება).
+
+SSH გასაღები (`~/.ssh/aivoice_gcp`) პირველ გაშვებაზე იქმნება. L4 ხშირად ამოწურულია — მანქანა სხვა ზონაში თავად გადადის.
 
 ---
 

@@ -29,9 +29,10 @@ RESTART_CODE = 3  # `aivoice serve` ამ კოდზე თავიდან
 # გასაღებები: სახელი → (სათაური, სად ინახება, ახსნა)
 SECRETS = {
     "KAGGLE_API_TOKEN": ("Kaggle API token", "~/.kaggle/access_token",
-                         "kaggle.com → Settings → API → „Generate New Token“. საჭიროა Kaggle-ზე წვრთნისთვის."),
+                         "kaggle.com → Settings → API → „Generate New Token“. საჭიროა ახალი ხმების შესაქმნელად (Kaggle-ის უფასო GPU)."),
     "HF_TOKEN": ("Hugging Face token", "secrets.env",
-                 "huggingface.co → Settings → Access Tokens. საჭიროა მოდელების ჩამოსატვირთად (Read) ან ასატვირთად (Write)."),
+                 "huggingface.co → Settings → Access Tokens. ჩამოსატვირთად — Read (თუ რეპოზიტორია „gated“-ია, ჯერ მის გვერდზე "
+                 "„Agree and access“; საჯარო რეპოზიტორიას token არ სჭირდება), ასატვირთად — Write."),
     "MDC_API_KEY": ("Mozilla Data Collective API key", "secrets.env",
                     "მხოლოდ საბაზო მოდელის თავიდან წვრთნისთვის (Common Voice-ის ჩამოტვირთვა)."),
 }
@@ -173,6 +174,82 @@ def _cmd(args, timeout=10) -> str:
         return ""
 
 
+# ქსელური შემოწმებები (Kaggle, Google Cloud) — უფასო, მხოლოდ კითხვა; 10 წთ ქეშდება, რომ ოსტატი სწრაფად გაიხსნას
+_net_cache: dict = {}
+NET_TTL = 600
+
+
+def _cached(key, fn):
+    hit = _net_cache.get(key)
+    if hit and time.time() - hit[0] < NET_TTL:
+        return hit[1]
+    v = fn()
+    _net_cache[key] = (time.time(), v)
+    return v
+
+
+def kaggle_base_check() -> tuple[str, str]:
+    slug = C.cfg()["kaggle"]["base_dataset"]
+    kg = str(C.ROOT / ".venv" / "bin" / "kaggle")
+
+    def run():
+        try:
+            r = subprocess.run([kg, "datasets", "list", "--mine", "-s", slug, "--csv"], capture_output=True, text=True, timeout=30)
+            u = next((l.split(":", 1)[1].strip() for l in _cmd([kg, "config", "view"], 20).splitlines() if "username" in l), "")
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if r.returncode != 0 or not u:
+            return None
+        return any(l.split(",", 1)[0].strip() == f"{u}/{slug}" for l in r.stdout.splitlines())
+
+    have = _cached(("kaggle_base", slug), run)
+    if have:
+        return "ok", f"{slug} — თქვენს ანგარიშზეა"
+    if have is False:
+        return "ok", f"{slug} — შეიქმნება ავტომატურად პირველ წვრთნაზე (~800 MB ატვირთვა)"
+    return "warn", "ვერ შევამოწმე (ქსელი ან token) — პირველ წვრთნაზე ავტომატურად შეიქმნება, თუ არ არის"
+
+
+def gcp_checks(gpath: str) -> list[tuple[str, str, str]]:
+    """(სახელი, მდგომარეობა, ახსნა) — ფასიანი არაფერი: მხოლოდ კონფიგურაციის და API/კვოტის წაკითხვა."""
+    out = []
+    acct = _cmd([gpath, "auth", "list", "--filter=status:ACTIVE", "--format=value(account)"], 20)
+    imp = _cmd([gpath, "config", "get-value", "auth/impersonate_service_account"], 20)
+    out.append(("Google Cloud: ანგარიში", "ok" if acct else "warn",
+                ("შესულია" + (" (service account-ის impersonation)" if imp else "")) if acct
+                else "gcloud auth login"))
+    proj = str(C.cfg()["gcp"].get("project") or "").strip() or _cmd([gpath, "config", "get-value", "project"], 20)
+    out.append(("Google Cloud: პროექტი", "ok" if proj else "warn",
+                proj if proj else "gcloud config set project <ID> — ან „პარამეტრები → gcp → Google Cloud პროექტი“"))
+    if not (acct and proj):
+        return out
+
+    def api_and_quota():
+        en = _cmd([gpath, "services", "list", "--enabled", "--project", proj, "--filter=config.name=compute.googleapis.com",
+                   "--format=value(config.name)"], 40)
+        reg = (C.cfg()["gcp"]["regions"].split(",") or ["us-central1"])[0].strip()
+        quota = l4 = None
+        if en:
+            try:
+                info = json.loads(_cmd([gpath, "compute", "project-info", "describe", "--project", proj, "--format=json"], 40) or "{}")
+                quota = next((q.get("limit") for q in info.get("quotas", []) if q.get("metric") == "GPUS_ALL_REGIONS"), None)
+                rinfo = json.loads(_cmd([gpath, "compute", "regions", "describe", reg, "--project", proj, "--format=json"], 40) or "{}")
+                l4 = next((q.get("limit") for q in rinfo.get("quotas", []) if q.get("metric") == "NVIDIA_L4_GPUS"), None)
+            except json.JSONDecodeError:
+                pass
+        return bool(en), quota, l4, reg
+
+    en, quota, l4, reg = api_and_quota()
+    out.append(("Google Cloud: Compute Engine API", "ok" if en else "warn",
+                "ჩართულია" if en else "ჩართეთ: console.cloud.google.com → APIs & Services → Compute Engine API (ან ვერ შევამოწმე)"))
+    if en:
+        ok = (quota or 0) >= 1 and (l4 or 0) >= 1
+        out.append(("Google Cloud: GPU კვოტა (L4)", "ok" if ok else "warn",
+                    f"GPUs (all regions) = {quota or 0:g} · NVIDIA L4 ({reg}) = {l4 or 0:g}"
+                    + ("" if ok else " — მოითხოვეთ 1: IAM & Admin → Quotas (README → Google Cloud)")))
+    return out
+
+
 @router.get("/setup/status")
 def setup_status():
     """პირველი დაყენების ოსტატი: რა არის მზად და რა აკლია (ok / warn / missing)."""
@@ -210,12 +287,21 @@ def setup_status():
     add("მოდელები", "მზა ხმები", "ok" if voices else "missing",
         ", ".join(p.parent.name for p in voices) or "ჯერ არცერთი — ჩამოტვირთვა Hugging Face-იდან", "models")
 
+    # ყველა ანგარიში არასავალდებულოა: მზა ხმები და ხმის შემქმნელი მათ გარეშეც მუშაობს
     for n, (t, _, h) in SECRETS.items():
-        add("ანგარიშები", t, "ok" if secret_present(n) else ("warn" if n != "KAGGLE_API_TOKEN" else "missing"), h, "secrets")
+        add("ანგარიშები", t, "ok" if secret_present(n) else "warn", h, "secrets")
+    if secret_present("KAGGLE_API_TOKEN"):
+        st, detail = kaggle_base_check()
+        add("ანგარიშები", "Kaggle: დამხმარე dataset", st, detail)
     gc = C.cfg()["gcp"]["gcloud"]
     gpath = str(C.expand(gc)) if "/" in gc else (shutil.which(gc) or "")
-    add("ანგარიშები", "Google Cloud (არასავალდებულო)", "ok" if gpath and Path(gpath).exists() else "warn",
-        gpath or "საჭიროა მხოლოდ Google Cloud-ზე წვრთნისთვის: https://cloud.google.com/sdk/docs/install")
+    have_g = bool(gpath and Path(gpath).exists())
+    add("ანგარიშები", "Google Cloud (არასავალდებულო)", "ok" if have_g else "warn",
+        gpath if have_g else "საჭიროა მხოლოდ საბაზო მოდელის წვრთნისთვის (ფასიანი): https://cloud.google.com/sdk/docs/install · README → Google Cloud")
+    if have_g:
+        for name, st, detail in _cached(("gcp_checks", gpath, str(C.cfg()["gcp"].get("project") or "")),
+                                        lambda: gcp_checks(gpath)):
+            add("ანგარიშები", name, st, detail)
 
     order = {"missing": 0, "warn": 1, "ok": 2}
     return {"ready": all(i["state"] != "missing" for i in items), "configured": C.configured(),

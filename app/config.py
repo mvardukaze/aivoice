@@ -47,12 +47,14 @@ SCHEMA: dict[str, dict[str, tuple]] = {
     },
     "gcp": {
         "gcloud": ("gcloud", "gcloud ბრძანება", "სრული მისამართი, თუ PATH-ში არ არის (მაგ. ~/google-cloud-sdk/bin/gcloud)."),
+        "project": ("", "Google Cloud პროექტი", "პროექტის ID (მაგ. my-aivoice-123). ცარიელი — gcloud-ის ნაგულისხმევი (gcloud config set project …)."),
         "ssh_key": ("~/.ssh/aivoice_gcp", "SSH გასაღები", "იქმნება ავტომატურად პირველ გაშვებაზე."),
         "regions": ("us-central1,us-east4,us-east1,us-west1,us-west4,europe-west4,europe-west1,asia-southeast1",
                     "რეგიონები (უპირატესობის რიგით)", "L4 GPU სადაც თავისუფალია. აშშ ყველაზე იაფია."),
     },
     "hf": {
-        "models_repo": ("", "Hugging Face მოდელების რეპოზიტორია", "მაგ. user/aivoice-models — აქედან ჩამოიტვირთება საბაზო მოდელი და ხმები."),
+        "models_repo": ("mvarduka/aivoice-models", "Hugging Face მოდელების რეპოზიტორია",
+                        "საჯარო რეპოზიტორია — აქედან მოდის ხმის შემქმნელი, ხმები და საბაზო მოდელი."),
     },
     "training": {
         "local_threads": (12, "ლოკალური წვრთნის ნაკადები", "პროცესორის ნაკადები ლოკალური (CPU) წვრთნისთვის."),
