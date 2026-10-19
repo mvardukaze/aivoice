@@ -933,3 +933,4 @@ tr.ear-on td { background: var(--accent-soft, rgba(79,70,229,.08)); }
 .des-player .des-save input { flex: 1; min-width: 0; }
 .rk-sort { cursor: pointer; user-select: none; white-space: nowrap; }
 .rk-sort:hover, .rk-sort.on { color: var(--accent, #4f46e5); }
+.trait { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }

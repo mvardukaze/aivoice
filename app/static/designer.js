@@ -68,7 +68,11 @@ window.Designer = (() => {
             <div class="chips">
               <button class="chip" data-sug="neutral">ნეიტრალური</button>
               <button class="chip" data-sug="female">ქალი</button>
+              <button class="chip" data-sug="female_young">ქალი, ახალგაზრდა</button>
+              <button class="chip" data-sug="female_adult">ქალი, ზრდასრული</button>
               <button class="chip" data-sug="male">კაცი</button>
+              <button class="chip" data-sug="male_young">კაცი, ახალგაზრდა</button>
+              <button class="chip" data-sug="male_adult">კაცი, ზრდასრული</button>
               <button class="chip" data-sug="random">შემთხვევითი</button>
               <button class="chip" id="des-clear">გასუფთავება</button>
             </div>
@@ -463,8 +467,16 @@ window.Designer = (() => {
     if (job.busy) rkTimer = setTimeout(() => { if (!$("#tab-designer").hidden) renderRank(); else bindRankControls(box, job); }, 4000);
   }
 
+  // ტემბრით შეფასებული სქესი/ასაკი (tools/voice_traits.py) — ჭდე ხმის სახელთან
+  const traitTag = (r) => {
+    if (!r.gender) return "";
+    const g = r.gender === "female" ? "ქალი" : "კაცი", a = { young: "ახალგაზრდა", adult: "ზრდასრული", "?": "ასაკი ?" }[r.age];
+    const mm = (r.mismatch || []).length ? ` <span class="warn-text" title="Common Voice-ში მითითებულია: ${esc(r.label_gender || "—")}, ${esc(r.label_age || "—")}">≠ CV</span>` : "";
+    return `<span class="trait" title="ტემბრით: ქალი ${Math.round(r.p_female * 100)}%, ახალგაზრდა ${Math.round(r.p_young * 100)}%">${g} · ${a}</span>${mm}`;
+  };
+
   // ---------- რეიტინგი (tools/mms_rank.py): ყველა ხმა და ნარევი, 5 წინადადება, საუკეთესოდან უარესისკენ ----------
-  let rk = { data: null, lo: 0, hi: 400, kind: "all", show: 40, sent: 0, by: -1 };  // by: -1 — საშუალოთი, 0–4 — წინადადებით
+  let rk = { data: null, lo: 0, hi: 400, kind: "all", show: 40, sent: 0, by: -1, g: "all", age: "all" };  // by: -1 — საშუალოთი, 0–4 — წინადადებით
   async function renderRank() {
     const box = $("#rank-card");
     rk.data = await api("/api/designer/rank").catch(() => null);
@@ -479,7 +491,9 @@ window.Designer = (() => {
       return;
     }
     const rows = rk.data.rows.filter((r) => (rk.kind === "all" || r.kind === rk.kind)
-      && (r.kind === "mix" || ((r.f0 || 0) >= rk.lo && (r.f0 || 0) <= rk.hi)));
+      && (r.kind === "mix" || ((r.f0 || 0) >= rk.lo && (r.f0 || 0) <= rk.hi))
+      && (r.kind === "mix" || rk.g === "all" || r.gender === rk.g)
+      && (r.kind === "mix" || rk.age === "all" || r.age === rk.age));
     if (rk.by >= 0) rows.sort((a, b) => a.per[rk.by] - b.per[rk.by] || a.cer - b.cer);  // ვინ ამბობს საუკეთესოდ ამ წინადადებას
     const pct = (x) => Math.round(x * 100);
     const cls = (x) => (x <= 0.12 ? "ok" : x <= 0.25 ? "" : "bad");
@@ -490,6 +504,8 @@ window.Designer = (() => {
       ${UI.hint(`თითოეულმა 5 წინადადება წაიკითხა; ავტომატურმა მსმენელმა (MMS) ჩაიწერა, რაც გაიგონა. „ღ“-ს ის კარგად ვერ აფასებს. დაკვრის ღილაკი უკრავს არჩეულ წინადადებას; სვეტის რიცხვზე მიტანისას ჩანს, რა „გაიგონა“.`)}
       <div class="aud-opts">
         <label>ჩვენება <select id="rk-kind"><option value="all">ყველა</option><option value="speaker">მხოლოდ ხმები</option><option value="mix">მხოლოდ ნარევები</option></select></label>
+        <label>სქესი <select id="rk-g"><option value="all">ყველა</option><option value="female">ქალი</option><option value="male">კაცი</option></select></label>
+        <label>ასაკი <select id="rk-age"><option value="all">ყველა</option><option value="young">ახალგაზრდა</option><option value="adult">ზრდასრული</option><option value="?">გაურკვეველი</option></select></label>
         <label>სიმაღლე <input type="number" id="rk-lo" value="${rk.lo}" style="width:70px"> – <input type="number" id="rk-hi" value="${rk.hi}" style="width:70px"> Hz</label>
         <label>მოსასმენი წინადადება <select id="rk-sent">${S.map((t, i) => `<option value="${i}" ${i === rk.sent ? "selected" : ""}>${i + 1}. ${esc(t.slice(0, 30))}…</option>`).join("")}</select></label>
       </div>
@@ -498,7 +514,7 @@ window.Designer = (() => {
         <tbody>${rows.slice(0, rk.show).map((r, i) => `<tr class="${r.kind === "mix" ? "mixrow" : ""}">
           <td>${i + 1}</td>
           <td><button class="play" data-rk="${esc(r.kind)}|${esc(r.name)}" aria-label="მოსმენა">${UI.icon("play", 12)}</button></td>
-          <td class="small name">${r.kind === "mix" ? `<b>${esc(r.name)}</b>` : `${r.f0 ? Math.round(r.f0) + " Hz" : ""} <span class="muted">${esc(r.name)}</span>
+          <td class="small name">${r.kind === "mix" ? `<b>${esc(r.name)}</b>` : `${r.f0 ? Math.round(r.f0) + " Hz" : ""} <span class="muted">${esc(r.name)}</span> ${traitTag(r)}
             ${ratings[r.name]?.rating === 1 ? `<span class="ok" title="მომწონს">${UI.icon("up", 12)}</span>` : ratings[r.name]?.rating === -1 ? `<span class="bad" title="არ მომწონს">${UI.icon("down", 12)}</span>` : ""}`}</td>
           <td class="${cls(r.cer)}"><b>${pct(r.cer)}%</b></td>
           ${r.per.map((x, j) => `<td class="small ${cls(x)}" title="${esc(r.texts[j] || "")}">${pct(x)}</td>`).join("")}
@@ -510,6 +526,9 @@ window.Designer = (() => {
       rk.by = +h.dataset.by; if (rk.by >= 0) rk.sent = rk.by; rk.show = 40; renderRank();
     }));
     $("#rk-kind").value = rk.kind;
+    $("#rk-g").value = rk.g; $("#rk-age").value = rk.age;
+    $("#rk-g").onchange = (e) => { rk.g = e.target.value; rk.show = 40; renderRank(); };
+    $("#rk-age").onchange = (e) => { rk.age = e.target.value; rk.show = 40; renderRank(); };
     $("#rk-kind").onchange = (e) => { rk.kind = e.target.value; renderRank(); };
     $("#rk-lo").onchange = (e) => { rk.lo = +e.target.value || 0; renderRank(); };
     $("#rk-hi").onchange = (e) => { rk.hi = +e.target.value || 400; renderRank(); };

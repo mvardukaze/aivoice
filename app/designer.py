@@ -154,14 +154,33 @@ def set_model(b: ModelIn):
     return {"ok": True, "active": b.model}
 
 
+def traits() -> dict:
+    """ტემბრით შეფასებული სქესი/ასაკი (tools/voice_traits.py → data/voice_traits_<model>.json).
+    ასაკი სუსტად ფასდება (~74%) — გაურკვეველი შემთხვევა „?“-ია."""
+    d = read_json(ROOT / "data" / f"voice_traits_{active()}.json", {}) or {}
+    out = {}
+    for n, t in (d.get("speakers") or {}).items():
+        age = "young" if t["p_young"] >= 0.65 else "adult" if t["p_young"] <= 0.35 else "?"
+        out[n] = {"gender": t["gender"], "age": age, "p_female": t["p_female"], "p_young": t["p_young"],
+                  "label_gender": t.get("label_gender"), "label_age": t.get("label_age"), "mismatch": t.get("mismatch", [])}
+    return out
+
+
+@router.get("/traits")
+def traits_info():
+    d = read_json(ROOT / "data" / f"voice_traits_{active()}.json", {}) or {}
+    return {"accuracy": d.get("accuracy"), "labeled": d.get("labeled"), "ready": bool(d)}
+
+
 @router.get("/speakers")
 def speakers():
     s = state()
+    tr = traits()
     out = []
     for i, n in enumerate(s["names"]):
         inf = s["info"].get(n, {})
         out.append({"name": n, "x": round(float(s["xy"][i, 0]), 4), "y": round(float(s["xy"][i, 1]), 4),
-                    "f0": inf.get("f0_median"), "minutes": inf.get("minutes")})
+                    "f0": inf.get("f0_median"), "minutes": inf.get("minutes"), **tr.get(n, {})})
     return {"speakers": out, "meta": s["meta"]}
 
 
@@ -250,6 +269,19 @@ def suggest(mode: str = "neutral", k: int = 4, seed: int | None = None):
         if len(low) < 2 or len(high) < 2:
             raise HTTPException(409, "საკმარისი ხმა ვერ მოიძებნა")
         pick = [low[i] for i in rng.choice(len(low), 2, replace=False)] + [high[i] for i in rng.choice(len(high), 2, replace=False)]
+    elif mode in ("female", "male", "female_young", "female_adult", "male_young", "male_adult") and (tr := traits()):
+        g, _, ag = mode.partition("_")  # ტემბრით შეფასებული სქესი/ასაკი (არა Common Voice-ის მითითება)
+        # ასაკი აქ — კლასიფიკატორის გადაწყვეტილებით (0.5); „?“ ზოლი მხოლოდ ჩვენებისთვისაა
+        age_of = lambda n: "young" if tr.get(n, {}).get("p_young", 0.5) >= 0.5 else "adult"  # noqa: E731
+        cand = [p for p in pool if tr.get(p[0], {}).get("gender") == g and (not ag or age_of(p[0]) == ag)]
+        # რეიტინგი თუ არის — ჯგუფის უკეთესი ნახევრიდან (MMS-ით სუფთად მოლაპარაკეები)
+        rk = {v["name"]: v["cer"] for v in (read_json(M()["rank"], {}) or {}).values() if v.get("kind") == "speaker"}
+        if rk and len(cand) >= 8:
+            cer = sorted(rk.get(n, 1) for n, _ in cand)
+            cand = [c for c in cand if rk.get(c[0], 1) <= cer[len(cer) // 2]]
+        if len(cand) < 2:
+            raise HTTPException(409, "ამ ჯგუფში საკმარისი ხმა ვერ მოიძებნა")
+        pick = [cand[i] for i in rng.choice(len(cand), min(k, len(cand)), replace=False)]
     else:
         cand = [p for p in pool if (mode == "female" and p[1] >= 175) or (mode == "male" and p[1] < 140) or mode == "random"]
         pick = [cand[i] for i in rng.choice(len(cand), min(k, len(cand)), replace=False)]
@@ -345,7 +377,8 @@ def rank():
                           "შენ აქ რას აკეთებ? ხომ გითხარი, არ მოსულიყავი!",
                           "ზღვის ღრმა ტალღებმა ნავი ნაპირისკენ გააქანა.",
                           "მწვრთნელმა ბავშვებს წყალში ცურვა ასწავლა."],
-            "rows": rows, "total": len(rows), "job": rank_job(),
+            "rows": [{**r, **(tr.get(r["name"], {}) if r["kind"] == "speaker" else {})} for r in rows]
+            if (tr := traits()) else rows, "total": len(rows), "job": rank_job(),
             "model_epoch": M()["epoch"], "model": active()}
 
 
