@@ -31,8 +31,8 @@ SECRETS = {
     "KAGGLE_API_TOKEN": ("Kaggle API token", "~/.kaggle/access_token",
                          "kaggle.com → Settings → API → „Generate New Token“. საჭიროა ახალი ხმების შესაქმნელად (Kaggle-ის უფასო GPU)."),
     "HF_TOKEN": ("Hugging Face token", "secrets.env",
-                 "huggingface.co → Settings → Access Tokens. ჩამოსატვირთად — Read (თუ რეპოზიტორია „gated“-ია, ჯერ მის გვერდზე "
-                 "„Agree and access“; საჯარო რეპოზიტორიას token არ სჭირდება), ასატვირთად — Write."),
+                 "huggingface.co → Settings → Access Tokens. მოდელების რეპოზიტორია პირადია: ჩამოსატვირთად — Read "
+                 "(წვდომას ავტორი გაძლევთ), ასატვირთად — Write."),
     "MDC_API_KEY": ("Mozilla Data Collective API key", "secrets.env",
                     "მხოლოდ საბაზო მოდელის თავიდან წვრთნისთვის (Common Voice-ის ჩამოტვირთვა)."),
 }

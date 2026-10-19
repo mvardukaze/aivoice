@@ -1,4 +1,4 @@
-"""მოდელები Hugging Face-ზე (საჯარო რეპოზიტორია, aivoice.toml → [hf].models_repo; ჩამოტვირთვას token არ სჭირდება).
+"""მოდელები Hugging Face-ზე (aivoice.toml → [hf].models_repo; პირადი — Read token, საჯარო რეპოზიტორიას token არ სჭირდება).
 
     ./aivoice models status [--json]   # რა არის რეპოზიტორიაში და რა — ამ კომპიუტერზე
     ./aivoice models pull              # ხმის შემქმნელი, ხმები, ნარევები
@@ -389,7 +389,8 @@ def cmd_pull(a):
     api = HfApi(token=t)
     rem, cache = remote_index(api, t), _hashes()
     if not rem:
-        raise SystemExit(f"რეპოზიტორია {repo()} ცარიელია ან წვდომა არ არის (token?)")
+        raise SystemExit(f"რეპოზიტორია {repo()} ცარიელია ან წვდომა არ არის — საჭიროა Hugging Face Read token "
+                         "(პარამეტრები → ანგარიშები) და ავტორის მიცემული წვდომა")
     cat = catalog()
     known = {v["id"]: v for v in cat["voices"]}
     n = 0

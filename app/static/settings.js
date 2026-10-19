@@ -72,7 +72,7 @@ window.Settings = (() => {
 
       <div class="card" id="models-card" data-pane="models">
         <div class="card-head"><h2>მოდელები (Hugging Face)</h2><span class="muted small mono" id="mdl-repo"></span></div>
-        <p class="muted small help">ხმები და ნარევები საერთო საჯარო რეპოზიტორიაშია (Hugging Face). „ჩამოტვირთვა“ მოიტანს ახალს, „ატვირთვა“ გაგზავნის თქვენსას (Write token).</p>
+        <p class="muted small help">ხმები და ნარევები საერთო პირად რეპოზიტორიაშია (Hugging Face; საჭიროა Read token და ავტორის მიცემული წვდომა). „ჩამოტვირთვა“ მოიტანს ახალს, „ატვირთვა“ გაგზავნის თქვენსას (Write token).</p>
         <details class="hint"><summary>${UI.icon("help", 14)} დაწვრილებით</summary>
           <p class="muted small">„ჩამოტვირთვა“ აქ შეცვლილ პარამეტრებს არ გადაწერს. „ატვირთვა“ აგზავნის მხოლოდ შეცვლილს და საჭიროებს Write token-ს.
           „დამალული“ ხმები არ იტვირთება.</p></details>
