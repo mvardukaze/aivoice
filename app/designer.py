@@ -43,7 +43,8 @@ def models() -> dict:
     for d in sorted(cpath("designer").parent.glob("designer_base_ka_v*")):  # designer_base_ka_v2, _v3 … (export_designer)
         slot = d.name.removeprefix("designer_")
         v = slot.rsplit("_", 1)[-1]
-        entries.append((slot, f"{'ახალი' if slot == max(p.name for p in d.parent.glob('designer_base_ka_v*')).removeprefix('designer_') else ''} ({v})".strip(),
+        newest = slot == max(p.name for p in d.parent.glob("designer_base_ka_v*")).removeprefix("designer_")
+        entries.append((slot, f"ახალი ({v})" if newest else v,
                         d, slot, f"mms_rank_{slot}.json", f"designer_ratings_{slot}.json"))
     for slot, label, d, ds, rank, rat in entries:
         if (d / "meta.json").exists():

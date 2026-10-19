@@ -85,8 +85,12 @@ def local_files(base: bool) -> list[tuple[Path, str]]:
     out += [(p, f"designs/{p.name}") for p in sorted(DESIGNS.glob("*.json"))] if DESIGNS.exists() else []
     if LEXICON.exists():
         out.append((LEXICON, "lexicon/lexicon.json"))
-    if RANK.exists():
-        out.append((RANK, "rank/mms_rank.json"))
+    out += [(r, f"rank/{r.name}") for r in sorted((ROOT / "data").glob("mms_rank*.json")) if "progress" not in r.name]
+    # ახალი საბაზო მოდელები (v2, v3 …): ხმის შემქმნელი + დინამიკების სია
+    for d in sorted(cpath("designer").parent.glob("designer_base_ka_v*")):
+        slot = d.name.removeprefix("designer_")
+        out += [(d / f, f"{d.name}/{f}") for f in ("designer.onnx", "embeddings.npy", "config.json", "meta.json")]
+        out.append((cpath("datasets") / slot / "speakers.json", f"{d.name}/speakers.json"))
     for v in catalog()["voices"]:
         if v.get("status") in SHARED_STATUS and v.get("model"):
             m = ROOT / "voices" / v["model"]
@@ -97,8 +101,12 @@ def local_files(base: bool) -> list[tuple[Path, str]]:
 
 
 def base_files() -> list[tuple[Path, str]]:
+    extra = []
+    for ko in sorted(cpath("runs").glob("base_ka_v*/kaggle_out")):  # base_ka_v2/, base_ka_v3/ … (ახალი ხმების მოსამზადებლად)
+        slot = ko.parent.name
+        extra += [(ko / "final.ckpt", f"{slot}/final.ckpt"), (ko / "config.json", f"{slot}/config.json")]
     ko = cpath("runs") / "base_ka" / "kaggle_out"
-    return [(ko / "final.ckpt", "base_ka/final.ckpt"), (ko / "config.json", "base_ka/config.json"),
+    return extra + [(ko / "final.ckpt", "base_ka/final.ckpt"), (ko / "config.json", "base_ka/config.json"),
             (ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt",
              "ljspeech/ljspeech-medium.clean.ckpt")]
 
@@ -230,7 +238,12 @@ def target_for(f: str, base: bool) -> Path | None:
     if top == "lexicon":
         return LEXICON
     if top == "rank":
-        return RANK
+        return ROOT / "data" / (rest or "mms_rank.json")
+    if top.startswith("designer_base_ka_v"):
+        slot = top.removeprefix("designer_")
+        return cpath("datasets") / slot / "speakers.json" if rest == "speakers.json" else cpath("designer").parent / top / rest
+    if base and top.startswith("base_ka_v"):
+        return cpath("runs") / top / "kaggle_out" / rest
     if top == "voices":
         return ROOT / f
     if base and top == "base_ka":
