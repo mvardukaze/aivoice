@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ka">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aivoice — ქართული სინთეზური ხმები</title>
+<meta name="description" content="ქართული მეტყველების სინთეზი (Piper): მზა ხმები და 80 სინთეზური ხმა — მოუსმინეთ ბრაუზერში.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7fb; --surface: #ffffff; --surface-2: #f0f1f7; --text: #171923; --muted: #5f6475;
+    --border: #e3e5ee; --accent: #4f46e5; --accent-soft: #eceafe; --ok: #0f8a5f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1117; --surface: #171a23; --surface-2: #1e2230; --text: #e8eaf2; --muted: #9aa1b5;
+            --border: #2a2f40; --accent: #8b85ff; --accent-soft: #252445; --ok: #4fd1a1; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.6 "Noto Sans Georgian", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 56px 0 28px; }
+  h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.2; margin: 0 0 12px; }
+  .lead { color: var(--muted); max-width: 720px; margin: 0 0 20px; }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px; text-decoration: none;
+         border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 600; font-size: 14px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  h2 { font-size: 22px; margin: 40px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 18px; font-size: 15px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+  .card h3 { margin: 0; font-size: 18px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px; }
+  .tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .row { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--border); }
+  .row:first-of-type { border-top: 0; }
+  .row p { margin: 0; font-size: 14px; }
+  .play { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface-2);
+          color: var(--text); cursor: pointer; display: grid; place-items: center; padding: 0; }
+  .play:hover, .play.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .play svg { width: 14px; height: 14px; }
+  .bands { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+  .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+          cursor: pointer; font: inherit; font-size: 13px; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .syn { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border);
+         border-radius: 12px; padding: 10px; }
+  .syn b { font-size: 13px; display: block; }
+  .syn span { font-size: 12px; color: var(--muted); }
+  .note { background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; font-size: 14px; }
+  pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; overflow-x: auto; font-size: 13px; }
+  footer { color: var(--muted); font-size: 13px; padding: 40px 0 56px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ქართული სინთეზური ხმები</h1>
+    <p class="lead">ღია, უფასო ქართული მეტყველების სინთეზი (<a href="https://github.com/OHF-Voice/piper1-gpl">Piper</a>) — მუშაობს
+      ჩვეულებრივ კომპიუტერზე, ინტერნეტის გარეშე. აქ ყველა ხმა <b>სინთეზურია</b>: რამდენიმე ხმის ნარევი, რომელიც არცერთ ნამდვილ ადამიანს არ ეკუთვნის.</p>
+    <div class="links">
+      <a class="btn primary" href="https://github.com/mvardukaze/aivoice">GitHub — დაყენება</a>
+      <a class="btn" href="https://huggingface.co/mvarduka/aivoice-voices">Hugging Face — მოდელები</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>მზა ხმები</h2>
+    <p class="sub">ცალკე, მსუბუქი Piper-ის ხმები (~60 MB) — ჩამოტვირთეთ და გამოიყენეთ ნებისმიერ Piper-თან თავსებად პროგრამაში.</p>
+    <div class="cards" id="voices"></div>
+  </section>
+
+  <section>
+    <h2>80 სინთეზური ხმა</h2>
+    <p class="sub">ხმის შემქმნელის ბაზა: ბოხი კაცის ხმიდან მაღალ ქალის ხმამდე. ამათი შერევით პანელში ახალ ხმას აწყობთ და Kaggle-ზე უფასოდ წვრთნით.</p>
+    <div class="bands" id="bands"></div>
+    <div class="grid" id="synthetic"></div>
+  </section>
+
+  <section>
+    <h2>გამოყენება</h2>
+    <pre><code>pip install piper-tts
+# ჩამოტვირთეთ voices/f_mix_01/f_mix_01.onnx და .onnx.json (Hugging Face)
+echo "გამარჯობა!" | piper -m f_mix_01.onnx -f hello.wav</code></pre>
+    <p class="sub">სრული პანელი (ხმის შემქმნელი, ემოციები, გრძელი ტექსტი → MP3 + სუბტიტრები, ციფრების/თარიღების წაკითხვა) —
+      <a href="https://github.com/mvardukaze/aivoice">GitHub</a>-ზე, დაყენება ერთი ბრძანებით (macOS / Linux / Windows WSL).</p>
+    <div class="note"><b>გამოყენების წესები.</b> აკრძალულია ამ ხმებით ან მოდელებით კონკრეტული ნამდვილი ადამიანის მიბაძვა, მოტყუება და ყალბი ჩანაწერები.
+      სადაც შესაძლებელია, მონიშნეთ, რომ აუდიო ხელოვნურადაა შექმნილი.</div>
+  </section>
+
+  <footer>
+    მონაცემები: Mozilla Common Voice 27 (CC0), LJSpeech (საჯარო საკუთრება). კოდი: GPL-3.0.
+    ნიმუშები გახმოვანებულია იგივე მოდელებით, რაც ჩამოსატვირთადაა.
+  </footer>
+</div>
+<audio id="player" preload="none"></audio>
+<script>
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const player = document.getElementById("player");
+  let current = null;
+  function bindPlay(root) {
+    root.querySelectorAll(".play").forEach((b) => b.addEventListener("click", () => {
+      if (current === b && !player.paused) { player.pause(); return; }
+      if (current) { current.classList.remove("on"); current.innerHTML = PLAY; }
+      current = b; b.classList.add("on"); b.innerHTML = PAUSE;
+      player.src = "audio/" + b.dataset.file; player.play();
+    }));
+  }
+  player.addEventListener("ended", () => { if (current) { current.classList.remove("on"); current.innerHTML = PLAY; } });
+  player.addEventListener("pause", () => { if (current) current.innerHTML = PLAY; });
+
+  const BANDS = [["ყველა", 0, 999], ["კაცის · ბოხი", 0, 125], ["კაცის · საშუალო", 125, 150], ["შუალედური", 150, 185],
+                 ["ქალის · საშუალო", 185, 215], ["ქალის · მაღალი", 215, 999]];
+  fetch("samples.json").then((r) => r.json()).then((d) => {
+    const vb = document.getElementById("voices");
+    vb.innerHTML = d.voices.map((v) => `
+      <div class="card">
+        <h3>${esc(v.name)}</h3>
+        <div class="tags">${[v.gender, v.age, v.character].filter(Boolean).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+        ${v.files.map((f, i) => `<div class="row"><button class="play" data-file="${esc(f)}" aria-label="მოსმენა">${PLAY}</button><p>${esc(d.phrases[i])}</p></div>`).join("")}
+        <div class="links" style="margin-top:10px">${v.download ? `<a class="btn" href="https://huggingface.co/mvarduka/aivoice-voices/tree/main/voices/${esc(v.id)}">ჩამოტვირთვა</a>` : `<span class="tag">ჩამოტვირთვა — მალე</span>`}</div>
+      </div>`).join("");
+    bindPlay(vb);
+
+    const bands = document.getElementById("bands"), grid = document.getElementById("synthetic");
+    let band = 0;
+    const render = () => {
+      const [, lo, hi] = BANDS[band];
+      const list = d.synthetic.filter((s) => s.f0 >= lo && s.f0 < hi);
+      grid.innerHTML = list.map((s) => `
+        <div class="syn"><button class="play" data-file="${esc(s.file)}" aria-label="მოსმენა">${PLAY}</button>
+          <div><b>${esc(s.name.replace("syn", "ხმა "))}</b><span>≈ ${Math.round(s.f0)} Hz</span></div></div>`).join("");
+      bindPlay(grid);
+      bands.querySelectorAll(".chip").forEach((c, i) => c.setAttribute("aria-pressed", i === band));
+    };
+    bands.innerHTML = BANDS.map(([t], i) => `<button class="chip" aria-pressed="${i === 0}">${t}</button>`).join("");
+    bands.querySelectorAll(".chip").forEach((c, i) => c.addEventListener("click", () => { band = i; render(); }));
+    render();
+  });
+</script>
+</body>
+</html>
