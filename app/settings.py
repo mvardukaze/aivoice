@@ -280,9 +280,13 @@ def setup_status():
     add("ხელსაწყოები", "Piper (ჩვენი შესწორებებით)", "ok" if patched else "warn",
         "" if patched else "./install.sh --training ადებს piper_overlay/-ს ოფიციალურ Piper-ზე")
 
-    des = C.path("designer") / "designer.onnx"
-    add("მოდელები", "ხმის შემქმნელის მოდელი", "ok" if des.exists() else "missing",
-        str(des) if des.exists() else "ჩამოტვირთვა Hugging Face-იდან (მოდელები → ჩამოტვირთვა)", "models")
+    # ხმის შემქმნელი: ძველი (designer/), ახალი (designer_base_ka_v*) ან საჯარო (…_public) — რომელიმე საკმარისია
+    dirs = [d for d in [C.path("designer"), *sorted(C.path("designer").parent.glob("designer_base_ka_v*"))]
+            if (d / "designer.onnx").exists()]
+    names = ", ".join("v1" if d.name == "designer" else d.name.removeprefix("designer_base_ka_").replace("_public", " საჯარო")
+                      for d in dirs)
+    add("მოდელები", "ხმის შემქმნელის მოდელი", "ok" if dirs else "missing",
+        names if dirs else "ჩამოტვირთვა Hugging Face-იდან (მოდელები → ჩამოტვირთვა)", "models")
     voices = [p for p in (C.ROOT / "voices").glob("*/*.onnx")]
     add("მოდელები", "მზა ხმები", "ok" if voices else "missing",
         ", ".join(p.parent.name for p in voices) or "ჯერ არცერთი — ჩამოტვირთვა Hugging Face-იდან", "models")
