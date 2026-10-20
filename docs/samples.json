@@ -25,8 +25,8 @@
    "id": "f_mix_02",
    "name": "ქალი 2",
    "gender": "ქალი",
-   "age": "",
-   "character": "",
+   "age": "18–30",
+   "character": "ახალგაზრდული, მაღალი, მკაფიო",
    "base": "base_ka_v3",
    "files": [
     "f_mix_02_1.mp3",
