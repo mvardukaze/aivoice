@@ -42,6 +42,7 @@ case "$cmd" in
   check)   # გაწვრთნილი ხმის შემოწმება: სატესტო ფრაზები, ნარევთან შედარება, MMS
     if [ -x "$TPY" ]; then $TPY tools/voice_check.py "$@"; else $PY tools/voice_check.py --no-mms "$@"; fi ;;
   designer) need_training; $TPY tools/export_designer.py "$@" ;;       # საბაზო checkpoint → ხმის შემქმნელის მოდელი
+  cv)      $PY tools/cv_download.py "$@" ;;                           # Common Voice 27: status | download --accept-terms [--dry-run|--check]
   quality)  need_training; nice -n 10 $TPY tools/clip_quality.py "$@" ;;  # Common Voice-ის ჩანაწერების ხარისხი (MMS, შიშინი, ხმაური)
   base)    $PY tools/base_ctl.py "$@" ;;                            # საბაზო მოდელი: options | new | prepare | start --on gcp|local | status | stop
   select)  $PY tools/select_best.py "$@" ;;                         # საუკეთესო ჩანაწერები ახალი dataset-ისთვის (--hours 40)
@@ -80,6 +81,10 @@ aivoice — ქართული სინთეზური ხმები
   ./aivoice base prepare base_ka_v4                  dataset (+ არქივი Google Cloud-ისთვის)
   ./aivoice base start base_ka_v4 --on gcp           Google Cloud L4 (ან --on local — GPU ≥ 12 GB)
   ./aivoice base status | stop base_ka_v4
+
+  საკუთარი მონაცემები (Common Voice 27, Mozilla Data Collective API key; ან „მონაცემები → ხარისხი“):
+  ./aivoice cv download --accept-terms               ჩამოტვირთვა (~10 GB) + ცხრილები + დინამიკების ანალიზი
+  ./aivoice cv status | cv download --dry-run|--check
 
   სხვა: designer | rank | kaggle ... | gcp ... | local
   დაყენება: ./install.sh [--training]  ·  დოკუმენტაცია: README.md

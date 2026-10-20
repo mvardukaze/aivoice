@@ -15,20 +15,103 @@
   let data = null, timer = null;
   const audio = new Audio();
 
+  // ---------- Common Voice — ჩამოტვირთვა (tools/cv_download.py): თქვენი Mozilla Data Collective-ის გასაღებით ----------
+  let cv = null, cvTimer = null, cvAccept = false;
+  const GB = (n) => (n / 1e9).toFixed(2) + " GB";
+  const CV_STAGE = { start: "იწყება", download: "ჩამოტვირთვა", verify: "sha256-ის შემოწმება", extract: "ცხრილების ამოღება",
+    analyse: "დინამიკების ანალიზი (10–40 წთ)", done: "დასრულდა", error: "შეწყდა", stopped: "გაჩერებულია" };
+  const yes = (b) => (b ? `<span class="cv-yes">✓</span>` : `<span class="cv-no">✗</span>`);
+  function cvNotice(c) {
+    const [mdc, cvt] = c.terms;
+    return `<div class="cv-notice">
+      <b>პასუხისმგებლობა.</b> მონაცემები ჩამოიტვირთება <b>თქვენი</b> Mozilla Data Collective-ის ანგარიშით და API key-ით,
+      Mozilla-ს Common Voice-ის პირობებით (ლიცენზია CC0-1.0). მასში <b>ნამდვილი ადამიანების ხმებია</b>.
+      <ul>
+        <li>დინამიკების ვინაობის დადგენა (ან ამის მცდელობა) <b>აკრძალულია</b>.</li>
+        <li>ნამდვილ ხმებზე გაწვრთნილი მოდელები და მათი გამოყენება — მათ შორის ნამდვილი ადამიანის ხმის მიბაძვა, მოტყუება,
+          თაღლითობა — <b>თქვენი პასუხისმგებლობაა</b>.</li>
+        <li>პროექტის საჯარო მოდელებში მხოლოდ სინთეზური ხმებია (ნამდვილი ადამიანების გარეშე).</li>
+      </ul>
+      პირობები: <a href="${esc(mdc)}" target="_blank" rel="noopener">Mozilla Data Collective — Terms of Use</a> ·
+      <a href="${esc(cvt)}" target="_blank" rel="noopener">Common Voice — პირობები</a> ·
+      <a href="${esc(c.dataset_url)}" target="_blank" rel="noopener">მონაცემთა ნაკრების გვერდი</a>
+      (იქ ერთხელ დაეთანხმეთ ნაკრების პირობებს — თორემ ჩამოტვირთვა „წვდომა უარყოფილია“-თი შეწყდება).
+    </div>`;
+  }
+  async function renderCv() {
+    const box = document.getElementById("cv-card");
+    const c = await api("/api/quality/cv").catch((e) => ({ error: e.message }));
+    const wasBusy = cv?.busy;
+    cv = c;
+    if (!box) return c;
+    if (c.error) { box.innerHTML = `<div class="empty">${esc(c.error)}</div>`; return c; }
+    const s = c.state || {}, ready = c.archive && c.tables_ok && c.corpus;
+    const arch = c.archive ? `${GB(c.archive_bytes)}` : c.part_bytes ? `ნაწილობრივ: ${GB(c.part_bytes)} / ${GB(c.expected_bytes)}` : "არ არის";
+    const pctv = s.total ? Math.min(100, Math.round(((s.done || 0) / s.total) * 100)) : 0;
+    const noKey = !c.archive && !c.key;
+    const tail = (c.log || "").trim().split("\n").slice(-14).join("\n");
+    box.innerHTML = `
+      <div class="card-head"><h2>Common Voice — ჩამოტვირთვა</h2>
+        <span class="badge ${c.busy ? "training" : ready ? "ready" : "testing"}">${c.busy ? "მიმდინარეობს" : ready ? "მზადაა" : "საჭიროა ჩამოტვირთვა"}</span></div>
+      <p class="muted small">Common Voice 27 (ქართული, ~${GB(c.expected_bytes)}) — საკუთარი საბაზო მოდელისთვის. ჩამოტვირთვა გაგრძელებადია
+        (შეწყვეტისას იქიდან გაგრძელდება); შემდეგ არქივიდან ამოიღება ცხრილები და კეთდება დინამიკების ანალიზი (corpus.json). mp3 არქივში რჩება.</p>
+      <div class="kv">
+        <div><span>API key</span><b>${yes(c.key)}${c.key ? "" : ` <button class="ghost small" id="cv-keys">პარამეტრები → ანგარიშები</button>`}</b></div>
+        <div><span>არქივი</span><b>${yes(c.archive)} ${arch}</b></div>
+        <div><span>ცხრილები</span><b>${yes(c.tables_ok)} ${c.tables.length} ფაილი</b></div>
+        <div><span>corpus.json</span><b>${yes(c.corpus)}${c.corpus ? "" : c.training_env ? "" : ` <span class="muted">(საჭიროა ./install.sh --training)</span>`}</b></div>
+        <div><span>თავისუფალი ადგილი</span><b>${GB(c.free_bytes)}</b></div>
+      </div>
+      <div class="muted small mono">${esc(c.dir)}</div>
+      ${c.busy ? `
+        <div class="small" style="margin-top:10px"><b>${esc(CV_STAGE[s.stage] || s.stage || "")}</b>
+          ${s.stage === "download" && s.total ? ` · ${GB(s.done || 0)} / ${GB(s.total)}${s.rate ? ` · ${s.rate} MB/წმ` : ""}${s.eta_min != null ? ` · დარჩა ~${s.eta_min} წთ` : ""}` : ""}
+          ${s.stage === "extract" && s.total ? ` · ${s.done || 0} / ${s.total}` : ""}</div>
+        ${s.total && s.stage !== "analyse" ? `<div class="bar"><span style="width:${s.stage === "verify" ? Math.round(((s.done || 0) / (c.archive_bytes || c.expected_bytes)) * 100) : pctv}%"></span></div>` : ""}
+        <div class="actions"><button class="ghost small" id="cv-stop">გაჩერება</button></div>`
+      : ready ? `<details class="hint"><summary>პირობები და პასუხისმგებლობა</summary>${cvNotice(c)}</details>`
+      : `${cvNotice(c)}
+        <label class="check-inline cv-accept"><input type="checkbox" id="cv-accept" ${cvAccept ? "checked" : ""}>
+          წავიკითხე პირობები, ვეთანხმები და ვიღებ პასუხისმგებლობას</label>
+        <div class="actions">
+          <button class="primary small" id="cv-go" ${cvAccept && !noKey ? "" : "disabled"}>${c.part_bytes ? "ჩამოტვირთვის გაგრძელება" : c.archive ? "ანალიზის დასრულება" : "ჩამოტვირთვა და ანალიზი"}</button>
+          ${noKey ? `<span class="small warn-t">ჯერ ჩაწერეთ Mozilla Data Collective API key (იქმნება mozilladatacollective.com-ზე)</span>` : ""}
+        </div>`}
+      ${tail && (c.busy || s.stage === "error" || !ready) ? `<pre class="tr-log">${esc(tail)}</pre>` : ""}`;
+    $("#cv-keys")?.addEventListener("click", () => window.UI?.go?.("settings", "accounts"));
+    $("#cv-accept")?.addEventListener("change", (e) => { cvAccept = e.target.checked; const b = $("#cv-go"); if (b) b.disabled = !cvAccept || noKey; });
+    $("#cv-go")?.addEventListener("click", async () => {
+      try { await post("/api/quality/cv/download", { accept: cvAccept }); window.UI?.toast("დაიწყო — შეგიძლიათ პანელი დახუროთ, ფონში გაგრძელდება", "ok"); setTimeout(renderCv, 1500); }
+      catch (e) { window.UI ? UI.toast(e.message, "error") : alert(e.message); }
+    });
+    $("#cv-stop")?.addEventListener("click", async () => {
+      await post("/api/quality/cv/stop").catch(() => {});
+      window.UI?.toast("ჩერდება — შემდეგ ჯერზე იქიდან გაგრძელდება", "info"); setTimeout(renderCv, 1500);
+    });
+    clearTimeout(cvTimer);
+    if (c.busy) cvTimer = setTimeout(() => { if (!$("#tab-data").hidden) renderCv(); }, 5000);
+    else if (wasBusy) render();  // დასრულდა — შემოწმების ღილაკიც განახლდეს
+    return c;
+  }
+
   async function render() {
     const box = $("#quality");
     if (!box) return;
     data = await api("/api/quality").catch((e) => ({ error: e.message }));
     if (data.error) { box.innerHTML = `<div class="card"><div class="empty">${esc(data.error)}</div></div>`; return; }
+    if (!cv || cv.error) await renderCv();
     const p = data.progress || {}, t = data.totals;
     const running = data.busy || (p.stage && p.stage !== "done" && p.updated && Date.now() - new Date(p.updated) < 10 * 60e3);
     const done = p.total ? Math.round(((p.done || t.clips) / p.total) * 100) : 0;
+    const blocked = !running && (cv?.busy ? "ჯერ უნდა დასრულდეს Common Voice-ის ჩამოტვირთვა და ანალიზი" : cv?.blocked);
     box.innerHTML = `
+      <div id="cv-card" class="card"></div>
       <div class="card">
         <div class="card-head"><h2>ჩანაწერების ხარისხი — Common Voice 27</h2>
           <div class="actions" style="margin:0">${running
             ? `<button class="ghost small" id="q-stop">გაჩერება</button>`
-            : `<button class="primary small" id="q-run">${t.clips ? "გაგრძელება" : "შემოწმების დაწყება"}</button>`}</div></div>
+            : `<button class="primary small" id="q-run" ${blocked ? `disabled title="${esc(blocked)}"` : ""}>${t.clips ? "გაგრძელება" : "შემოწმების დაწყება"}</button>`}</div></div>
+        ${blocked ? `<p class="small warn-t">${esc(blocked)}</p>` : ""}
         <p class="muted small">თითო ჩანაწერი მოწმდება: ემთხვევა თუ არა ტექსტს (MMS), შიშინი, ხმაური, ჩუმი ხმა, გადატვირთვა, სიჩქარე.
           ცუდი ჩანაწერები ამოვარდება, დინამიკი — თუ მისი ჩანაწერების დიდი ნაწილი ცუდია. ბოლო სიტყვა თქვენია.</p>
         ${p.total ? `<div class="small">${running ? `<b>მიმდინარეობს:</b> ` : ""}${(p.done || t.clips).toLocaleString()} / ${p.total.toLocaleString()} ჩანაწერი
@@ -45,6 +128,7 @@
       </div>
       ${t.clips ? `<div id="sel-card" class="card"></div>` + earCard() + speakersCard() : ""}`;
     bind(box);
+    renderCv();
     renderSel();
     clearTimeout(timer);
     if (running) timer = setTimeout(() => { if (!$("#tab-data").hidden && !st.open) { const y = window.scrollY; render().then(() => window.scrollTo(0, y)); } }, 30000);

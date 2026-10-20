@@ -4,7 +4,10 @@ GET  /api/quality                 შეჯამება + დინამი�
 GET  /api/quality/speaker/{spk}   დინამიკის ჩანაწერები (ყველაზე ცუდიდან)
 GET  /api/quality/clip/{id}       mp3 მოსასმენად
 POST /api/quality/decision        {spk, decision: include|exclude|auto} — თქვენი გადაწყვეტილება (data/dataset_decisions.json)
-POST /api/quality/run · /stop     შემოწმების გაშვება / გაჩერება (./aivoice quality, გაგრძელებადი)
+POST /api/quality/run · /stop     შემოწმების გაშვება / გაჩერება (./aivoice quality, გაგრძელებადი); 400 — თუ Common Voice არ არის
+GET  /api/quality/cv              Common Voice 27: გასაღები, არქივი, ცხრილები, corpus.json + ჩამოტვირთვის მიმდინარეობა/ლოგი
+POST /api/quality/cv/download     {accept: true} — ჩამოტვირთვა + ანალიზი ცალკე პროცესად (./aivoice cv download --accept-terms)
+POST /api/quality/cv/stop         გაჩერება (შემდეგ ჯერზე გაგრძელდება)
 
 ჩანაწერი „ცუდია“, თუ ერთი წესი მაინც ირღვევა (BAD); დინამიკი „საეჭვოა“, თუ ცუდი ჩანაწერები ბევრია (SPEAKER).
 """
@@ -199,11 +202,94 @@ def decision(d: Decision):
     return {"ok": True}
 
 
+# ---------- Common Voice 27: ჩამოტვირთვა (tools/cv_download.py) ----------
+
+
+def _cvtool():
+    import importlib.util
+    if "mod" not in _cv:
+        spec = importlib.util.spec_from_file_location("cv_download", ROOT / "tools" / "cv_download.py")
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        _cv["mod"] = m
+    return _cv["mod"]
+
+
+_cv: dict = {}
+
+
+def _cv_busy(state: dict) -> bool:
+    try:
+        os.killpg(int(state["pgid"]), 0)
+        return state.get("stage") not in ("done", "error")
+    except (KeyError, TypeError, ValueError, OSError):
+        return False
+
+
+def cv_ready() -> str | None:
+    """None — შემოწმებისთვის ყველაფერი მზადაა; სხვა შემთხვევაში — მიზეზი (ქართულად)."""
+    s = _cvtool().status()
+    if not s["archive"]:
+        return "Common Voice-ის არქივი არ არის — ჯერ ჩამოტვირთეთ (ზემოთ: „Common Voice — ჩამოტვირთვა“)"
+    if not s["tables_ok"]:
+        return "Common Voice-ის ცხრილები (validated.tsv …) არ არის ამოღებული — გაუშვით ჩამოტვირთვა (ჩამოტვირთულს გამოტოვებს)"
+    if not s["corpus"]:
+        return "დინამიკების ანალიზი (corpus.json) არ არის — გაუშვით ჩამოტვირთვა (ჩამოტვირთულს გამოტოვებს)"
+    if not s["training_env"]:
+        return "შემოწმებას სჭირდება წვრთნის გარემო: ./install.sh --training"
+    return None
+
+
+@router.get("/cv")
+def cv_status():
+    t = _cvtool()
+    state = read_json(t.RUN / "state.json", {}) or {}
+    log = t.RUN / "log.txt"
+    return {**t.status(), "state": state, "busy": _cv_busy(state), "blocked": cv_ready(),
+            "log": log.read_text(encoding="utf-8", errors="replace")[-5000:] if log.exists() else ""}
+
+
+class CvIn(BaseModel):
+    accept: bool = False
+
+
+@router.post("/cv/download")
+def cv_download(b: CvIn):
+    t = _cvtool()
+    if not b.accept:
+        raise HTTPException(400, "ჯერ დაადასტურეთ პირობები და პასუხისმგებლობა (მონიშვნა)")
+    if _cv_busy(read_json(t.RUN / "state.json", {}) or {}):
+        raise HTTPException(409, "ჩამოტვირთვა უკვე მიმდინარეობს")
+    s = t.status()
+    if not s["archive"] and not s["key"]:
+        raise HTTPException(400, "Mozilla Data Collective API key არ არის: პარამეტრები → ანგარიშები")
+    t.RUN.mkdir(parents=True, exist_ok=True)
+    log = (t.RUN / "log.txt").open("w", encoding="utf-8")
+    p = subprocess.Popen([str(ROOT / "aivoice"), "cv", "download", "--accept-terms"], cwd=ROOT, stdout=log,
+                         stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True,
+                         env={**os.environ, "PYTHONUNBUFFERED": "1"})
+    threading.Thread(target=p.wait, daemon=True).start()
+    # p.pid = ჯგუფის ID (start_new_session); ინსტრუმენტი შემდეგ თავისას ჩაწერს
+    (t.RUN / "state.json").write_text(json.dumps({"stage": "start", "pgid": p.pid}), encoding="utf-8")
+    return {"ok": True, "pid": p.pid}
+
+
+@router.post("/cv/stop")
+def cv_stop():
+    state = read_json(_cvtool().RUN / "state.json", {}) or {}
+    if _cv_busy(state):
+        os.killpg(int(state["pgid"]), signal.SIGTERM)  # .part + .checksum რჩება — შემდეგ ჯერზე გაგრძელდება
+        (_cvtool().RUN / "state.json").write_text(json.dumps({**state, "stage": "stopped"}), encoding="utf-8")
+    return {"ok": True}
+
+
 @router.post("/run")
 def run():
     p = _job["proc"]
     if p and p.poll() is None:
         raise HTTPException(409, "შემოწმება უკვე მიმდინარეობს")
+    if why := cv_ready():
+        raise HTTPException(400, why)
     log = (DIR.parent / "quality.log")
     log.parent.mkdir(parents=True, exist_ok=True)
     _job["proc"] = p = subprocess.Popen([str(ROOT / "aivoice"), "quality"], cwd=ROOT, stdout=log.open("a", encoding="utf-8"),

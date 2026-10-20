@@ -36,7 +36,7 @@ git clone https://github.com/mvardukaze/aivoice.git && cd aivoice
 |---|---|---|
 | ახალი ხმის შექმნა ნარევიდან („წვრთნა“) | **Kaggle** token — kaggle.com → Settings → API → *Generate New Token* (+ ტელეფონის ვერიფიკაცია GPU-სთვის) | უფასო (30 GPU-სთ/კვირა) |
 | საბაზო მოდელის შექმნა / გაუმჯობესება | **Google Cloud** (იხ. [ქვემოთ](#google-cloud--საბაზო-მოდელის-წვრთნა)) + `./aivoice models pull --base --data` | ფასიანი, ≈ $0.9/სთ (საცდელი კრედიტი $300) |
-| Common Voice-ის ნედლი არქივის ჩამოტვირთვა | **Mozilla Data Collective** API key | უფასო |
+| Common Voice-ის ნედლი არქივის ჩამოტვირთვა ([საკუთარი მონაცემები](#საკუთარი-მონაცემები-common-voice)) | **Mozilla Data Collective** API key | უფასო |
 | თქვენი ხმების/ნარევების ატვირთვა საერთო რეპოზიტორიაში | Hugging Face **Write** token (ავტორის მიცემული ჩაწერის უფლებით) | უფასო |
 
 ---
@@ -137,7 +137,39 @@ macOS-ზე `install.sh` Homebrew-ით აყენებს Python 3.12-ს,
 ./aivoice base status base_ka_v4 · ./aivoice base stop base_ka_v4
 # ყველა ბრძანებას აქვს --dry-run — აჩვენებს გეგმას, არაფერს ქმნის და არ უშვებს
 ```
-სხვა კომპიუტერზე ჯერ: `./aivoice models pull --base --data` (საბაზო checkpoint-ები + ხარისხის მონაცემები) და `./install.sh --training`.
+სხვა კომპიუტერზე ჯერ: `./aivoice models pull --base --data` (საბაზო checkpoint-ები + ხარისხის მონაცემები) და `./install.sh --training`
+— ან საკუთარი მონაცემებით: [ქვემოთ](#საკუთარი-მონაცემები-common-voice).
+
+### საკუთარი მონაცემები (Common Voice)
+ხარისხის მონაცემების ნაცვლად (`models pull --data` — ავტორის წვდომით) შეგიძლიათ Common Voice 27 (ქართული, ~10.4 GB, CC0)
+**თქვენი** ანგარიშით ჩამოტვირთოთ და საბაზო მოდელი თავად ააწყოთ.
+
+> **პასუხისმგებლობა.** მონაცემები ჩამოიტვირთება **თქვენი** Mozilla Data Collective-ის ანგარიშით, Mozilla-ს Common Voice-ის
+> პირობებით. მასში **ნამდვილი ადამიანების ხმებია**: დინამიკების ვინაობის დადგენა (ან ამის მცდელობა) **აკრძალულია**.
+> ნამდვილ ხმებზე გაწვრთნილი მოდელები და მათი გამოყენება — მათ შორის ნამდვილი ადამიანის ხმის მიბაძვა, მოტყუება,
+> თაღლითობა — **თქვენი პასუხისმგებლობაა**. პროექტის საჯარო მოდელებში მხოლოდ სინთეზური ხმებია.
+> პირობები: [Mozilla Data Collective — Terms of Use](https://mozilladatacollective.com/terms) ·
+> [Common Voice — პირობები](https://commonvoice.mozilla.org/terms) ·
+> [მონაცემთა ნაკრების გვერდი](https://mozilladatacollective.com/datasets/cmu5x9qda00fenq07byl8rlc8).
+
+1. **ანგარიში და გასაღები**: დარეგისტრირდით [mozilladatacollective.com](https://mozilladatacollective.com)-ზე, გახსენით
+   [მონაცემთა ნაკრების გვერდი](https://mozilladatacollective.com/datasets/cmu5x9qda00fenq07byl8rlc8) და **დაეთანხმეთ მის
+   პირობებს** (თორემ ჩამოტვირთვა „წვდომა უარყოფილია“-თი შეწყდება), შექმენით API key → პანელი → „პარამეტრები“ →
+   „ანგარიშები“ → *Mozilla Data Collective API key*.
+2. **ჩამოტვირთვა**: „მონაცემები“ → „ხარისხი“ → „Common Voice — ჩამოტვირთვა“ → მონიშნეთ პირობებზე თანხმობა →
+   „ჩამოტვირთვა და ანალიზი“. ფონში მიდის (პანელის დახურვა არ აჩერებს), შეწყვეტისას იქიდან გრძელდება; დასრულებისას
+   sha256 მოწმდება. შემდეგ არქივიდან ამოიღება ცხრილები (`validated.tsv`, `other.tsv` …) და კეთდება დინამიკების ანალიზი
+   (`corpus.json`, საჭიროა `./install.sh --training`). mp3 არქივში რჩება. ადგილი: ≥ 11 GB `<sources>/cv27_ka/`-ში.
+3. **ხარისხის შემოწმება**: იგივე გვერდზე „შემოწმების დაწყება“ (MMS + შიშინი/ხმაური; GPU-ით ~1–1.5 დღე, CPU-ზე გაცილებით მეტი) →
+   დინამიკების გადარჩევა.
+4. **საბაზო მოდელი**: „წვრთნა“ → „საბაზო მოდელი“ (იხ. ზემოთ) — შერჩევა → მომზადება → გაშვება.
+
+```bash
+./aivoice cv download --dry-run          # გეგმა: ზომა, ადგილი, რა უკვე არის (არაფერს წერს)
+./aivoice cv download --check            # გასაღები და პირობებზე თანხმობა (არქივის ჩამოტვირთვის გარეშე)
+./aivoice cv download --accept-terms     # ჩამოტვირთვა + ცხრილები + corpus.json (რაც არის — გამოტოვებს)
+./aivoice quality                        # ხარისხის შემოწმება
+```
 
 ### Google Cloud — საბაზო მოდელის წვრთნა
 საჭიროა მხოლოდ საბაზო მოდელისთვის (ხმებისთვის — Kaggle, უფასოდ). **ფასიანია:** L4 GPU ≈ **$0.9/სთ** (on-demand,

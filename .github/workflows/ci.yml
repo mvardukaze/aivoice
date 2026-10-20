@@ -55,6 +55,14 @@ jobs:
           check /api/setup/status
           check /api/settings
           check /api/designer/status
+          check /api/quality/cv
+          .venv/bin/python -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['archive'] is None and d['blocked'], d" "$RUNNER_TEMP/out"
+          echo "== POST /api/quality/run (Common Voice-ის გარეშე → 400)"
+          code="$(curl -s -o "$RUNNER_TEMP/out" -w '%{http_code}' -X POST "$B/api/quality/run")"; cat "$RUNNER_TEMP/out"; echo
+          [ "$code" = 400 ]
+          echo "== POST /api/quality/cv/download (თანხმობის გარეშე → 400)"
+          code="$(curl -s -o "$RUNNER_TEMP/out" -w '%{http_code}' -X POST "$B/api/quality/cv/download" -H 'Content-Type: application/json' -d '{}')"; cat "$RUNNER_TEMP/out"; echo
+          [ "$code" = 400 ]
           echo "== POST /api/textnorm"
           out="$(curl -sf -X POST "$B/api/textnorm" -H 'Content-Type: application/json' -d '{"text":"15 ლარი"}')"
           echo "$out"

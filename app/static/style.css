@@ -944,3 +944,10 @@ tr.ear-on td { background: var(--accent-soft, rgba(79,70,229,.08)); }
 .rk-sort { cursor: pointer; user-select: none; white-space: nowrap; }
 .rk-sort:hover, .rk-sort.on { color: var(--accent, #4f46e5); }
 .trait { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+
+/* „მონაცემები → ხარისხი“: Common Voice-ის ჩამოტვირთვის პასუხისმგებლობის ტექსტი */
+.cv-notice { background: var(--warn-soft); border-radius: var(--radius-sm); padding: 10px 14px; margin: 12px 0 8px; font-size: 13px; line-height: 1.55; }
+.cv-notice ul { margin: 6px 0; padding-left: 20px; }
+.cv-accept { margin: 4px 0 0; color: var(--text); font-weight: 500; }
+#cv-card .cv-yes { color: var(--ok); font-weight: 700; }
+#cv-card .cv-no { color: var(--bad); font-weight: 700; }

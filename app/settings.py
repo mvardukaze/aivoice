@@ -34,7 +34,7 @@ SECRETS = {
                  "huggingface.co → Settings → Access Tokens. მოდელების რეპოზიტორია პირადია: ჩამოსატვირთად — Read "
                  "(წვდომას ავტორი გაძლევთ), ასატვირთად — Write."),
     "MDC_API_KEY": ("Mozilla Data Collective API key", "secrets.env",
-                    "მხოლოდ საბაზო მოდელის თავიდან წვრთნისთვის (Common Voice-ის ჩამოტვირთვა)."),
+                    "მხოლოდ საკუთარი საბაზო მოდელისთვის: Common Voice-ის ჩამოტვირთვა („მონაცემები“ → „ხარისხი“). mozilladatacollective.com → API key."),
 }
 LEGACY_ENV = Path.home() / ".config" / "aivoice" / "mdc.env"  # ძველი ადგილი (ამ კომპიუტერზე)
 
