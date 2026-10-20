@@ -494,7 +494,7 @@ function renderBase(b) {
     <div class="card" data-pane="progress">
       <h2>ქართული საბაზო მოდელი${b.slot && b.slot !== "base_ka" ? ` <span class="badge training">${esc(b.slot)} — ახალი, ნულიდან</span>` : ""}</h2>
       <p class="muted">${esc(b.note || "")}. ქართული გამოთქმა ისწავლა ბევრ ხმაზე — მისგან იქმნება ხმის შემქმნელის ნარევები და
-        ცალკე ხმები (მაგ. „ქალი 1“). ლიცენზიისგან თავისუფალია.</p>
+        ცალკე ხმები (მაგ. „ქალი 1“). მონაცემები CC0-ია; გამოქვეყნებული ხმების პირობები — LICENSE-VOICES.md.</p>
       <div class="kv">
         <div><span>საწყისი წერტილი</span><b>LJSpeech (ინგლისური, public domain)</b></div>
         <div><span>დინამიკი</span><b>${ds.speakers ?? "—"}</b></div>
