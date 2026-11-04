@@ -127,7 +127,7 @@ def public_files(base: bool) -> list[tuple[Path, str]]:
     if LEXICON.exists():
         out.append((LEXICON, "lexicon/lexicon.json"))
     for v in catalog()["voices"]:
-        if v.get("status") in SHARED_STATUS and v.get("model"):
+        if v.get("status") in SHARED_STATUS and v.get("model") and not v.get("private"):  # პირადი (კომერციული) ხმა საჯაროდ არ გადის
             m = ROOT / "voices" / v["model"]
             out += [(m, f"voices/{v['model']}"), (Path(str(m) + ".json"), f"voices/{v['model']}.json")]
     if base:
@@ -330,7 +330,7 @@ def cmd_push(a):
         api.upload_file(path_or_fileobj=str(src), path_in_repo=dst, repo_id=repo(), repo_type="model")
         n += 1
     for v in catalog()["voices"]:  # კატალოგის ჩანაწერი — რომ სხვა კომპიუტერზე სახელი/აღწერა გადავიდეს
-        if v.get("status") in SHARED_STATUS and v.get("model"):
+        if v.get("status") in SHARED_STATUS and v.get("model") and not (pub and v.get("private")):
             dst, data = f"voices/{v['id']}/voice.json", voice_entry_bytes(v)
             r = rem.get(dst)
             if r and r[1] == "sha1" and hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest() == r[2]:
