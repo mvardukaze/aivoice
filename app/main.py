@@ -161,6 +161,8 @@ def api_voices(all: bool = False):
             v["engine"] = "omnivoice"
             v["available"] = voice_available(v)
             v["sample_rate"] = omni.SAMPLE_RATE
+            oc = ccfg()["omnivoice"]  # „მოსმენის“ სლაიდერისთვის: სიჩქარე = speed / length_scale; ხარისხი = num_step
+            v["omni"] = {"speed": float(oc["speed"]), "num_step": int(oc["num_step"])}
             v["defaults"] = voice_defaults(v)
             v["emotions"] = {k: emotion_params(v, k) for k in EMOTIONS}
         elif v.get("model"):
@@ -308,6 +310,7 @@ class SynthRequest(BaseModel):
     noise_scale: float | None = None
     noise_w_scale: float | None = None
     volume: float | None = None
+    num_step: int | None = Field(None, ge=4, le=64)  # მხოლოდ OmniVoice: ხარისხი ↔ სიჩქარე (ნაგულისხმევი — კონფიგურაციიდან)
 
 
 @app.post("/api/synthesize")
@@ -323,7 +326,7 @@ def api_synthesize(req: SynthRequest):
 
     text = ka_text(req.text.strip())
     if engine(v) == "omnivoice":
-        out = omni_synth_cached(v, text, params)
+        out = omni_synth_cached(v, text, params, req.num_step)
         return {"url": f"/api/audio/{out.name}", "seconds": round(wav_seconds(out), 2), "params": params, "engine": "omnivoice"}
     key = hashlib.sha1(json.dumps([v["model"], text, params], ensure_ascii=False).encode()).hexdigest()[:16]
     out = CACHE / f"{key}.wav"
@@ -341,21 +344,21 @@ def omni_speed(params: dict) -> float:
     return round(float(ccfg()["omnivoice"]["speed"]) / params["length_scale"], 3)
 
 
-def omni_key(v: dict, text: str, params: dict) -> str:
+def omni_key(v: dict, text: str, params: dict, num_step: int | None = None) -> str:
     """ქეშის გასაღები: ხმა (prompt.pt-ის ვერსია) + ტექსტი + ტემპი/ხმამაღლობა + ნაბიჯები."""
     p = VOICES / v["id"] / "prompt.pt"
-    num_step = ccfg()["omnivoice"]["num_step"]
+    num_step = num_step or ccfg()["omnivoice"]["num_step"]
     return hashlib.sha1(json.dumps(["omni", v["id"], p.stat().st_mtime if p.exists() else 0, text, omni_speed(params),
                                     params["volume"], num_step], ensure_ascii=False).encode()).hexdigest()[:16]
 
 
-def omni_synth_cached(v: dict, text: str, params: dict) -> Path:
+def omni_synth_cached(v: dict, text: str, params: dict, num_step: int | None = None) -> Path:
     if not voice_available(v):
         raise HTTPException(409, "OmniVoice-ის ხმის ფაილი (prompt.pt) ამ კომპიუტერზე არ არის")
-    out = CACHE / f"{omni_key(v, text, params)}.wav"
+    out = CACHE / f"{omni_key(v, text, params, num_step)}.wav"
     if not out.exists():
         tmp = out.with_suffix(f".{threading.get_ident()}.tmp")  # ერთდროული მოთხოვნები ერთმანეთს არ გადაეწერება
-        tmp.write_bytes(omni.synth_wav(v, text, omni_speed(params), params["volume"]))
+        tmp.write_bytes(omni.synth_wav(v, text, omni_speed(params), params["volume"], num_step))
         tmp.rename(out)
     return out
 

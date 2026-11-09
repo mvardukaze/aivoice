@@ -30,14 +30,15 @@ window.Train = (() => {
   }
 
   async function renderForm(box) {
-    designs = await api("/api/designer/designs").catch(() => []);
+    // ამოღებული საბაზო მოდელების (v1, v2) ნარევებიდან ახალი ხმა ვეღარ გაიწვრთნება
+    designs = (await api("/api/designer/designs").catch(() => [])).filter((d) => !UI.isRetiredBase(d.model));
     box.innerHTML = `
       <div class="card">
         <h2>ახალი ხმა შენახული ნარევიდან</h2>
         <p class="muted small help">შენახული ნარევი ცალკე, მსუბუქ ხმად იქცევა და ~8 საათში თავისით გამოჩნდება „ხმებში“.</p>
         ${UI.hint(`ნარევი იქმნება „ხმის შემქმნელში“ („შენახვა“). ჯერ ამ კომპიუტერზე მზადდება ~3000 ჩანაწერი (~1–2 სთ), მერე იწვრთნება Kaggle-ზე (~6 სთ, უფასოდ).`)}
         <form id="tr-new" class="tr-new">
-          <label>ნარევი <select name="design" required>${designs.map((d) => `<option>${esc(d.name)}</option>`).join("")}</select></label>
+          <label>ნარევი <select name="design" required>${designs.map((d) => `<option value="${esc(d.name)}">${esc(d.name)}${UI.baseLabel(d.model) ? ` · ${esc(UI.baseLabel(d.model))}` : ""}</option>`).join("")}</select></label>
           <label>ხმის სახელი <input name="name" placeholder="მაგ. ქალი 2" required></label>
           <label>ID <input name="slot" pattern="[a-z][a-z0-9_]{1,30}" placeholder="მაგ. f_mix_02" required></label>
           <label>სქესი <select name="gender"><option value="ქალი">ქალი</option><option value="კაცი">კაცი</option><option value="">ნეიტრალური</option></select></label>

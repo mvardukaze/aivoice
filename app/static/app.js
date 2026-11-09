@@ -7,12 +7,19 @@ const api = async (url, opts) => {
   return body;
 };
 
-const SLIDERS = [
-  { key: "length_scale", label: "ტემპი (სიგრძე)", step: 0.01 },
+// სლაიდერები ძრავის მიხედვით. OmniVoice-ის „სიჩქარე“ = speed (კონფიგურაცია) / length_scale — backend იგივე ფორმულით ითვლის
+const PIPER_SLIDERS = [
+  { key: "length_scale", label: "ტემპი (სიგრძე)", step: 0.01, title: "მეტი = უფრო ნელა" },
   { key: "noise_scale", label: "ინტონაცია", step: 0.01 },
   { key: "noise_w_scale", label: "რიტმის ცოცხლობა", step: 0.01 },
   { key: "volume", label: "ხმამაღლობა", step: 0.01 },
 ];
+const OMNI_SLIDERS = [
+  { key: "speed", label: "სიჩქარე", step: 0.01, title: "მეტი = უფრო სწრაფად" },
+  { key: "volume", label: "ხმამაღლობა", step: 0.01 },
+];
+// OmniVoice-ის ხარისხი (num_step): ნაკლები ნაბიჯი — უფრო სწრაფი, ოდნავ უარესი
+const NUM_STEPS = [[8, "სწრაფი (8 ნაბიჯი)"], [16, "საშუალო (16)"], [32, "სრული (32)"]];
 const PHRASES = [
   "შენ აქ რას აკეთებ? ხომ გითხარი, არ მოსულიყავი!",
   "ბოდიში... არ მინდოდა, რომ ასე მომხდარიყო.",
@@ -116,24 +123,25 @@ function renderLibrarySummary() {
   const shown = voices.filter((v) => v.status !== "hidden");
   $("#ov-voices").innerHTML = shown.length ? shown.map((v) => `
     <div class="lib-row"><span class="avatar sm" style="--h:${hue(v.id)}">${esc(initial(v.name))}</span>
-      <div class="lib-main"><b>${esc(v.name)}</b><span class="muted small">${esc([v.gender, v.character, isOmni(v) ? "OmniVoice" : ""].filter(Boolean).join(" · "))}</span></div>
-      <span class="badge ${v.status}">${esc(STATUS[v.status] || v.status)}</span></div>`).join("")
-    : `<div class="empty">ჯერ არცერთი ხმა — „პარამეტრები → მოდელები → ჩამოტვირთვა“.</div>`;
+      <div class="lib-main"><b>${esc(v.name)}</b><span class="muted small">${esc([v.gender, v.character].filter(Boolean).join(" · "))}</span></div>
+      ${engineTag(v)}${ncTag(v)}<span class="badge ${v.status}">${esc(STATUS[v.status] || v.status)}</span></div>`).join("")
+    : `<div class="empty">ჯერ არცერთი ხმა — „პარამეტრები → მოდელები → ჩამოტვირთვა“ ან „ხმის შემქმნელი“.</div>`;
 }
 
 // ---------- voices ----------
 // ემოციები ფარდობითია: თითო ხმას თავისი ნორმა აქვს (backend: /api/voices → defaults, emotions)
-let showHidden = false, editing = null;
+let showHidden = false, editing = null, engineFilter = "all";
 const curVoice = () => voices.find((v) => v.id === $("#voice-select").value);
 
 const hue = (s) => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
 const initial = (s) => [...String(s || "?").trim()][0] || "?";
 
-// საბაზო მოდელის მოკლე სახელი: base_ka → v1, base_ka_v3 → v3
-const baseLabel = (b) => (b === "base_ka" ? "v1" : (b || "").replace(/^base_ka_/, ""));
 // ძრავი: Piper (ნაგულისხმევი) ან OmniVoice (ხმა აღწერით — omni.js)
 const isOmni = (v) => v?.engine === "omnivoice";
-const engineTag = (v) => isOmni(v) ? `<span class="tag engine-omni" title="მეორე ძრავი: ხმა აღწერით (ნელია)">OmniVoice</span>` : `<span class="tag">Piper</span>`;
+const isNC = (v) => isOmni(v) || v?.license === "cc-by-nc" || v?.commercial === false;
+const engineTag = (v) => isOmni(v) ? `<span class="tag engine-omni" title="მეორე ძრავი: ხმა აღწერით (ნელია)">OmniVoice</span>` : `<span class="tag" title="სწრაფი, ლოკალური">Piper</span>`;
+const ncTag = (v) => isNC(v) ? `<span class="tag nc" title="მოდელის ლიცენზია CC-BY-NC — მხოლოდ არაკომერციულად">არაკომერციული</span>` : "";
+const privTag = (v) => v.private ? `<span class="tag" title="პირადი ხმა — საჯაროდ არ ქვეყნდება">პირადი</span>` : "";
 
 function voiceCard(v) {
   if (editing === v.id) return voiceEditCard(v);
@@ -152,12 +160,12 @@ function voiceCard(v) {
           UI.ddItem("data-remove", "trash", "წაშლა", true),
         ])}
       </div>
-      <div class="voice-tags"><span class="badge ${v.status}">${STATUS[v.status] || v.status}</span>${engineTag(v)}
+      <div class="voice-tags"><span class="badge ${v.status}">${STATUS[v.status] || v.status}</span>${engineTag(v)}${ncTag(v)}${privTag(v)}
         ${[v.gender, v.age].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("")}
-        ${v.base ? `<span class="tag" title="რომელ საბაზო მოდელზეა შექმნილი">საბაზო ${esc(baseLabel(v.base))}</span>` : ""}</div>
+        ${UI.baseLabel(v.base) ? `<span class="tag" title="რომელ საბაზო მოდელზეა შექმნილი">საბაზო ${esc(UI.baseLabel(v.base))}</span>` : ""}</div>
       ${v.character ? `<div class="meta">${esc(v.character)}</div>` : ""}
       <div class="meta small">${esc(v.source)}${v.size_mb ? ` · ${v.sample_rate} Hz, ${v.size_mb} MB` : isOmni(v) ? ` · ${v.sample_rate} Hz` : ""}</div>
-      ${d && isOmni(v) ? `<div class="norm-line small" title="ნორმა">ტემპი <b>${d.length_scale}</b> · ხმამაღლობა <b>${d.volume}</b></div>`
+      ${d && isOmni(v) ? `<div class="norm-line small" title="ნორმა">სიჩქარე <b>${omniSpeed(v, d.length_scale)}</b> · ხმამაღლობა <b>${d.volume}</b></div>`
         : d ? `<div class="norm-line small" title="ნორმა">ტემპი <b>${d.length_scale}</b> · ინტონაცია <b>${d.noise_scale}</b> · რიტმი <b>${d.noise_w_scale}</b> · ხმამაღლობა <b>${d.volume}</b></div>` : ""}
       ${isOmni(v) && !v.available ? `<div class="meta err">ხმის ფაილი (prompt.pt) ამ კომპიუტერზე არ არის</div>` : ""}
       ${v.model && !v.available ? `<div class="meta err">მოდელი ამ კომპიუტერზე არ არის — „პარამეტრები → მოდელები“</div>` : ""}
@@ -185,18 +193,34 @@ function voiceEditCard(v) {
     </form>`;
 }
 
+function renderEngineFilter() {
+  const n = { all: voices.length, piper: voices.filter((v) => !isOmni(v)).length, omnivoice: voices.filter(isOmni).length };
+  const box = $("#engine-filter");
+  if (!n.omnivoice || !n.piper) { box.innerHTML = ""; engineFilter = "all"; return; }  // ერთი ძრავი — ფილტრი არ სჭირდება
+  box.innerHTML = [["all", "ყველა"], ["piper", "Piper"], ["omnivoice", "OmniVoice"]].map(([k, l]) =>
+    `<button class="chip" data-eng="${k}" aria-pressed="${k === engineFilter}">${l} <span class="muted">${n[k]}</span></button>`).join("");
+  box.querySelectorAll("[data-eng]").forEach((b) => b.addEventListener("click", () => { engineFilter = b.dataset.eng; renderVoices(); }));
+}
+
 function renderVoices() {
-  const vis = voices.filter((v) => showHidden || v.status !== "hidden");
+  renderEngineFilter();
+  const vis = voices.filter((v) => (showHidden || v.status !== "hidden")
+    && (engineFilter === "all" || (engineFilter === "omnivoice") === isOmni(v)));
   $("#voice-list").innerHTML = vis.map(voiceCard).join("") || `<div class="empty">${UI.icon("wave", 22)}<div>ბიბლიოთეკა ცარიელია.</div></div>`;
   const nHidden = voices.filter((v) => v.status === "hidden").length;
   $("#hidden-toggle").hidden = !nHidden;
   $("#hidden-toggle").textContent = showHidden ? "დამალულების დამალვა" : `დამალულების ჩვენება (${nHidden})`;
   const sel = $("#voice-select"), prev = sel.value;
   const usable = voices.filter((v) => v.available && ["ready", "testing"].includes(v.status));
-  sel.innerHTML = usable.map((v) => `<option value="${esc(v.id)}">${esc(v.name)}${v.status === "testing" ? " (სატესტო)" : ""}</option>`).join("");
+  // ერთი სია, ძრავით დაჯგუფებული (longform.js-იც ამ სიას კითხულობს — data-engine)
+  const opt = (v) => `<option value="${esc(v.id)}" data-engine="${isOmni(v) ? "omnivoice" : "piper"}">${esc(v.name)}${v.status === "testing" ? " (სატესტო)" : ""}</option>`;
+  const piper = usable.filter((v) => !isOmni(v)), om = usable.filter(isOmni);
+  sel.innerHTML = piper.length && om.length
+    ? `<optgroup label="Piper">${piper.map(opt).join("")}</optgroup><optgroup label="OmniVoice · არაკომერციული">${om.map(opt).join("")}</optgroup>`
+    : usable.map(opt).join("");
   if (usable.some((v) => v.id === prev)) sel.value = prev;
   bindVoiceCards();
-  if (Object.keys(emotions.presets).length && $("#sliders").innerHTML) applyPreset(current || "neutral");
+  if (Object.keys(emotions.presets).length && $("#emotions").innerHTML) { sliderEngine = null; applyPreset(current || "neutral"); }
 }
 
 function bindVoiceCards() {
@@ -210,12 +234,7 @@ function bindVoiceCards() {
     try { await postJSON(`/api/voices/${id}`, { status: "hidden" }); await reloadVoices(); UI.toast("ხმა დაიმალა", "ok"); }
     catch (e) { UI.toast(e.message, "error"); }
   }));
-  $("#voice-list").querySelectorAll("[data-listen]").forEach((b) => b.addEventListener("click", () => {
-    $("#voice-select").value = b.closest("[data-id]").dataset.id;
-    $("#voice-select").dispatchEvent(new Event("change"));
-    UI.setSub("voices", "listen");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }));
+  $("#voice-list").querySelectorAll("[data-listen]").forEach((b) => b.addEventListener("click", () => window.listenVoice(b.closest("[data-id]").dataset.id)));
   const f = $("#voice-list").querySelector("form.editing");
   if (!f) return;
   const id = f.dataset.id;
@@ -237,6 +256,13 @@ async function deleteVoice(id) {
 const postJSON = (url, data) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
 async function reloadVoices() { voices = await api("/api/voices"); renderVoices(); renderLibrarySummary(); }
 window.reloadVoices = reloadVoices;
+// სხვა ჩანართიდან (მაგ. „აღწერით“ შენახვის შემდეგ) ხმის გახსნა „მოსმენაში“
+window.listenVoice = (id) => {
+  if (![...$("#voice-select").options].some((o) => o.value === id)) { UI.toast("ხმა სიაში ჯერ არ არის", "warn"); return; }
+  $("#voice-select").value = id;
+  $("#voice-select").dispatchEvent(new Event("change"));
+  UI.go("voices", "listen");
+};
 
 // ---------- შემოწმება: ხმა ↔ ნარევი, ერთი და იგივე ფრაზები + MMS (tools/voice_check.py) ----------
 let checkId = null, checkTimer = null;
@@ -287,24 +313,54 @@ async function renderCheck() {
   if (c.busy) checkTimer = setTimeout(() => { if (checkId === id) renderCheck(); }, 4000);
 }
 
+// OmniVoice: length_scale ↔ სიჩქარე
+const omniBase = (v) => v?.omni?.speed || 0.9;
+const omniSpeed = (v, ls) => +(omniBase(v) / ls).toFixed(2);
+
 function renderEmotions() {
   $("#emotions").innerHTML = Object.entries(emotions.presets).map(([k, p]) =>
     `<button class="chip" data-emo="${k}" aria-pressed="${k === current}">${esc(p.label)}</button>`).join("");
   $("#emotions").querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => applyPreset(c.dataset.emo)));
+  $("#voice-select").addEventListener("change", () => applyPreset(current || "neutral"));
+  applyPreset(current);
+}
 
-  $("#sliders").innerHTML = SLIDERS.map((s) => {
-    const [lo, hi] = emotions.limits[s.key];
-    return `<label class="slider"><span>${s.label}</span>
+// სლაიდერები ხმის ძრავის მიხედვით — ხელახლა იხატება მხოლოდ ძრავის შეცვლისას
+let sliderEngine = null;
+const activeSliders = () => (sliderEngine === "omnivoice" ? OMNI_SLIDERS : PIPER_SLIDERS);
+function renderSliders() {
+  const v = curVoice(), eng = isOmni(v) ? "omnivoice" : "piper";
+  if (eng === sliderEngine) return;
+  sliderEngine = eng;
+  const range = (key) => {
+    if (key !== "speed") return emotions.limits[key];
+    const [lo, hi] = emotions.limits.length_scale;  // სიჩქარე უკუპროპორციულია
+    return [+(omniBase(v) / hi).toFixed(2), +(omniBase(v) / lo).toFixed(2)];
+  };
+  $("#sliders").innerHTML = activeSliders().map((s) => {
+    const [lo, hi] = range(s.key);
+    return `<label class="slider"${s.title ? ` title="${esc(s.title)}"` : ""}><span>${s.label}</span>
       <input type="range" id="sl-${s.key}" min="${lo}" max="${hi}" step="${s.step}">
       <output id="out-${s.key}"></output></label>`;
   }).join("");
-  SLIDERS.forEach((s) => $(`#sl-${s.key}`).addEventListener("input", (e) => {
+  activeSliders().forEach((s) => $(`#sl-${s.key}`).addEventListener("input", (e) => {
     $(`#out-${s.key}`).textContent = (+e.target.value).toFixed(2);
     current = null;
     $("#emotions").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
   }));
-  $("#voice-select").addEventListener("change", () => applyPreset(current || "neutral"));
-  applyPreset(current);
+  const q = $("#quality-row");
+  q.hidden = eng !== "omnivoice";
+  if (eng === "omnivoice") {
+    const def = v?.omni?.num_step || 32;
+    const items = NUM_STEPS.some(([n]) => n === def) ? NUM_STEPS : [...NUM_STEPS, [def, `${def} ნაბიჯი`]];
+    $("#num-step").innerHTML = items.map(([n, l]) => `<option value="${n}" ${n === def ? "selected" : ""}>${l}${n === def ? " — ნაგულისხმევი" : ""}</option>`).join("");
+  }
+}
+
+function renderVoiceMeta() {
+  const v = curVoice();
+  $("#voice-meta").innerHTML = v ? `${engineTag(v)}${ncTag(v)}${privTag(v)}
+    <span class="muted">${isOmni(v) ? "ნელია: ~10 წმ ყოველ 1 წმ აუდიოზე" : `${v.sample_rate || ""} Hz · სწრაფი`}</span>` : "";
 }
 
 // ხმის საკუთარი ემოციები (ნორმიდან); ხმა თუ არ არის — ზოგადი პრესეტი
@@ -312,30 +368,31 @@ function presetFor(key) {
   return curVoice()?.emotions?.[key] || emotions.presets[key];
 }
 
-// OmniVoice-ის ხმაზე მოქმედებს მხოლოდ ტემპი და ხმამაღლობა
-const OMNI_OFF = ["noise_scale", "noise_w_scale"];
 function applyPreset(key) {
   current = key;
-  const p = presetFor(key);
-  const omni = isOmni(curVoice());
-  SLIDERS.forEach((s) => {
-    $(`#sl-${s.key}`).value = p[s.key]; $(`#out-${s.key}`).textContent = (+p[s.key]).toFixed(2);
-    const off = omni && OMNI_OFF.includes(s.key);
-    $(`#sl-${s.key}`).disabled = off;
-    $(`#sl-${s.key}`).closest(".slider").title = off ? "OmniVoice-ის ხმაზე არ მოქმედებს — მხოლოდ ტემპი და ხმამაღლობა" : "";
+  renderSliders();
+  renderVoiceMeta();
+  const v = curVoice(), p = presetFor(key || "neutral");
+  activeSliders().forEach((s) => {
+    const val = s.key === "speed" ? omniSpeed(v, p.length_scale) : p[s.key];
+    $(`#sl-${s.key}`).value = val; $(`#out-${s.key}`).textContent = (+val).toFixed(2);
   });
   $("#emotions").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", c.dataset.emo === key));
 }
 
+// სლაიდერები → /api/synthesize-ის პარამეტრები (OmniVoice: სიჩქარე → length_scale, + num_step)
 function sliderParams() {
-  return Object.fromEntries(SLIDERS.map((s) => [s.key, +$(`#sl-${s.key}`).value]));
+  const val = (k) => +$(`#sl-${k}`).value;
+  if (sliderEngine !== "omnivoice") return Object.fromEntries(PIPER_SLIDERS.map((s) => [s.key, val(s.key)]));
+  return { length_scale: +(omniBase(curVoice()) / val("speed")).toFixed(3), volume: val("volume") };
 }
+const numStep = () => (sliderEngine === "omnivoice" ? +$("#num-step").value || undefined : undefined);
 
 async function synth(params) {
   return api("/api/synthesize", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ voice: $("#voice-select").value, text: $("#text").value, ...params }),
+    body: JSON.stringify({ voice: $("#voice-select").value, text: $("#text").value, num_step: numStep(), ...params }),
   });
 }
 
@@ -386,10 +443,16 @@ async function renderLexicon() {
   }));
 }
 const lexAudio = new Audio();
+// გამოთქმა ძრავზე არ არის დამოკიდებული (app/textnorm.py) — სწრაფი მოსმენისთვის Piper-ის ხმა, თუ არჩეული OmniVoice-ისაა
+function lexVoice() {
+  const v = curVoice();
+  if (v && !isOmni(v)) return v.id;
+  return voices.find((x) => !isOmni(x) && x.available && ["ready", "testing"].includes(x.status))?.id || v?.id;
+}
 async function sayWord(text) {
   try {
     const r = await api("/api/synthesize", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ voice: $("#voice-select").value, text }) });
+      body: JSON.stringify({ voice: lexVoice(), text }) });
     lexAudio.src = r.url; lexAudio.play();
   } catch (e) { UI.toast(e.message, "error"); }
 }
@@ -431,19 +494,21 @@ $("#speak").addEventListener("click", async () => {
 });
 
 $("#compare").addEventListener("click", async () => {
-  const list = $("#compare-list");
-  list.innerHTML = `<p class="muted small">გენერირდება ყველა ემოცია…</p>`;
+  const list = $("#compare-list"), btn = $("#compare");
+  const all = Object.entries(emotions.presets);
+  if (isOmni(curVoice()) && !(await UI.confirm(`OmniVoice ნელია: ${all.length} ემოცია ≈ ${all.length}× ერთი გახმოვანების დრო. დავიწყო?`, { okText: "დაწყება" }))) return;
+  btn.disabled = true;
+  const rows = [];
   try {
-    const rows = [];
-    for (const [k, p] of Object.entries(emotions.presets)) {
-      const label = p.label;
+    for (const [i, [k, p]] of all.entries()) {
+      list.innerHTML = rows.join("") + `<p class="muted small">გენერირდება ${i + 1} / ${all.length}: ${esc(p.label)}…</p>`;
       const r = await synth({ emotion: k });
-      rows.push(`<div class="compare-row"><span>${esc(label)}</span><audio controls preload="none" src="${r.url}"></audio></div>`);
+      rows.push(`<div class="compare-row"><span>${esc(p.label)}</span><audio controls preload="none" src="${r.url}"></audio></div>`);
     }
     list.innerHTML = rows.join("");
   } catch (e) {
-    list.innerHTML = `<p class="muted small">შეცდომა: ${esc(e.message)}</p>`;
-  }
+    list.innerHTML = rows.join("") + `<p class="muted small">შეცდომა: ${esc(e.message)}</p>`;
+  } finally { btn.disabled = false; }
 });
 
 const sampleAudio = new Audio();
@@ -490,9 +555,9 @@ function localLine(l) {
     ${l.stopped ? ` (${esc(l.stopped.slice(5, 16).replace("T", " "))})` : ""}${l.error ? ` · <span class="err">${esc(l.error)}</span>` : ""}</p>` : "";
 }
 
-let baseSlot = "base_ka";
+let baseSlot = "";
 function renderBase(b) {
-  baseSlot = b.slot || "base_ka";
+  baseSlot = b.slot || "";
   const r = b.run;
   const ds = b.dataset || {};
   const job = b.job || {};
@@ -505,7 +570,7 @@ function renderBase(b) {
   };
   $("#base").innerHTML = `
     <div class="card" data-pane="progress">
-      <h2>ქართული საბაზო მოდელი${b.slot && b.slot !== "base_ka" ? ` <span class="badge training">${esc(b.slot)} — ახალი, ნულიდან</span>` : ""}</h2>
+      <h2>ქართული საბაზო მოდელი${b.slot ? ` <span class="badge ${r?.status === "done" ? "ready" : "training"}" title="${esc(b.slot)}">${esc(UI.baseLabel(b.slot) || b.slot)}</span>` : ""}</h2>
       <p class="muted">${esc(b.note || "")}. ქართული გამოთქმა ისწავლა ბევრ ხმაზე — მისგან იქმნება ხმის შემქმნელის ნარევები და
         ცალკე ხმები (მაგ. „ქალი 1“). მონაცემები CC0-ია; გამოქვეყნებული ხმების პირობები — LICENSE-VOICES.md.</p>
       <div class="kv">
@@ -550,7 +615,6 @@ function renderBase(b) {
           <tbody>${sessions.filter((x) => x.hours).map((x) => `<tr><td>${esc((x.ended || "").slice(5, 16).replace("T", " "))}</td><td class="num">${x.hours ?? "—"}</td>
             <td class="num">${x.epoch != null ? x.epoch + 1 : "—"}</td><td>${esc(RUN_STATUS[x.status] || x.status || "")}</td></tr>`).join("")}</tbody></table></div>`
           : `<div class="empty">დასრულებული სესია ჯერ არ არის.</div>`}
-        <p class="muted small">სესიები Kaggle-ზე; ბოლო ეტაპი (ეპოქა 27–72) — Google Cloud L4.</p>
       </div>
     </div>`;
   bindPlays($("#base"));

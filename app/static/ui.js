@@ -263,6 +263,13 @@ window.UI = (() => {
     el.onclick = s.go ? () => go(...s.go) : null;
   }
 
+  // ---------- საბაზო მოდელები ----------
+  // v1 (base_ka) და v2 (base_ka_v2) ამოღებულია — UI-ში აღარ ჩანს; v4-omni შეიძლება ჯერ არ არსებობდეს
+  const RETIRED_BASES = ["base_ka", "base_ka_v2"];
+  const isRetiredBase = (slot) => RETIRED_BASES.includes(slot);
+  const BASE_LABELS = { base_ka_v3: "v3", base_ka_v3_public: "v3 საჯარო", base_ka_v4_omni_nc: "v4-omni (არაკომერციული)" };
+  const baseLabel = (slot) => (!slot || isRetiredBase(slot) ? "" : BASE_LABELS[slot] || slot.replace(/^base_ka_/, ""));
+
   initShell();  // სკრიპტი <body>-ის ბოლოშია — DOM უკვე მზადაა
   // დანარჩენი სკრიპტების ჩატვირთვის შემდეგ — ქვე-ჩანართის მოვლენა მიმდინარე მდგომარეობისთვის
   window.addEventListener("DOMContentLoaded", () => {
@@ -270,5 +277,6 @@ window.UI = (() => {
       document.dispatchEvent(new CustomEvent("subtab", { detail: { page: bar.dataset.subtabs, key: getSub(bar.dataset.subtabs), initial: true } })));
   });
 
-  return { toast, confirm, icon, hint, dd: ddHTML, ddItem, closeMenus, setSub, getSub, go, setStatus, updateTitle };
+  return { toast, confirm, icon, hint, dd: ddHTML, ddItem, closeMenus, setSub, getSub, go, setStatus, updateTitle,
+           baseLabel, isRetiredBase };
 })();

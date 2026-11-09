@@ -305,7 +305,7 @@
     return `<div class="card">
       <div class="card-head"><h2>დინამიკები</h2><span class="muted small">${rows.length} ნაჩვენები</span></div>
       <div class="aud-opts">
-        <label>ჩვენება <select id="q-show">${opt("all", st.show, "ყველა")}${opt("exclude", st.show, "ამოსარიცხი")}${opt("new", st.show, "ახალი კანდიდატები")}${opt("current", st.show, "ახლანდელი 296")}${opt("manual", st.show, "ჩემი გადაწყვეტილებები")}${opt("inset", st.show, "უკვე გაშვებული (v2)")}${opt("notset", st.show, "ჯერ გაუშვებელი")}</select></label>
+        <label>ჩვენება <select id="q-show">${opt("all", st.show, "ყველა")}${opt("exclude", st.show, "ამოსარიცხი")}${opt("new", st.show, "ახალი კანდიდატები")}${opt("current", st.show, "უკვე საბაზოში")}${opt("manual", st.show, "ჩემი გადაწყვეტილებები")}${opt("inset", st.show, "უკვე შერჩევაში")}${opt("notset", st.show, "ჯერ გაუშვებელი")}</select></label>
         <label>ხმა <select id="q-pitch">${opt("all", st.pitch, "ყველა")}${opt("low", st.pitch, "დაბალი (კაცის ტიპის)")}${opt("high", st.pitch, "მაღალი")}</select></label>
         <label>დალაგება <select id="q-sort">${opt("bad", st.sort, "ცუდი ჩანაწერების წილით")}${opt("cer", st.sort, "MMS შეცდომით")}${opt("hiss", st.sort, "შიშინით")}${opt("snr", st.sort, "ხმაურით")}${opt("min", st.sort, "კარგი წუთებით")}${opt("f0", st.sort, "სიმაღლით")}</select></label>
         <button class="ghost small" id="q-dir" title="მიმართულების შეცვლა">${st.dir === 1 ? "↓ ცუდიდან" : "↑ კარგიდან"}</button>

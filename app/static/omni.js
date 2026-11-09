@@ -1,4 +1,4 @@
-// „ხმები → აღწერით“: მეორე ძრავი OmniVoice — ხმის შექმნა აღწერით (backend: app/omni.py, tools/omni_server.py)
+// „ხმის შემქმნელი → აღწერით“: მეორე ძრავი OmniVoice — ხმის შექმნა აღწერით (backend: app/omni.py, tools/omni_server.py)
 window.Omni = (() => {
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -13,7 +13,7 @@ window.Omni = (() => {
   // instruct-ის მნიშვნელობა → „შენახვის“ ფორმის ნაგულისხმევი ასაკი
   const AGE_HINT = { child: "8–12", teenager: "13–18", "young adult": "20–30", "middle-aged": "35–55", elderly: "65+" };
 
-  let opts = null, st = null, variants = [], running = false, stop = false, saving = null, timer = null;
+  let opts = null, st = null, variants = [], running = false, stop = false, saving = null, timer = null, savedId = null;
 
   const box = () => $("#omni-card");
 
@@ -29,7 +29,7 @@ window.Omni = (() => {
 
   async function refreshStatus() {
     clearTimeout(timer);
-    if (!box() || UI.getSub("voices") !== "omni" || $("#tab-voices").hidden) return;
+    if (!box() || UI.getSub("designer") !== "describe" || $("#tab-designer").hidden) return;
     st = await api("/api/omni/status").catch(() => st);
     const el = $("#om-status");
     if (el && st?.installed) { el.innerHTML = statusLine(st); bindStart(); }
@@ -51,23 +51,24 @@ window.Omni = (() => {
     if (!box()) return;
     [st, opts] = await Promise.all([api("/api/omni/status"), opts ? opts : api("/api/omni/options")]);
     if (!st.installed) {
-      box().innerHTML = `<div class="card-head"><h2>ხმის შექმნა აღწერით (OmniVoice)</h2><span class="tag">არ არის დაყენებული</span></div>
+      box().innerHTML = `<div class="card-head"><h2>ხმა აღწერით</h2><span class="tag">არ არის დაყენებული</span></div>
         <p class="muted small help">მეორე ძრავი — <b>OmniVoice</b> (k2-fsa; კოდი Apache-2.0, წონები CC-BY-NC — მხოლოდ არაკომერციულად): ახალ ხმას ქმნის აღწერით (სქესი, ასაკი, სიმაღლე),
           წვრთნის გარეშე. შენახული ხმა ბიბლიოთეკაში ჩნდება და „მოსმენაში“ / „გრძელ ტექსტში“ მუშაობს, როგორც Piper-ის ხმები.</p>
+        <p class="muted small">წვრთნით შექმნილი (კომერციულად გამოსაყენებელი) ხმისთვის — ჩანართი „ნარევით“.</p>
         <p class="small">დასაყენებლად (~6 GB: torch + მოდელი; სასურველია NVIDIA GPU ან Apple Silicon):</p>
         <pre class="tr-log">${esc(st.install_cmd)}</pre>
         <p class="muted small">შემდეგ გადატვირთეთ ეს გვერდი. CPU-ზეც მუშაობს, ოღონდ ძალიან ნელა.</p>`;
       return;
     }
     if (!st.enabled) {
-      box().innerHTML = `<div class="card-head"><h2>ხმის შექმნა აღწერით (OmniVoice)</h2><span class="tag">გამორთულია</span></div>
+      box().innerHTML = `<div class="card-head"><h2>ხმა აღწერით</h2><span class="tag">გამორთულია</span></div>
         <p class="muted small">ჩართვა: „პარამეტრები“ → OmniVoice → „OmniVoice ჩართულია“ → კი.</p>`;
       return;
     }
     box().innerHTML = `
-      <div class="card-head"><h2>ხმის შექმნა აღწერით (OmniVoice)</h2><span class="tag engine-omni">OmniVoice</span></div>
-      <p class="muted small help">აღწერეთ ხმა, მოუსმინეთ რამდენიმე ვარიანტს და საუკეთესო შეინახეთ — ამის შემდეგ მისი ტემბრი ფიქსირებულია.
-        OmniVoice-ის ხმები <b>მხოლოდ არაკომერციულადაა</b> (მოდელის ლიცენზია CC-BY-NC).</p>
+      <div class="card-head"><h2>ხმა აღწერით</h2><span><span class="tag engine-omni">OmniVoice</span> <span class="tag nc" title="მოდელის ლიცენზია CC-BY-NC">არაკომერციული</span></span></div>
+      <p class="muted small help">აღწერეთ ხმა, მოუსმინეთ რამდენიმე ვარიანტს და საუკეთესო შეინახეთ ბიბლიოთეკაში — წვრთნა არ სჭირდება, ტემბრი შენახვის შემდეგ ფიქსირებულია.
+        OmniVoice-ის ხმები <b>მხოლოდ არაკომერციულადაა</b> (CC-BY-NC). კომერციული ხმისთვის — „ნარევით“ + წვრთნა.</p>
       ${UI.hint(`ვარიანტები ერთი აღწერით, სხვადასხვა „seed“-ით იქმნება — ყოველი ახალი ხმაა, არცერთ ადამიანს არ ეკუთვნის.
         ნამდვილი ადამიანის ხმის კლონირება (ჩანაწერის ატვირთვა) გამორთულია. GTX 1050 Ti-ზე ვარიანტი ~5-ჯერ ნელა იქმნება, ვიდრე მისი ხანგრძლივობა,
         შენახული ხმით გახმოვანება — ~10-ჯერ. ემოცია OmniVoice-ის ხმაზე ტემპსა და ხმამაღლობას ცვლის.`)}
@@ -101,7 +102,7 @@ window.Omni = (() => {
     const desc = { gender: $("#om-gender").value, age: $("#om-age").value, pitch: $("#om-pitch").value, style: $("#om-style").value };
     const text = $("#om-text").value.trim();
     if (!text) { $("#om-text").focus(); return; }
-    running = true; stop = false; variants = []; saving = null;
+    running = true; stop = false; variants = []; saving = null; savedId = null;
     $("#om-go").disabled = true; $("#om-stop").hidden = false; $("#om-bar").hidden = false;
     renderVariants();
     const base = Math.floor(Math.random() * 1e6);
@@ -143,8 +144,10 @@ window.Omni = (() => {
               <button class="primary small" type="submit">${UI.icon("save", 14)} შენახვა</button>
               <button class="ghost small" type="button" data-cancel>გაუქმება</button>
             </div>
-          </form>` : `<div class="actions tight"><button class="ghost small" data-save>${UI.icon("save", 14)} შენახვა ხმად</button></div>`}
-      </div>`).join("");
+          </form>` : `<div class="actions tight"><button class="ghost small" data-save>${UI.icon("save", 14)} შენახვა ბიბლიოთეკაში</button></div>`}
+      </div>`).join("") + (savedId ? `<div class="om-saved small"><span class="verdict good">✓ შენახულია: ${esc(savedId)}</span>
+        <button class="ghost small" data-listen-saved>${UI.icon("play", 12)} „მოსმენაში“ გახსნა</button></div>` : "");
+    el.querySelector("[data-listen-saved]")?.addEventListener("click", () => window.listenVoice?.(savedId));
     el.querySelectorAll("[data-save]").forEach((b) => b.addEventListener("click", () => {
       saving = +b.closest("[data-i]").dataset.i; renderVariants();
       el.querySelector("form.om-save input[name=name]")?.focus();
@@ -158,15 +161,16 @@ window.Omni = (() => {
       btn.disabled = true; btn.textContent = "ინახება…";
       try {
         const r = await post("/api/omni/voices", { design_id: v.id, ...Object.fromEntries(new FormData(f)) });
-        UI.toast(`ხმა შენახულია (${r.id}) — „ბიბლიოთეკაში“, სტატუსი: სატესტო`, "ok");
-        saving = null; renderVariants();
+        UI.toast(`ხმა შენახულია (${r.id}) — „ხმები → ბიბლიოთეკა“, სტატუსი: სატესტო`, "ok");
+        saving = null; savedId = r.id; renderVariants();
         await window.reloadVoices?.();
       } catch (err) { UI.toast(err.message, "error"); btn.disabled = false; btn.textContent = "შენახვა"; }
     };
   }
 
-  document.addEventListener("subtab", (e) => { if (e.detail.page === "voices" && e.detail.key === "omni") render(); });
-  document.querySelector('.tabs button[data-tab="voices"]')?.addEventListener("click", () => { if (UI.getSub("voices") === "omni") render(); });
-  if (document.readyState !== "loading" && !$("#tab-voices").hidden && UI.getSub("voices") === "omni") render();
+  // გენერაციისას თავიდან არ ვხატავთ — ვარიანტები და ღილაკების მდგომარეობა უნდა დარჩეს
+  const show = () => { if (!box().innerHTML || !running) render().catch((e) => (box().innerHTML = `<div class="empty">შეცდომა: ${esc(e.message)}</div>`)); else refreshStatus(); };
+  document.addEventListener("subtab", (e) => { if (e.detail.page === "designer" && e.detail.key === "describe" && !$("#tab-designer").hidden) show(); });
+  document.querySelector('.tabs button[data-tab="designer"]')?.addEventListener("click", () => { if (UI.getSub("designer") === "describe") show(); });
   return { render };
 })();

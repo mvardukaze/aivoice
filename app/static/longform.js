@@ -1,4 +1,5 @@
 // „გრძელი ტექსტი → ფაილი“: აბზაცები (ხმა/ემოცია თითოზე) → MP3/WAV + SRT (backend: app/longform.py)
+// ორივე ძრავი: Piper და OmniVoice (ხმა „მოსმენის“ სიიდანაა; OmniVoice-ისთვის — ხარისხი/num_step)
 (() => {
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -12,7 +13,9 @@
   let overrides = {}; // აბზაცის ნომერი → {voice, emotion}
   let timer = null;
 
-  const voiceList = () => [...$("#voice-select").options].map((o) => ({ id: o.value, name: o.textContent.replace(/ \(სატესტო\)$/, "") }));
+  const voiceList = () => [...$("#voice-select").options].map((o) => ({ id: o.value, name: o.textContent.replace(/ \(სატესტო\)$/, ""), omni: o.dataset.engine === "omnivoice" }));
+  const STEPS = [[8, "სწრაფი (8)"], [16, "საშუალო (16)"], [32, "სრული (32)"]];
+  const numStep = () => ($("#long-q-wrap").hidden ? undefined : +$("#long-numstep").value || undefined);
   const emoList = async () => (await api("/api/emotions")).presets;
   let EMO = null;
 
@@ -40,13 +43,23 @@
     const blocks = parse($("#long-text").value);
     const chars = blocks.reduce((n, b) => n + b.text.length, 0);
     $("#long-count").textContent = blocks.length ? `${blocks.length} აბზაცი · ${chars.toLocaleString()} სიმბოლო · ~${Math.max(1, Math.round(chars / 900))} წთ აუდიო` : "";
-    if ($("#long-blocks").hidden) return blocks;
     const voices = voiceList();
+    // OmniVoice-ის ხმები: ხარისხის არჩევა + გაფრთხილება დროზე და ლიცენზიაზე
+    const omniIds = new Set(voices.filter((v) => v.omni).map((v) => v.id));
+    const omniChars = blocks.filter((b) => omniIds.has(b.voice)).reduce((n, b) => n + b.text.length, 0);
+    const anyOmni = omniIds.has($("#voice-select").value) || omniChars > 0;
+    $("#long-q-wrap").hidden = !anyOmni;
+    $("#long-omni-note").hidden = !anyOmni;
+    if (anyOmni) {
+      const audioMin = Math.max(1, Math.round(omniChars / 900)), k = +$("#long-numstep").value >= 32 ? 10 : 5;
+      $("#long-omni-note").textContent = `OmniVoice ნელია${omniChars ? `: ~${audioMin} წთ აუდიოს გენერაცია ≈ ${audioMin * k} წთ` : ""}. შედეგი მხოლოდ არაკომერციულად (CC-BY-NC).`;
+    }
+    if ($("#long-blocks").hidden) return blocks;
     $("#long-blocks").innerHTML = blocks.map((b, i) => `
       <div class="long-block" data-i="${i}">
         <div class="long-ctl">
           <span class="muted small">${i + 1}</span>
-          <select data-k="voice">${voices.map((v) => `<option value="${esc(v.id)}" ${v.id === b.voice ? "selected" : ""}>${esc(v.name)}</option>`).join("")}</select>
+          <select data-k="voice">${voices.map((v) => `<option value="${esc(v.id)}" ${v.id === b.voice ? "selected" : ""}>${esc(v.name)}${v.omni ? " · OmniVoice" : ""}</option>`).join("")}</select>
           <select data-k="emotion">${Object.entries(EMO).map(([k, e]) => `<option value="${k}" ${k === b.emotion ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select>
           <button class="ghost small" data-play title="ამ აბზაცის მოსმენა" aria-label="მოსმენა">${UI.icon("play", 12)}</button>
         </div>
@@ -56,13 +69,14 @@
       const i = +el.dataset.i;
       el.querySelectorAll("select").forEach((s) => s.addEventListener("change", () => {
         overrides[i] = { ...(overrides[i] || {}), [s.dataset.k]: s.value };
+        if (s.dataset.k === "voice") renderBlocks();  // ძრავი შეიძლება შეიცვალა — ხარისხის ველი
       }));
       el.querySelector("[data-play]").addEventListener("click", async (e) => {
         const b = parse($("#long-text").value)[i];
         e.target.disabled = true;
         try {
           const r = await api("/api/synthesize", { method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ voice: b.voice, emotion: b.emotion, text: b.text.slice(0, 2000) }) });
+            body: JSON.stringify({ voice: b.voice, emotion: b.emotion, text: b.text.slice(0, 2000), num_step: numStep() }) });
           const a = new Audio(r.url); a.play();
         } catch (err) { UI.toast(err.message, "error"); } finally { e.target.disabled = false; }
       });
@@ -97,6 +111,8 @@
 
   async function init() {
     EMO = await emoList();
+    $("#long-numstep").innerHTML = STEPS.map(([n, l]) => `<option value="${n}" ${n === 32 ? "selected" : ""}>${l}</option>`).join("");
+    $("#long-numstep").addEventListener("change", renderBlocks);
     try { $("#long-text").value = localStorage.getItem(DRAFT) || ""; } catch {}
     renderBlocks();
     $("#long-text").addEventListener("input", () => {
@@ -124,7 +140,7 @@
       if (!blocks.length) { $("#long-text").focus(); return; }
       try {
         const r = await api("/api/longform", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ blocks, pause: +$("#long-pause").value, sentence_pause: +$("#long-spause").value, mp3: $("#long-mp3").checked }) });
+          body: JSON.stringify({ blocks, pause: +$("#long-pause").value, sentence_pause: +$("#long-spause").value, mp3: $("#long-mp3").checked, num_step: numStep() }) });
         try { localStorage.setItem("longform-job", r.id); } catch {}
         poll(r.id);
       } catch (err) { showState({ status: "failed", error: err.message }); }

@@ -67,12 +67,13 @@ class LongIn(BaseModel):
     pause: float = Field(0.7, ge=0, le=5)           # აბზაცებს შორის, წმ
     sentence_pause: float = Field(0.25, ge=0, le=3)  # წინადადებებს შორის, წმ
     mp3: bool = True
+    num_step: int | None = Field(None, ge=4, le=64)  # OmniVoice-ის ხარისხი (None — კონფიგურაციიდან); Piper-ზე არ მოქმედებს
 
 
-def _synth_sentence(M, v: dict, text: str, params: dict) -> np.ndarray:
+def _synth_sentence(M, v: dict, text: str, params: dict, num_step: int | None = None) -> np.ndarray:
     norm = ka_text(text)
     if M.engine(v) == "omnivoice":  # მეორე ძრავი: სერვერზე (ნელია — ქეში app.main-ისაა, იგივე, რაც „მოსმენისას“)
-        with wave.open(str(M.omni_synth_cached(v, norm, params)), "rb") as w:
+        with wave.open(str(M.omni_synth_cached(v, norm, params, num_step)), "rb") as w:
             return np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
     key = hashlib.sha1(json.dumps([v["model"], norm, params], ensure_ascii=False).encode()).hexdigest()[:20]
     f = SENT_CACHE / f"{key}.npy"
@@ -114,7 +115,7 @@ def _run(jid: str, req: LongIn):
         for i, (bi, v, s, params) in enumerate(plan):
             if st.get("cancel"):
                 raise RuntimeError("გაუქმებულია")
-            a = _synth_sentence(M, v, s, params)
+            a = _synth_sentence(M, v, s, params, req.num_step)
             rate = M.omni.SAMPLE_RATE if M.engine(v) == "omnivoice" else \
                 M.read_json((M.VOICES / v["model"]).with_suffix(".onnx.json"), {}).get("audio", {}).get("sample_rate", 22050)
             if sr is None:

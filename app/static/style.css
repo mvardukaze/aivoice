@@ -282,7 +282,7 @@ main { width: 100%; max-width: 1240px; margin: 0 auto; padding: 24px 32px 64px; 
 [data-sub-active="long"] [data-pane]:not([data-pane~="long"]),
 [data-sub-active="library"] [data-pane]:not([data-pane~="library"]),
 [data-sub-active="lexicon"] [data-pane]:not([data-pane~="lexicon"]),
-[data-sub-active="omni"] [data-pane]:not([data-pane~="omni"]),
+[data-sub-active="describe"] [data-pane]:not([data-pane~="describe"]),
 [data-sub-active="progress"] [data-pane]:not([data-pane~="progress"]),
 [data-sub-active="samples"] [data-pane]:not([data-pane~="samples"]),
 [data-sub-active="stats"] [data-pane]:not([data-pane~="stats"]),
@@ -964,3 +964,13 @@ tr.ear-on td { background: var(--accent-soft, rgba(79,70,229,.08)); }
 .om-save .lbl { margin-top: 10px; }
 .om-save input { width: 100%; }
 .slider:has(input:disabled) { opacity: .45; }
+
+/* ერთიანი ხმები: ძრავის ჭდე, არაკომერციული, ბიბლიოთეკის ფილტრი */
+.tag.nc { background: var(--warn-soft); color: var(--warn); box-shadow: none; }
+.voice-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 2px; min-height: 22px; }
+.voice-meta .muted { font-size: 12.5px; }
+.lib-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lib-tools .chips { margin: 0; }
+#quality-row select { width: 100%; }
+.om-saved { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip[aria-pressed="true"] .muted { color: inherit; opacity: .75; }

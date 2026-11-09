@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=40">
+<link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
 <div class="shell">
@@ -20,7 +20,7 @@
       </span>
       <div class="brand-text">
         <div class="brand-name">AI ხმები</div>
-        <div class="brand-sub">ქართული ხმები Piper-ისთვის</div>
+        <div class="brand-sub">Piper · OmniVoice</div>
       </div>
     </div>
 
@@ -123,18 +123,19 @@
           <button data-subtab="listen">მოსმენა</button>
           <button data-subtab="long">გრძელი ტექსტი</button>
           <button data-subtab="library">ბიბლიოთეკა</button>
-          <button data-subtab="omni">აღწერით</button>
           <button data-subtab="lexicon">ლექსიკონი</button>
         </div>
 
         <div class="card" data-pane="listen">
           <div class="card-head"><h2>მოსმენა</h2></div>
-          <p class="muted small help">აირჩიეთ ხმა და ემოცია, ჩაწერეთ ტექსტი და დააჭირეთ „გახმოვანებას“.</p>
-          <details class="hint"><summary><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2.2-2.4 3.7M12 17h.01"/></svg> დაწვრილებით</summary><p class="muted small">ტემბრი ფიქსირებულია — ემოცია მხოლოდ ტემპს, ინტონაციას და ხმამაღლობას ცვლის, შეზღუდულ ფარგლებში. თითო ხმას თავისი <b>ნორმა</b> აქვს („ნეიტრალური“); სხვა ემოციები მისგან ითვლება. სლაიდერებით მოარგეთ და დააჭირეთ „ნორმად შენახვა“.</p></details>
+          <p class="muted small help">აირჩიეთ ხმა და ემოცია, ჩაწერეთ ტექსტი და დააჭირეთ „გახმოვანებას“. პარამეტრები ხმის ძრავს ერგება (Piper ან OmniVoice).</p>
+          <details class="hint"><summary><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2.2-2.4 3.7M12 17h.01"/></svg> დაწვრილებით</summary><p class="muted small">ტემბრი ფიქსირებულია — ემოცია მხოლოდ წარმოთქმის პარამეტრებს ცვლის, შეზღუდულ ფარგლებში. თითო ხმას თავისი <b>ნორმა</b> აქვს („ნეიტრალური“); სხვა ემოციები მისგან ითვლება. სლაიდერებით მოარგეთ და დააჭირეთ „ნორმად შენახვა“.
+            <b>Piper</b>: ტემპი, ინტონაცია, რიტმი, ხმამაღლობა — სწრაფია. <b>OmniVoice</b>: სიჩქარე, ხმამაღლობა და ხარისხი (ნაბიჯები) — ნელია (~10 წმ ყოველ 1 წმ აუდიოზე), მხოლოდ არაკომერციულად.</p></details>
           <div class="play-grid">
             <div>
               <label class="lbl" for="voice-select">ხმა</label>
               <select id="voice-select"></select>
+              <div class="voice-meta" id="voice-meta"></div>
               <label class="lbl" for="text">ტექსტი</label>
               <textarea id="text" rows="5">გამარჯობა! მე ვარ ქართული ხმა, რომელიც ლოკალურად, თქვენს კომპიუტერზე მუშაობს. დღეს ამინდი მშვენიერია, არა?</textarea>
               <div class="chips" id="phrases"></div>
@@ -144,6 +145,8 @@
               <span class="lbl">ემოცია</span>
               <div class="chips" id="emotions"></div>
               <div class="sliders" id="sliders"></div>
+              <label class="slider" id="quality-row" hidden><span>ხარისხი</span>
+                <select id="num-step" aria-label="OmniVoice-ის ხარისხი"></select><span></span></label>
               <div class="actions tight">
                 <button class="ghost small" id="save-default" title="ამჟამინდელი სლაიდერები → ამ ხმის „ნეიტრალური“"><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> ნორმად შენახვა</button>
                 <button class="ghost small" id="reset-default" title="წვრთნისას დაყენებულ მნიშვნელობებზე დაბრუნება" aria-label="ნორმის დაბრუნება">↺</button>
@@ -174,7 +177,9 @@
             <label class="field-inline">პაუზა აბზაცებს შორის <input type="number" id="long-pause" value="0.7" min="0" max="5" step="0.1"> წმ</label>
             <label class="field-inline">წინადადებებს შორის <input type="number" id="long-spause" value="0.25" min="0" max="3" step="0.05"> წმ</label>
             <label class="check-inline"><input type="checkbox" id="long-mp3" checked> MP3</label>
+            <label class="field-inline" id="long-q-wrap" hidden>OmniVoice-ის ხარისხი <select id="long-numstep"></select></label>
           </div>
+          <p class="muted small" id="long-omni-note" hidden></p>
           <div class="actions action-bar">
             <button class="primary" id="long-go"><svg class="ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></svg> მთლიანი ტექსტის გახმოვანება</button>
             <button class="ghost small" id="long-cancel" hidden>გაუქმება</button>
@@ -183,16 +188,18 @@
         </div>
 
         <div class="card" data-pane="library">
-          <div class="card-head"><h2>ბიბლიოთეკა</h2><button class="ghost small" id="hidden-toggle" hidden></button></div>
+          <div class="card-head"><h2>ბიბლიოთეკა</h2>
+            <div class="lib-tools">
+              <div class="chips" id="engine-filter" role="group" aria-label="ძრავი"></div>
+              <button class="ghost small" id="hidden-toggle" hidden></button>
+            </div></div>
           <div class="voice-list slot" id="voice-list"></div>
-          <p class="muted small">გამოქვეყნებული მზა ხმები („ქალი 1“, „ქალი 2“) და 80 სინთეზური ხმა კომერციულად (რეკლამა, მონეტიზებული ვიდეო, პროდუქტი) ისე, როგორც არის, არ გამოიყენება.
-            OmniVoice-ის ხმებიც (მოდელის ლიცენზია CC-BY-NC) — მხოლოდ არაკომერციულად.
+          <p class="muted small">ახალი ხმა იქმნება „ხმის შემქმნელში“ — ნარევით (Piper, შემდეგ წვრთნა) ან აღწერით (OmniVoice, მაშინვე).
+            გამოქვეყნებული მზა ხმები („ქალი 1“, „ქალი 2“) და სინთეზური ხმები კომერციულად ისე, როგორც არის, არ გამოიყენება;
+            OmniVoice-ის ხმები (მოდელის ლიცენზია CC-BY-NC) — მხოლოდ არაკომერციულად.
             კომერციულად შექმენით საკუთარი ხმა: ააწყვეთ ახალი ნარევი და გაწვრთენით. <a href="https://github.com/mvardukaze/aivoice/blob/main/LICENSE-VOICES.md" target="_blank" rel="noopener">პირობები</a></p>
         </div>
         <div class="card" id="check-card" data-pane="library" hidden></div>
-
-        <!-- ხმის შექმნა აღწერით — მეორე ძრავი OmniVoice (omni.js) -->
-        <div class="card" id="omni-card" data-pane="omni"></div>
 
         <div class="card" data-pane="lexicon">
           <details id="lex-box">
@@ -224,11 +231,14 @@
       <!-- ხმის შემქმნელი -->
       <section id="tab-designer" class="tab" hidden>
         <div class="subtabs" data-subtabs="designer" aria-label="ხმის შემქმნელი">
-          <button data-subtab="mix">ნარევი</button>
+          <button data-subtab="mix">ნარევით</button>
+          <button data-subtab="describe">აღწერით</button>
           <button data-subtab="audition">ყველა ხმის მოსმენა</button>
           <button data-subtab="rank">რეიტინგი</button>
         </div>
         <div id="designer" class="slot"></div>
+        <!-- ხმის შექმნა აღწერით — მეორე ძრავი OmniVoice (omni.js); #designer-ის გარეთ, რომ საბაზო მოდელის გარეშეც იმუშაოს -->
+        <div class="card" id="omni-card" data-pane="describe"></div>
       </section>
 
       <!-- ჩაწერა -->
@@ -266,14 +276,14 @@
   </div>
 </div>
 
-<script src="ui.js?v=30"></script>
-<script src="app.js?v=33"></script>
+<script src="ui.js?v=31"></script>
+<script src="app.js?v=34"></script>
 <script src="rec.js?v=30"></script>
-<script src="designer.js?v=34"></script>
+<script src="designer.js?v=35"></script>
 <script src="settings.js?v=31"></script>
-<script src="train.js?v=31"></script>
-<script src="quality.js?v=11"></script>
-<script src="longform.js?v=30"></script>
-<script src="omni.js?v=1"></script>
+<script src="train.js?v=32"></script>
+<script src="quality.js?v=12"></script>
+<script src="longform.js?v=31"></script>
+<script src="omni.js?v=2"></script>
 </body>
 </html>

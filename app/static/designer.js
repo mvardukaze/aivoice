@@ -1,4 +1,5 @@
-// ხმის შემქმნელი — ჩანართი „ხმის შემქმნელი“ (backend: app/designer.py)
+// ხმის შემქმნელი → „ნარევით“ (Piper), „ყველა ხმის მოსმენა“, „რეიტინგი“ (backend: app/designer.py)
+// „აღწერით“ (OmniVoice) — omni.js
 window.Designer = (() => {
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -41,18 +42,28 @@ window.Designer = (() => {
     inited = true;
     const st = await api("/api/designer/status");
     if (!st.ready) {
-      $("#designer").innerHTML = `<div class="card"><h2>ხმის შემქმნელი</h2><div class="empty">საბაზო მოდელი ჯერ არ არის მზად შემქმნელისთვის.</div></div>`;
+      $("#designer").innerHTML = `<div class="card" data-pane="mix audition rank"><h2>ხმა ნარევით</h2><div class="empty">საბაზო მოდელი ჯერ არ არის მზად შემქმნელისთვის — ხმა „აღწერით“ მაინც შეგიძლიათ შექმნათ.</div></div>`;
       return;
     }
-    const [d, mi] = await Promise.all([api("/api/designer/speakers"), api("/api/designer/models")]);
+    let mi = await api("/api/designer/models");
+    // ამოღებული საბაზო მოდელები (v1, v2) აღარ ჩანს; თუ აქტიური სწორედ ისაა — გადავრთავთ უახლეს კომერციულზე
+    const visible = mi.models.filter((m) => !UI.isRetiredBase(m.slot));
+    if (visible.length && !visible.some((m) => m.active)) {
+      const pick = visible.filter((m) => m.commercial !== false && !m.slot.endsWith("_public")).pop() || visible[0];
+      await api("/api/designer/model", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: pick.slot }) });
+      mi = await api("/api/designer/models");
+    }
+    mi.models = mi.models.filter((m) => !UI.isRetiredBase(m.slot));
+    const d = await api("/api/designer/speakers");
     speakers = d.speakers; meta = d.meta; models = mi;
     byName = Object.fromEntries(speakers.map((s) => [s.name, s]));
     $("#designer").innerHTML = `
       <div class="card" data-pane="mix">
-        <div class="card-head"><h2>ხმის შემქმნელი</h2>
+        <div class="card-head"><h2>ხმა ნარევით <span class="tag">Piper</span></h2>
           <div class="model-switch" role="group" aria-label="საბაზო მოდელი">${models.models.map((m) =>
-            `<button data-model="${esc(m.slot)}" class="${m.active ? "on" : ""}" title="${m.voices} ხმა · ეპოქა ${m.epoch + 1}">${esc(m.label)} <span class="muted small">${m.voices} ხმა</span></button>`).join("")}</div></div>
-        <p class="muted small help">აირჩიეთ ხმები რუკაზე ან მზა ვარიანტით, დაალაგეთ წილები და მოუსმინეთ. ნარევი ახალი ხმაა — არცერთ რეალურ დინამიკს არ ეკუთვნის.</p>
+            `<button data-model="${esc(m.slot)}" class="${m.active ? "on" : ""}" title="${esc(m.slot)} · ${m.voices} ხმა · ეპოქა ${m.epoch + 1}${m.commercial === false ? " · მხოლოდ არაკომერციულად" : ""}">${esc(UI.baseLabel(m.slot) || m.label)} <span class="muted small">${m.voices} ხმა</span></button>`).join("")}</div></div>
+        <p class="muted small help">აირჩიეთ ხმები რუკაზე ან მზა ვარიანტით, დაალაგეთ წილები და მოუსმინეთ. ნარევი ახალი ხმაა — არცერთ რეალურ დინამიკს არ ეკუთვნის.
+          შენახული ნარევი „წვრთნაში“ ცალკე ხმად იქცევა. სწრაფად, წვრთნის გარეშე — „აღწერით“ (OmniVoice, არაკომერციული).</p>
         <div class="des-grid">
           <div>
             <div class="lbl">ხმების რუკა <span class="muted small" title="ზემოთ-ქვემოთ — ჟღერადობის სხვა თვისება">· მარცხნივ დაბალი, მარჯვნივ მაღალი</span></div>
@@ -92,8 +103,8 @@ window.Designer = (() => {
               </div>
               <audio id="des-audio" controls preload="none"></audio>
               <div class="des-save">
-                <input id="des-name" maxlength="60" placeholder="ხმის სახელი, მაგ. „ნეიტრალური 1“">
-                <button class="ghost" id="des-save-btn">შენახვა</button>
+                <input id="des-name" maxlength="60" placeholder="ნარევის სახელი, მაგ. „ნეიტრალური 1“">
+                <button class="ghost" id="des-save-btn">ნარევის შენახვა</button>
               </div>
             </div>
           </div>
@@ -124,14 +135,15 @@ window.Designer = (() => {
         <div id="aud-liked"></div>
       </div>
       <div class="card" data-pane="mix">
-        <h2>შენახული ხმები</h2>
+        <div class="card-head"><h2>შენახული ნარევები</h2><button class="ghost small" id="des-to-train">„წვრთნა“ →</button></div>
         <div id="des-list"></div>
       </div>`;
     audio = $("#des-audio");
+    $("#des-to-train").onclick = () => UI.go("train");
     document.querySelectorAll("[data-model]").forEach((b) => b.addEventListener("click", async () => {
       if (b.classList.contains("on")) return;
       await api("/api/designer/model", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: b.dataset.model }) });
-      mix = {}; UI.toast(`ხმის შემქმნელი: ${b.textContent.trim()}`, "ok", 2500);
+      mix = {}; UI.toast(`საბაზო მოდელი: ${b.firstChild.textContent.trim()}`, "ok", 2500);
       init().catch((e) => UI.toast(e.message, "error"));
     }));
     aud = new Audio();
@@ -272,7 +284,7 @@ window.Designer = (() => {
     const all = await api("/api/designer/designs");
     const act = models.models.find((m) => m.active)?.slot;
     const list = all.filter((d) => d.model === act), other = all.filter((d) => d.model !== act);
-    const label = (slot) => models.models.find((m) => m.slot === slot)?.label || slot;
+    const label = (slot) => UI.baseLabel(slot) || (UI.isRetiredBase(slot) ? "ძველი მოდელი" : slot);
     const item = (d, foreign) => `
       <div class="des-item${foreign ? " foreign" : ""}">
         <div><b>${esc(d.name)}</b> <span class="muted small">${d.f0_estimate ? `≈ ${d.f0_estimate} Hz · ` : ""}${Object.keys(d.weights).length} ხმის ნარევი ·
@@ -546,5 +558,5 @@ window.Designer = (() => {
     box.querySelectorAll("[data-rkmix]").forEach((b) => b.addEventListener("click", () => { mix[b.dataset.rkmix] = 50; renderMix(); drawMap(); UI.toast("ნარევში დაემატა", "ok", 2500); }));
   }
 
-  return { render: () => { if (!inited) init().catch((e) => ($("#designer").innerHTML = `<div class="card"><div class="empty">შეცდომა: ${esc(e.message)}</div></div>`)); } };
+  return { render: () => { if (!inited) init().catch((e) => ($("#designer").innerHTML = `<div class="card" data-pane="mix audition rank"><div class="empty">შეცდომა: ${esc(e.message)}</div></div>`)); } };
 })();

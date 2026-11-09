@@ -142,9 +142,10 @@ def voice_files_ok(voice_id: str) -> bool:
     return (ROOT / "voices" / voice_id / "prompt.pt").exists()
 
 
-def synth_wav(v: dict, text: str, speed: float, volume: float) -> bytes:
-    """შენახული ხმით გახმოვანება → WAV (24 kHz). text — უკვე გასწორებული (ka_text)."""
-    return call("/synth", {"voice": v["id"], "text": text, "speed": round(speed, 3), "volume": round(volume, 3), "seed": 0})
+def synth_wav(v: dict, text: str, speed: float, volume: float, num_step: int | None = None) -> bytes:
+    """შენახული ხმით გახმოვანება → WAV (24 kHz). text — უკვე გასწორებული (ka_text). num_step=None — კონფიგურაციიდან."""
+    return call("/synth", {"voice": v["id"], "text": text, "speed": round(speed, 3), "volume": round(volume, 3), "seed": 0,
+                           "num_step": num_step})
 
 
 # ---------- API ----------
