@@ -63,9 +63,9 @@
   },
   {
    "id": "base-v4-omnivoice",
-   "title": "საბაზო მოდელი v4 — OmniVoice-ის ჩანაწერებით (Kaggle + Google Cloud)",
-   "status": "todo",
-   "note": "1) ტესტი: OmniVoice-ის სიჩქარე Kaggle-ზე (უფასო, 30 სთ/კვირაში) და Google Cloud-ზე → ზუსტი ხარჯი, თანხმობა. 2) ტექსტები: ~25–30 ათასი წინადადება (მეტი კითხვა/ძახილი, რ ღ ბ ფ პ, ციფრები, ნავიგაცია). 3) 40 ხმა აღწერით, მოსმენა და დამტკიცება. 4) ~35 სთ ჩანაწერის დაგენერირება — ძირითადად Kaggle-ზე (უფასოდ, ნაწილ-ნაწილ), საჭიროებისას Google Cloud + MMS ფილტრი. 5) v4 წვრთნა Google Cloud-ზე (LJSpeech-იდან). 6) შედარება v3-თან. ბიუჯეტი ≤ $80 (კრედიტი $152, ვადა 07.01.2027)."
+   "title": "საბაზო v4-omni (არაკომერციული) — OmniVoice-ის ჩანაწერებით",
+   "status": "in_progress",
+   "note": "⚠ არაკომერციული (CC-BY-NC): OmniVoice-ის წონები CC-BY-NC (Emilia), ტოკენიზატორი — Boson Higgs Audio 2 Community License ⇒ ჩანაწერები და მოდელი base_ka_v4_omni_nc მხოლოდ არაკომერციულად, საჯარო Hugging Face-ზე არ იტვირთება. გეგმა: 40 ხმა აღწერით (20 ქალი, 20 კაცი; tools/omni_dataset.py) → ~35 სთ გენერაცია Kaggle-ზე (num_step 16, ტემპი 0.9) + MMS ფილტრი → dataset → წვრთნა Google Cloud L4-ზე (on-demand, LJSpeech-იდან, 160 ეპოქა). მიმდინარე: ხმების reference-ები (Kaggle)."
   }
  ]
 }
