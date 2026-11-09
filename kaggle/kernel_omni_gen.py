@@ -162,6 +162,14 @@ def run_gen():
     for v in job["voices"]:
         if time.time() > deadline:
             log("deadline — skip", v["name"]); continue
+        try:
+            gen_voice(v, deadline, tars, inp)
+        except Exception as e:  # ერთი ხმის შეცდომამ დანარჩენები არ უნდა გააჩეროს
+            import traceback
+            log("ERROR voice", v["name"], repr(e), traceback.format_exc()[-1500:])
+
+def gen_voice(v, deadline, tars, inp):
+    if True:
         ref = inp / "refs" / v["ref"]
         y_ref, sr_ref = sf.read(str(ref), dtype="float32")
         prompt = model.create_voice_clone_prompt(ref_audio=(torch.from_numpy(y_ref), sr_ref), ref_text=v["ref_text"])
@@ -201,11 +209,13 @@ def run_gen():
                 t = time.time()
                 try:
                     y = gen(txt, seed, voice_clone_prompt=prompt, speed=v["speed"])
+                    if len(y) < SR // 5:  # ცარიელი/ძალიან მოკლე (postprocess-მა ყველაფერი მოჭრა) — 2026-11-09 m04 ამაზე ჩავარდა
+                        raise ValueError(f"empty audio ({len(y)} samples)")
+                    wall = time.time() - t
+                    h = heard(y); c, L = cer(s["text"], h)
+                    m = metrics(y, SR)
                 except Exception as e:
-                    log("ERROR gen", s["id"], repr(e)); torch.cuda.empty_cache(); continue
-                wall = time.time() - t
-                h = heard(y); c, L = cer(s["text"], h)
-                m = metrics(y, SR)
+                    log("ERROR gen", s["id"], att, repr(e)); torch.cuda.empty_cache(); continue
                 cps = L / max(m["dur"], 1e-3)
                 bad = (c > (0.10 if L >= 15 else 0.05)) or not (7 <= cps <= 24) or m.get("bad") or m.get("clip", 0) > 0.001
                 cand = {"y": y, "m": m, "cer": c, "heard": h, "letters": L, "att": att + 1, "seed": seed, "wall": wall, "bad": bool(bad)}
