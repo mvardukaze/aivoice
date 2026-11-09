@@ -1,0 +1,18 @@
+{
+ "_note": "საბაზო მოდელი v4-omni: LJSpeech (public domain) → OmniVoice-ის სინთეზური ჩანაწერები (40 ხმა აღწერით, ~33 სთ; tools/omni_dataset.py); ნულიდან. ⚠ არაკომერციული: OmniVoice-ის წონები CC-BY-NC (Emilia), ტოკენიზატორი — Boson Higgs Audio 2 Community License ⇒ dataset და ეს მოდელი მხოლოდ არაკომერციულად; საჯარო Hugging Face-ზე არ იტვირთება.",
+ "label": "v4-omni (არაკომერციული)",
+ "license": "cc-by-nc-4.0",
+ "commercial": false,
+ "license_note": "OmniVoice-ის სინთეზური ჩანაწერებით ნაწვრთნი: წონები CC-BY-NC-4.0 (Emilia), აუდიო ტოკენიზატორი — Boson Higgs Audio 2 Community License. მხოლოდ არაკომერციული გამოყენება.",
+ "dataset_dir": "/mnt/d/aivoice/datasets/base_ka_v4_omni_nc",
+ "num_speakers": 600,
+ "batch": 32,
+ "devices": 1,
+ "max_epochs": 160,
+ "warmstart": "ljspeech-medium.clean.ckpt",
+ "audio_from_source": true,
+ "trim_silence": false,
+ "preview_speakers": [],
+ "base_meta": {"mode": "scratch", "from": null, "from_epoch": null, "epochs": 160, "hours": null,
+               "selection": "base_ka_v4_omni_nc", "target": "gcp", "source": "omnivoice", "created": "2026-11-09T16:20:00"}
+}

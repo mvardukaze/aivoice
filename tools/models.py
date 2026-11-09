@@ -111,27 +111,48 @@ def local_files(base: bool) -> list[tuple[Path, str]]:
     return out
 
 
+def non_commercial(name: str, meta: dict | None = None) -> bool:
+    """არაკომერციული (მაგ. OmniVoice-ის ჩანაწერებით ნაწვრთნი base_ka_v4_omni_nc, CC-BY-NC) — საჯაროდ არასდროს."""
+    meta = meta or {}
+    return ("omni_nc" in str(name) or meta.get("commercial") is False
+            or "nc" in str(meta.get("license", "")).lower().replace("-", " ").split())
+
+
+def _meta(p: Path) -> dict:
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
 def public_files(base: bool) -> list[tuple[Path, str]]:
     """საჯარო რეპოზიტორია — მხოლოდ ის, რაც ნამდვილ ადამიანებს არ შეიცავს (tools/public_voices.py, public_ckpt.py):
-    სინთეზური ხმის შემქმნელი(ები), მათი ნარევები და რეიტინგი, მზა ხმები, ლექსიკონი; --base: საჯარო checkpoint + LJSpeech."""
+    სინთეზური ხმის შემქმნელი(ები), მათი ნარევები და რეიტინგი, მზა ხმები, ლექსიკონი; --base: საჯარო checkpoint + LJSpeech.
+    არაკომერციული (non_commercial: სახელში omni_nc ან meta-ში commercial: false / CC-BY-NC) — არასდროს."""
     out = []
     for d in sorted(cpath("designer").parent.glob("designer_*_public")):
+        if non_commercial(d.name, _meta(d / "meta.json")):
+            continue
         out += [(d / f, f"{d.name}/{f}") for f in ("designer.onnx", "embeddings.npy", "config.json", "meta.json", "speakers.json")]
         slot = d.name.removeprefix("designer_")
         r = ROOT / "data" / f"mms_rank_{slot}.json"
         if r.exists():
             out.append((r, f"rank/{r.name}"))
     for p in sorted(DESIGNS.glob("*.json")) if DESIGNS.exists() else []:
-        if str(json.loads(p.read_text(encoding="utf-8")).get("model", "")).endswith("_public"):
+        m = str(json.loads(p.read_text(encoding="utf-8")).get("model", ""))
+        if m.endswith("_public") and not non_commercial(m):
             out.append((p, f"designs/{p.name}"))
     if LEXICON.exists():
         out.append((LEXICON, "lexicon/lexicon.json"))
     for v in catalog()["voices"]:
-        if v.get("status") in SHARED_STATUS and v.get("model") and not v.get("private"):  # პირადი (კომერციული) ხმა საჯაროდ არ გადის
+        if v.get("status") in SHARED_STATUS and v.get("model") and not v.get("private") \
+                and not non_commercial(v.get("base") or "", v):  # პირადი (კომერციული) და არაკომერციული ხმა საჯაროდ არ გადის
             m = ROOT / "voices" / v["model"]
             out += [(m, f"voices/{v['model']}"), (Path(str(m) + ".json"), f"voices/{v['model']}.json")]
     if base:
         for ko in sorted(cpath("runs").glob("*_public/kaggle_out")):
+            if non_commercial(ko.parent.name, _meta(ko / "status.json")):
+                continue
             out += [(ko / "final.ckpt", f"{ko.parent.name}/final.ckpt"), (ko / "config.json", f"{ko.parent.name}/config.json")]
         out.append((ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt",
                     "ljspeech/ljspeech-medium.clean.ckpt"))
@@ -330,7 +351,8 @@ def cmd_push(a):
         api.upload_file(path_or_fileobj=str(src), path_in_repo=dst, repo_id=repo(), repo_type="model")
         n += 1
     for v in catalog()["voices"]:  # კატალოგის ჩანაწერი — რომ სხვა კომპიუტერზე სახელი/აღწერა გადავიდეს
-        if v.get("status") in SHARED_STATUS and v.get("model") and not (pub and v.get("private")):
+        if v.get("status") in SHARED_STATUS and v.get("model") and not (
+                pub and (v.get("private") or non_commercial(v.get("base") or "", v))):
             dst, data = f"voices/{v['id']}/voice.json", voice_entry_bytes(v)
             r = rem.get(dst)
             if r and r[1] == "sha1" and hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest() == r[2]:

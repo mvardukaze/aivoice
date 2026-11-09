@@ -75,7 +75,8 @@ def models() -> list[dict]:
         if not (final.exists() and sel and st.get("epoch") is not None and st.get("status") == "done"):
             continue
         out.append({"slot": slot, "epoch": int(st["epoch"]) + 1, "selection": sel["name"], "clips": sel["stats"]["clips"],
-                    "hours": sel["stats"]["hours"], "speakers": len(sel["speaker_order"]), "checkpoint": str(final)})
+                    "hours": sel["stats"]["hours"], "speakers": len(sel["speaker_order"]), "checkpoint": str(final),
+                    "commercial": j.get("commercial", True) is not False, "label": j.get("label")})
     return out
 
 
@@ -86,7 +87,8 @@ def selections() -> list[dict]:
     jobs = {p.stem for p in JOBS.glob("*.json")}
     return [{"name": n, "hours": s.get("stats", {}).get("hours"), "clips": s.get("stats", {}).get("clips"),
              "speakers": s.get("stats", {}).get("speakers"), "created": s.get("created")}
-            for n, s in all_.items() if not s.get("launched") and n not in parts and n not in jobs]
+            for n, s in all_.items() if not s.get("launched") and n not in parts and n not in jobs
+            and s.get("commercial", True) is not False]  # არაკომერციული (OmniVoice) შერჩევა CC0 მოდელში არ შევა
 
 
 def quality_ready() -> bool:
@@ -226,6 +228,8 @@ def check_new(a) -> dict:
         frm = next((m for m in models() if m["slot"] == a.from_), None)
         if not frm:
             raise SystemExit(f"გასაგრძელებელი მოდელი ვერ ვიპოვე: {a.from_} (საჭიროა დასრულებული წვრთნა და გაშვებული შერჩევა)")
+        if not frm["commercial"]:
+            raise SystemExit(f"{a.from_} არაკომერციულია (CC-BY-NC) — მისი გაგრძელება base_ka_v<N>-ად არ შეიძლება")
     if a.selection:
         s = selection(a.selection)
         if not s:

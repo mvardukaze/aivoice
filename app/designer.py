@@ -46,7 +46,10 @@ def models() -> dict:
         if slot.endswith("_public"):  # მხოლოდ სინთეზური ხმები (tools/public_voices.py)
             entries.append((slot, f"{slot.split('_')[-2]} საჯარო", d, slot, f"mms_rank_{slot}.json", f"designer_ratings_{slot}.json"))
             continue
-        newest = slot == max(p.name for p in d.parent.glob("designer_base_ka_v*") if not p.name.endswith("_public")).removeprefix("designer_")
+        # არაკომერციული (base_ka_v4_omni_nc …) „ახალი“ არ ხდება და ნაგულისხმევად არ ირჩევა — წარწერა meta.json-იდან
+        newest = slot == max(p.name for p in d.parent.glob("designer_base_ka_v*")
+                             if not p.name.endswith("_public") and "omni_nc" not in p.name).removeprefix("designer_") \
+            if "omni_nc" not in slot else False
         entries.append((slot, f"ახალი ({v})" if newest else v,
                         d, slot, f"mms_rank_{slot}.json", f"designer_ratings_{slot}.json"))
     for slot, label, d, ds, rank, rat in entries:
@@ -54,9 +57,11 @@ def models() -> dict:
             meta = read_json(d / "meta.json", {}) or {}
             n = len((read_json(d / "config.json", {}) or {}).get("speaker_id_map", {}))
             sp = d / "speakers.json" if (d / "speakers.json").exists() else cpath("datasets") / ds / "speakers.json"
-            out[slot] = {"slot": slot, "label": label, "dir": d, "speakers": sp,
-                         "rank": ROOT / "data" / rank, "ratings": ROOT / "data" / rat,
-                         "epoch": meta.get("epoch"), "voices": n}
+            nc = meta.get("commercial") is False or "omni_nc" in slot
+            out[slot] = {"slot": slot, "label": meta.get("label") or (f"{label} (არაკომერციული)" if nc else label),
+                         "dir": d, "speakers": sp, "rank": ROOT / "data" / rank, "ratings": ROOT / "data" / rat,
+                         "epoch": meta.get("epoch"), "voices": n, "commercial": not nc,
+                         "license": meta.get("license")}
     return out
 
 
@@ -65,7 +70,7 @@ def active() -> str:
     a = (read_json(ACTIVE, {}) or {}).get("model")
     if a in ms:
         return a
-    real = sorted(k for k in ms if not k.endswith("_public"))
+    real = sorted(k for k in ms if not k.endswith("_public") and ms[k].get("commercial", True))
     return real[-1] if real else (next(iter(ms)) if ms else "base_ka")  # ნაგულისხმევად — უახლესი (არა საჯარო)
 
 
@@ -149,7 +154,7 @@ def status():
 @router.get("/models")
 def list_models():
     a = active()
-    return {"active": a, "models": [{k: v for k, v in m.items() if k in ("slot", "label", "epoch", "voices")}
+    return {"active": a, "models": [{k: v for k, v in m.items() if k in ("slot", "label", "epoch", "voices", "commercial", "license")}
                                     | {"active": k == a, "rank_file": m["rank"].name} for k, m in models().items()]}
 
 

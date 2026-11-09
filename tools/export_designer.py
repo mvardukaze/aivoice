@@ -72,9 +72,15 @@ def main():
     st = json.loads((ckpt.parent / "status.json").read_text()) if (ckpt.parent / "status.json").exists() else {}
     if st.get("epoch") is None:
         st["epoch"] = torch.load(ckpt, map_location="cpu", weights_only=False, mmap=True)["epoch"]
-    (tmp / "meta.json").write_text(json.dumps({
-        "checkpoint": str(ckpt), "epoch": st.get("epoch"), "speakers": int(emb.shape[0]), "gin": int(emb.shape[1]), "source": a.source,
-        "exported": dt.datetime.now().isoformat(timespec="seconds")}, ensure_ascii=False, indent=1))
+    meta = {"checkpoint": str(ckpt), "epoch": st.get("epoch"), "speakers": int(emb.shape[0]), "gin": int(emb.shape[1]),
+            "source": a.source, "exported": dt.datetime.now().isoformat(timespec="seconds")}
+    # ლიცენზია/წარწერა მოდელის job-იდან (მაგ. base_ka_v4_omni_nc: cc-by-nc-4.0, commercial: false — პანელი და
+    # tools/models.py საჯარო ატვირთვისას ამას ამოწმებს)
+    job_p = ROOT / "data" / "kaggle_jobs" / f"{out.name.removeprefix('designer_')}.json"
+    if job_p.exists():
+        job = json.loads(job_p.read_text(encoding="utf-8"))
+        meta.update({k: job[k] for k in ("label", "license", "commercial", "license_note") if k in job})
+    (tmp / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
     shutil.rmtree(out, ignore_errors=True)
     tmp.rename(out)
     print("OK", out, emb.shape, "epoch", st.get("epoch"))
