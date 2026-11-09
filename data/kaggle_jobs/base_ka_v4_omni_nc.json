@@ -12,7 +12,21 @@
  "warmstart": "ljspeech-medium.clean.ckpt",
  "audio_from_source": true,
  "trim_silence": false,
- "preview_speakers": [],
- "base_meta": {"mode": "scratch", "from": null, "from_epoch": null, "epochs": 160, "hours": null,
-               "selection": "base_ka_v4_omni_nc", "target": "gcp", "source": "omnivoice", "created": "2026-11-09T16:20:00"}
+ "preview_speakers": [
+  "omni_f01",
+  "omni_f08",
+  "omni_m02",
+  "omni_m08"
+ ],
+ "base_meta": {
+  "mode": "scratch",
+  "from": null,
+  "from_epoch": null,
+  "epochs": 160,
+  "hours": null,
+  "selection": "base_ka_v4_omni_nc",
+  "target": "gcp",
+  "source": "omnivoice",
+  "created": "2026-11-09T16:20:00"
+ }
 }
