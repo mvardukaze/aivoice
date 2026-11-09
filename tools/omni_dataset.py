@@ -436,7 +436,11 @@ def cmd_build(a):
         med[name] = c[len(c) // 2] if c else 14
     kept, dropped = [], defaultdict(int)
     per = defaultdict(lambda: {"clips": 0, "sec": 0.0, "dropped": 0, "gen": 0, "retried": 0, "cer_sum": 0.0})
+    excluded = {n: v["excluded"] for n, v in vj.items() if v.get("excluded")}  # data/omni_voices_nc.json
     for r in rows.values():
+        if r.get("voice") in excluded:
+            dropped["voice_excluded"] += 1
+            continue
         p = per[r.get("voice")]
         p["gen"] += 1
         p["retried"] += (r.get("attempts") or 1) > 1
@@ -474,7 +478,7 @@ def cmd_build(a):
     for fn in have - set(want):
         (out / "audio" / fn).unlink()
     # metadata: ხმები ფიქსირებული რიგით (f01…f20, m01…m20) — Piper-ი ID-ებს გამოჩენის რიგით ანიჭებს
-    order = [v["name"] for v in VOICES if v["name"] in vj]
+    order = [v["name"] for v in VOICES if v["name"] in vj and v["name"] not in excluded]
     rank = {n: i for i, n in enumerate(order)}
     kept.sort(key=lambda r: (rank.get(r["voice"], 99), r["id"]))
     lines = [f"{r['voice']}_{r['id']}.flac|{r['voice']}|{r['text']}" for r in kept]
@@ -489,7 +493,7 @@ def cmd_build(a):
     stats = {"source": "OmniVoice (k2-fsa/OmniVoice, num_step 16) — სინთეზური ხმები აღწერით (voice design → clone prompt); "
                        "ტექსტები: CC0 (Common Voice 27) + ჩვენი შაბლონები (tools/omni_corpus.py)",
              **LICENSE, "slot": SLOT, "speakers": len(speakers), "clips": len(lines), "hours": hours,
-             "generated": len(rows), "dropped": dict(dropped),
+             "generated": len(rows), "dropped": dict(dropped), "excluded_voices": excluded,
              "mean_cer": round(sum(r.get("cer_eff", r["cer"]) for r in kept) / max(1, len(kept)), 4),
              "rules": {"cer": "≤ 0.10 (≥ 15 ასო), ≤ 0.05 (მოკლე); MMS-ის ციფრები რიცხვით სიტყვებს ფარავს (num_cer)", "clip": "≤ 0.1%", "snr": "≥ 20 dB", "dur": "1–15 წმ",
                        "pause": "≤ 1.2 წმ", "rate": "8–22 ასო/წმ და ხმის მედიანის 0.7–1.4×"},
