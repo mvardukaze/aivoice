@@ -222,7 +222,7 @@ window.Settings = (() => {
     if (s.error) { box.innerHTML = `<span class="err">${esc(s.error)}</span>`; return; }
     const groups = {};
     s.files.forEach((f) => (groups[f.path.split("/")[0]] ||= []).push(f));
-    const NAME = { designer: "ხმის შემქმნელი", designs: "ნარევები", voices: "ხმები", base_ka: "საბაზო მოდელი", ljspeech: "LJSpeech (საწყისი)", cv27: "ხარისხის მონაცემები (Common Voice)", data: "ყურით შემოწმება" };
+    const NAME = { designer_base_ka_v3: "ხმის შემქმნელი", designs: "ნარევები", voices: "ხმები", base_ka_v3: "საბაზო მოდელი", ljspeech: "LJSpeech (საწყისი)", cv27: "ხარისხის მონაცემები (Common Voice)", data: "ყურით შემოწმება" };
     box.innerHTML = Object.entries(groups).map(([g, fs]) => {
       const cnt = {};
       fs.forEach((f) => (cnt[f.state] = (cnt[f.state] || 0) + 1));

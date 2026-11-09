@@ -436,7 +436,7 @@ window.Designer = (() => {
 
   // რეიტინგის მართვა: შეფასება (ახლები / თავიდან), გაჩერება, გასუფთავება — backend: /api/designer/rank/*
   let rkTimer = null, rkRunKind = "mix";
-  const RK_KIND = { mix: "ნარევები", speaker: "ხმები (296, ~1–2 სთ)", all: "ყველა" };
+  const RK_KIND = { mix: "ნარევები", speaker: "ხმები (110, ~30 წთ)", all: "ყველა" };
   function rankControls(job, stale) {
     if (job.busy) {
       const pct = job.total ? Math.round((job.done / job.total) * 100) : 0;
