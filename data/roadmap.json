@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-09",
+ "updated": "2026-11-10",
  "stages": [
   {
    "id": "data",
@@ -65,7 +65,7 @@
    "id": "base-v4-omnivoice",
    "title": "საბაზო v4-omni (არაკომერციული) — OmniVoice-ის ჩანაწერებით",
    "status": "in_progress",
-   "note": "⚠ არაკომერციული (CC-BY-NC): OmniVoice-ის წონები CC-BY-NC (Emilia), ტოკენიზატორი — Boson Higgs Audio 2 Community License ⇒ ჩანაწერები და მოდელი base_ka_v4_omni_nc მხოლოდ არაკომერციულად, საჯარო Hugging Face-ზე არ იტვირთება. გეგმა: 40 ხმა აღწერით (20 ქალი, 20 კაცი; tools/omni_dataset.py) → ~35 სთ გენერაცია Kaggle-ზე (num_step 16, ტემპი 0.9) + MMS ფილტრი → dataset → წვრთნა Google Cloud L4-ზე (on-demand, LJSpeech-იდან, 160 ეპოქა). მიმდინარე: ხმების reference-ები (Kaggle)."
+   "note": "⚠ არაკომერციული (CC-BY-NC): OmniVoice-ის წონები CC-BY-NC (Emilia), ტოკენიზატორი — Boson Higgs Audio 2 Community License ⇒ ჩანაწერები და მოდელი base_ka_v4_omni_nc მხოლოდ არაკომერციულად, საჯარო Hugging Face-ზე არ იტვირთება. ✓ 40 ხმა აღწერით (დამტკიცებული). ✓ 30 000 ჩანაწერი Kaggle-ზე (~10 GPU-სთ, num_step 16, ტემპი 0.9) + MMS ფილტრი → dataset: 39 ხმა (omni_m19 ამოღებულია — გენერაცია ჩავარდა), 29 016 ჩანაწერი, 30.3 სთ, საშ. CER 1.1%. ▶ წვრთნა Google Cloud L4-ზე (on-demand, asia-southeast1-c) 10.11 01:00-დან: LJSpeech-იდან, 160 ეპოქა × ~16 წთ ≈ 42 სთ (≈ $40–46) → დასრულება ~12.11 საღამოს; მერე ხმის შემქმნელში „v4-omni (არაკომერციული)“."
   }
  ]
 }
