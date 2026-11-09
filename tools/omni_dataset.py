@@ -367,12 +367,39 @@ def cmd_watch(a):
     cmd_build(argparse.Namespace(tar=True, dry_run=False))
 
 
+def num_cer(text: str, raw: str, heard: str) -> float:
+    """MMS რიცხვებს ციფრებით წერს („ხუთას ორმოცდაოთხი“ → „544“), რაც CER-ს ხელოვნურად ზრდის. აქ ციფრების ჯგუფი
+    ref-ის „რიცხვით“ ასოებს (ka_text-ის ჩამატებულ სიტყვებს — საწყის raw-ში არ არის) უფასოდ ფარავს; დანარჩენი —
+    ჩვეულებრივი Levenshtein. (რიცხვის სისწორეს ვერ ამოწმებს — მხოლოდ დანარჩენ ტექსტს.)"""
+    P = ".,!?;:„“\"'—–-()… "
+    rawt = {t.strip(P) for t in raw.split()}
+    ref, flag = [], []
+    for t in text.split():
+        core = t.translate(STRIP)
+        ref += list(core)
+        flag += [t.strip(P) not in rawt] * len(core)
+    hyp = [None if m.group().isdigit() else m.group() for m in re.finditer(r"\d+|\D", heard.translate(STRIP))]
+    n, k = len(ref), len(hyp)
+    prev = list(range(k + 1))
+    for i in range(1, n + 1):
+        cur = [i] + [0] * k
+        for j in range(1, k + 1):
+            h = hyp[j - 1]
+            if h is None:  # ციფრები: რიცხვითი ასოს შთანთქმა 0, სხვისი — 1; ან ცარიელი (1)
+                free = 0 if flag[i - 1] else 1
+                cur[j] = min(prev[j] + free, prev[j - 1] + free, cur[j - 1] + 1)
+            else:
+                cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ref[i - 1] != h))
+        prev = cur
+    return round(prev[k] / max(1, n), 3)
+
+
 # ---------------- build ----------------
 def keep(r: dict, med_cps: float) -> str | None:
     if r.get("error") or not r.get("file"):
         return "no_audio"
     lim = 0.10 if r["letters"] >= 15 else 0.05
-    if r["cer"] > lim:
+    if r.get("cer_eff", r["cer"]) > lim:
         return "cer"
     if (r.get("clip") or 0) > 0.001:
         return "clipping"
@@ -390,6 +417,16 @@ def keep(r: dict, med_cps: float) -> str | None:
 def cmd_build(a):
     vj = {v["name"]: v for v in rj(VOICES_JSON)["voices"]}
     rows = rows_from_tars(tars())
+    raw = {}
+    for l in (CORPUS / "sentences.jsonl").open(encoding="utf-8"):
+        x = json.loads(l)
+        raw[x["id"]] = x.get("raw", x["text"])
+    n_num = 0
+    for r in rows.values():
+        if r.get("heard") and re.search(r"\d", r["heard"]) and r["id"] in raw:
+            r["cer_eff"] = min(r["cer"], num_cer(r["text"], raw[r["id"]], r["heard"]))
+            n_num += r["cer_eff"] < r["cer"]
+    print(f"MMS-მა ციფრები დაწერა: {sum('cer_eff' in r for r in rows.values())}, CER შესწორდა {n_num}-ში")
     by = defaultdict(list)
     for r in rows.values():
         by[r.get("voice")].append(r)
@@ -411,7 +448,7 @@ def cmd_build(a):
         kept.append(r)
         p["clips"] += 1
         p["sec"] += r["dur"]
-        p["cer_sum"] += r["cer"]
+        p["cer_sum"] += r.get("cer_eff", r["cer"])
     out = cpath("datasets") / SLOT
     print(f"{len(rows)} გენერირებული → {len(kept)} დარჩა; ამოღებული: {dict(dropped)}")
     for name in sorted(per):
@@ -453,8 +490,8 @@ def cmd_build(a):
                        "ტექსტები: CC0 (Common Voice 27) + ჩვენი შაბლონები (tools/omni_corpus.py)",
              **LICENSE, "slot": SLOT, "speakers": len(speakers), "clips": len(lines), "hours": hours,
              "generated": len(rows), "dropped": dict(dropped),
-             "mean_cer": round(sum(r["cer"] for r in kept) / max(1, len(kept)), 4),
-             "rules": {"cer": "≤ 0.10 (≥ 15 ასო), ≤ 0.05 (მოკლე)", "clip": "≤ 0.1%", "snr": "≥ 20 dB", "dur": "1–15 წმ",
+             "mean_cer": round(sum(r.get("cer_eff", r["cer"]) for r in kept) / max(1, len(kept)), 4),
+             "rules": {"cer": "≤ 0.10 (≥ 15 ასო), ≤ 0.05 (მოკლე); MMS-ის ციფრები რიცხვით სიტყვებს ფარავს (num_cer)", "clip": "≤ 0.1%", "snr": "≥ 20 dB", "dur": "1–15 წმ",
                        "pause": "≤ 1.2 წმ", "rate": "8–22 ასო/წმ და ხმის მედიანის 0.7–1.4×"},
              "status": "მზადაა", "built": time.strftime("%Y-%m-%dT%H:%M:%S")}
     wj(out / "stats.json", stats)
