@@ -34,6 +34,7 @@ SCHEMA: dict[str, dict[str, tuple]] = {
         "gcp": ("{data_root}/gcp", "Google Cloud-ის ფაილები", "მანქანის მდგომარეობა და ატვირთვები."),
         "recordings": ("{data_root}/recordings", "ჩანაწერები", "„ჩაწერის“ ჩანართის ხმები (პირადი — არსად იტვირთება)."),
         "cache": ("{data_root}/cache", "ქეში", "გენერირებული აუდიო; შეიძლება წაიშალოს."),
+        "models": ("{data_root}/models", "დიდი მოდელები", "მაგ. OmniVoice-ის წონები (Hugging Face-ის ქეში: models/hf, ~3 GB)."),
         "tmp": ("{data_root}/tmp", "დროებითი", ""),
     },
     "server": {
@@ -60,6 +61,16 @@ SCHEMA: dict[str, dict[str, tuple]] = {
     },
     "training": {
         "local_threads": (12, "ლოკალური წვრთნის ნაკადები", "პროცესორის ნაკადები ლოკალური (CPU) წვრთნისთვის."),
+    },
+    # მეორე ძრავი (არასავალდებულო): ./install.sh --omnivoice → omnivoice/.venv; სერვერი — tools/omni_server.py
+    "omnivoice": {
+        "enabled": (True, "OmniVoice ჩართულია", "ხმები აღწერით (სქესი, ასაკი, სიმაღლე). საჭიროა ./install.sh --omnivoice."),
+        "port": (8210, "OmniVoice-ის სერვერის პორტი", "მხოლოდ 127.0.0.1 — პანელი უკავშირდება."),
+        "device": ("auto", "მოწყობილობა", "auto — NVIDIA GPU (cuda) / Apple (mps), თუ არის, თორემ CPU. ან: cuda, mps, cpu."),
+        "speed": (0.9, "ტემპი (ნაგულისხმევი)", "OmniVoice ქართულს სწრაფად კითხულობს (~15–18 ასო/წმ): 0.9 — ცოტა დინჯად; 1.0 — მოდელის ტემპი."),
+        "num_step": (32, "ნაბიჯები", "ხარისხი ↔ სიჩქარე: 32 — სრული ხარისხი, 16 — ~2-ჯერ სწრაფი."),
+        "idle_unload_min": (10, "მოდელის გამოტვირთვა (წთ)", "ამდენი წუთი უსაქმოდ → მოდელი მეხსიერებიდან (GPU) ამოიტვირთება."),
+        "allow_clone": (False, "ნამდვილი ხმის კლონირება", "გამორთულია: ხმა იქმნება მხოლოდ აღწერით (ატვირთული ჩანაწერიდან — არა)."),
     },
 }
 
@@ -122,8 +133,12 @@ def save(values: dict) -> dict:
         changed = []
         for k, meta in keys.items():
             v = values.get(s, {}).get(k, cfg()[s].get(k, meta[0]))
-            if isinstance(meta[0], int) and not isinstance(meta[0], bool):
+            if isinstance(meta[0], bool):
+                v = v if isinstance(v, bool) else str(v).strip().lower() in ("1", "true", "yes", "on", "კი")
+            elif isinstance(meta[0], int):
                 v = int(v)
+            elif isinstance(meta[0], float):
+                v = float(v)
             if k == "data_root" or v != d[s][k]:
                 changed.append(f"{k} = {_toml_value(v)}")
         if changed:

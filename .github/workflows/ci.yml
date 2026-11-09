@@ -1,6 +1,6 @@
 # CI: დაყენება (./install.sh) + პანელის გაშვება და შემოწმება macOS-ზე (Apple Silicon) და Linux-ზე.
 # მოდელები (Hugging Face) აქ არ ჩამოიტვირთება — პანელი მათ გარეშეც უნდა ჩაირთოს და უპასუხოს.
-# ./install.sh --training (torch) აქ არ ეშვება — მძიმეა.
+# ./install.sh --training და --omnivoice (torch) აქ არ ეშვება — მძიმეა.
 name: CI
 
 on:
@@ -63,6 +63,13 @@ jobs:
           echo "== POST /api/quality/cv/download (თანხმობის გარეშე → 400)"
           code="$(curl -s -o "$RUNNER_TEMP/out" -w '%{http_code}' -X POST "$B/api/quality/cv/download" -H 'Content-Type: application/json' -d '{}')"; cat "$RUNNER_TEMP/out"; echo
           [ "$code" = 400 ]
+          echo "== OmniVoice (არასავალდებულო; CI-ში არ დგება) — სტატუსი და მოთხოვნა უნდა უპასუხოს გასაგებად"
+          check /api/omni/status
+          .venv/bin/python -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['installed'] is False and d['running'] is False and d['install_cmd'], d" "$RUNNER_TEMP/out"
+          check /api/omni/options
+          code="$(curl -s -o "$RUNNER_TEMP/out" -w '%{http_code}' -X POST "$B/api/omni/design" -H 'Content-Type: application/json' -d '{"text":"გამარჯობა"}')"; cat "$RUNNER_TEMP/out"; echo
+          [ "$code" = 503 ]
+          grep -q "install.sh --omnivoice" "$RUNNER_TEMP/out"
           echo "== POST /api/textnorm"
           out="$(curl -sf -X POST "$B/api/textnorm" -H 'Content-Type: application/json' -d '{"text":"15 ლარი"}')"
           echo "$out"

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=39">
+<link rel="stylesheet" href="style.css?v=40">
 </head>
 <body>
 <div class="shell">
@@ -123,6 +123,7 @@
           <button data-subtab="listen">მოსმენა</button>
           <button data-subtab="long">გრძელი ტექსტი</button>
           <button data-subtab="library">ბიბლიოთეკა</button>
+          <button data-subtab="omni">აღწერით</button>
           <button data-subtab="lexicon">ლექსიკონი</button>
         </div>
 
@@ -185,9 +186,13 @@
           <div class="card-head"><h2>ბიბლიოთეკა</h2><button class="ghost small" id="hidden-toggle" hidden></button></div>
           <div class="voice-list slot" id="voice-list"></div>
           <p class="muted small">გამოქვეყნებული მზა ხმები („ქალი 1“, „ქალი 2“) და 80 სინთეზური ხმა კომერციულად (რეკლამა, მონეტიზებული ვიდეო, პროდუქტი) ისე, როგორც არის, არ გამოიყენება.
+            OmniVoice-ის ხმებიც (მოდელის ლიცენზია CC-BY-NC) — მხოლოდ არაკომერციულად.
             კომერციულად შექმენით საკუთარი ხმა: ააწყვეთ ახალი ნარევი და გაწვრთენით. <a href="https://github.com/mvardukaze/aivoice/blob/main/LICENSE-VOICES.md" target="_blank" rel="noopener">პირობები</a></p>
         </div>
         <div class="card" id="check-card" data-pane="library" hidden></div>
+
+        <!-- ხმის შექმნა აღწერით — მეორე ძრავი OmniVoice (omni.js) -->
+        <div class="card" id="omni-card" data-pane="omni"></div>
 
         <div class="card" data-pane="lexicon">
           <details id="lex-box">
@@ -262,12 +267,13 @@
 </div>
 
 <script src="ui.js?v=30"></script>
-<script src="app.js?v=32"></script>
+<script src="app.js?v=33"></script>
 <script src="rec.js?v=30"></script>
 <script src="designer.js?v=34"></script>
-<script src="settings.js?v=30"></script>
+<script src="settings.js?v=31"></script>
 <script src="train.js?v=31"></script>
 <script src="quality.js?v=11"></script>
 <script src="longform.js?v=30"></script>
+<script src="omni.js?v=1"></script>
 </body>
 </html>

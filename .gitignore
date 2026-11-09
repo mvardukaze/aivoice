@@ -3,12 +3,18 @@ __pycache__/
 *.pyc
 .venv/
 training/.venv/
+omnivoice/.venv/
 
 # მონაცემები, მოდელები, ჩანაწერები — რეპოზიტორიაში არ ინახება (იხ. README: „მონაცემები და მოდელები“)
 datasets/*
 !datasets/.gitkeep
 voices/**/*.onnx
 voices/**/*.onnx.json
+# OmniVoice-ის ხმები (პანელი → „აღწერით“): პრომპტი + მისი ჩანაწერი — თითო კომპიუტერს თავისი
+voices/**/prompt.pt
+voices/**/ref.wav
+voices/**/ref.txt
+voices/**/omni.json
 recordings
 sources/
 training/runs

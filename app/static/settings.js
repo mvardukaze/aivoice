@@ -10,7 +10,7 @@ window.Settings = (() => {
   };
   const post = (url, data) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
 
-  const SECTION = { paths: "მისამართები", server: "პანელი", kaggle: "Kaggle", gcp: "Google Cloud", hf: "Hugging Face", training: "წვრთნა" };
+  const SECTION = { paths: "მისამართები", server: "პანელი", kaggle: "Kaggle", gcp: "Google Cloud", hf: "Hugging Face", training: "წვრთნა", omnivoice: "OmniVoice (მეორე ძრავი)" };
   const STATE = { ok: ["✓", "good"], warn: ["!", "maybe"], missing: ["✗", "bad"] };
   let restartNeeded = false;
 
@@ -58,7 +58,9 @@ window.Settings = (() => {
               ${sec.fields.map((f) => `
                 <label class="set-field">
                   <span class="set-label">${esc(f.label)}</span>
-                  <input name="${esc(sec.key)}.${esc(f.key)}" type="${f.type === "int" ? "number" : "text"}" value="${esc(f.value)}" placeholder="${esc(f.default)}">
+                  ${f.type === "bool" ? `<select name="${esc(sec.key)}.${esc(f.key)}">
+                    <option value="true" ${f.value ? "selected" : ""}>კი</option><option value="false" ${f.value ? "" : "selected"}>არა</option></select>`
+                    : `<input name="${esc(sec.key)}.${esc(f.key)}" type="${f.type === "int" ? "number" : "text"}" value="${esc(f.value)}" placeholder="${esc(f.default)}">`}
                   <span class="muted small">${esc(f.help)}${f.resolved ? ` → <span class="mono">${esc(f.resolved)}</span> ${f.exists ? "✓" : "<span class='err'>(არ არსებობს — შენახვისას შეიქმნება)</span>"}` : ""}</span>
                 </label>`).join("")}
             </fieldset>`).join("")}

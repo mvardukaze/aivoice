@@ -282,6 +282,7 @@ main { width: 100%; max-width: 1240px; margin: 0 auto; padding: 24px 32px 64px; 
 [data-sub-active="long"] [data-pane]:not([data-pane~="long"]),
 [data-sub-active="library"] [data-pane]:not([data-pane~="library"]),
 [data-sub-active="lexicon"] [data-pane]:not([data-pane~="lexicon"]),
+[data-sub-active="omni"] [data-pane]:not([data-pane~="omni"]),
 [data-sub-active="progress"] [data-pane]:not([data-pane~="progress"]),
 [data-sub-active="samples"] [data-pane]:not([data-pane~="samples"]),
 [data-sub-active="stats"] [data-pane]:not([data-pane~="stats"]),
@@ -951,3 +952,15 @@ tr.ear-on td { background: var(--accent-soft, rgba(79,70,229,.08)); }
 .cv-accept { margin: 4px 0 0; color: var(--text); font-weight: 500; }
 #cv-card .cv-yes { color: var(--ok); font-weight: 700; }
 #cv-card .cv-no { color: var(--bad); font-weight: 700; }
+
+/* ---------- ხმა აღწერით (OmniVoice, omni.js) ---------- */
+.tag.engine-omni { background: var(--accent-soft); color: var(--accent-text); box-shadow: none; }
+.om-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 10px 0 4px; }
+.om-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 12px; }
+.om-variants { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 14px; }
+.om-variant { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface-2); min-width: 0; }
+.om-vhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.om-variant audio { width: 100%; }
+.om-save .lbl { margin-top: 10px; }
+.om-save input { width: 100%; }
+.slider:has(input:disabled) { opacity: .45; }

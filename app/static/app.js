@@ -116,7 +116,7 @@ function renderLibrarySummary() {
   const shown = voices.filter((v) => v.status !== "hidden");
   $("#ov-voices").innerHTML = shown.length ? shown.map((v) => `
     <div class="lib-row"><span class="avatar sm" style="--h:${hue(v.id)}">${esc(initial(v.name))}</span>
-      <div class="lib-main"><b>${esc(v.name)}</b><span class="muted small">${esc([v.gender, v.character].filter(Boolean).join(" · "))}</span></div>
+      <div class="lib-main"><b>${esc(v.name)}</b><span class="muted small">${esc([v.gender, v.character, isOmni(v) ? "OmniVoice" : ""].filter(Boolean).join(" · "))}</span></div>
       <span class="badge ${v.status}">${esc(STATUS[v.status] || v.status)}</span></div>`).join("")
     : `<div class="empty">ჯერ არცერთი ხმა — „პარამეტრები → მოდელები → ჩამოტვირთვა“.</div>`;
 }
@@ -131,6 +131,9 @@ const initial = (s) => [...String(s || "?").trim()][0] || "?";
 
 // საბაზო მოდელის მოკლე სახელი: base_ka → v1, base_ka_v3 → v3
 const baseLabel = (b) => (b === "base_ka" ? "v1" : (b || "").replace(/^base_ka_/, ""));
+// ძრავი: Piper (ნაგულისხმევი) ან OmniVoice (ხმა აღწერით — omni.js)
+const isOmni = (v) => v?.engine === "omnivoice";
+const engineTag = (v) => isOmni(v) ? `<span class="tag engine-omni" title="მეორე ძრავი: ხმა აღწერით (ნელია)">OmniVoice</span>` : `<span class="tag">Piper</span>`;
 
 function voiceCard(v) {
   if (editing === v.id) return voiceEditCard(v);
@@ -143,18 +146,20 @@ function voiceCard(v) {
         <div class="voice-title"><span class="name">${esc(v.name)}</span><span class="id">${esc(v.id)}</span></div>
         ${UI.dd([
           UI.ddItem("data-edit", "edit", "რედაქტირება"),
-          v.available ? UI.ddItem("data-check", "shield", "შემოწმება") : "",
+          v.available && !isOmni(v) ? UI.ddItem("data-check", "shield", "შემოწმება") : "",
           !["hidden", "planned"].includes(v.status) ? UI.ddItem("data-hide", "eyeoff", "დამალვა") : "",
           `<div class="dd-sep" role="separator"></div>`,
           UI.ddItem("data-remove", "trash", "წაშლა", true),
         ])}
       </div>
-      <div class="voice-tags"><span class="badge ${v.status}">${STATUS[v.status] || v.status}</span>
+      <div class="voice-tags"><span class="badge ${v.status}">${STATUS[v.status] || v.status}</span>${engineTag(v)}
         ${[v.gender, v.age].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("")}
         ${v.base ? `<span class="tag" title="რომელ საბაზო მოდელზეა შექმნილი">საბაზო ${esc(baseLabel(v.base))}</span>` : ""}</div>
       ${v.character ? `<div class="meta">${esc(v.character)}</div>` : ""}
-      <div class="meta small">${esc(v.source)}${v.size_mb ? ` · ${v.sample_rate} Hz, ${v.size_mb} MB` : ""}</div>
-      ${d ? `<div class="norm-line small" title="ნორმა">ტემპი <b>${d.length_scale}</b> · ინტონაცია <b>${d.noise_scale}</b> · რიტმი <b>${d.noise_w_scale}</b> · ხმამაღლობა <b>${d.volume}</b></div>` : ""}
+      <div class="meta small">${esc(v.source)}${v.size_mb ? ` · ${v.sample_rate} Hz, ${v.size_mb} MB` : isOmni(v) ? ` · ${v.sample_rate} Hz` : ""}</div>
+      ${d && isOmni(v) ? `<div class="norm-line small" title="ნორმა">ტემპი <b>${d.length_scale}</b> · ხმამაღლობა <b>${d.volume}</b></div>`
+        : d ? `<div class="norm-line small" title="ნორმა">ტემპი <b>${d.length_scale}</b> · ინტონაცია <b>${d.noise_scale}</b> · რიტმი <b>${d.noise_w_scale}</b> · ხმამაღლობა <b>${d.volume}</b></div>` : ""}
+      ${isOmni(v) && !v.available ? `<div class="meta err">ხმის ფაილი (prompt.pt) ამ კომპიუტერზე არ არის</div>` : ""}
       ${v.model && !v.available ? `<div class="meta err">მოდელი ამ კომპიუტერზე არ არის — „პარამეტრები → მოდელები“</div>` : ""}
       ${canListen ? `<div class="voice-foot"><button class="ghost small" data-listen>${UI.icon("play", 12)} მოსმენა</button></div>` : ""}
     </div>`;
@@ -307,10 +312,18 @@ function presetFor(key) {
   return curVoice()?.emotions?.[key] || emotions.presets[key];
 }
 
+// OmniVoice-ის ხმაზე მოქმედებს მხოლოდ ტემპი და ხმამაღლობა
+const OMNI_OFF = ["noise_scale", "noise_w_scale"];
 function applyPreset(key) {
   current = key;
   const p = presetFor(key);
-  SLIDERS.forEach((s) => { $(`#sl-${s.key}`).value = p[s.key]; $(`#out-${s.key}`).textContent = (+p[s.key]).toFixed(2); });
+  const omni = isOmni(curVoice());
+  SLIDERS.forEach((s) => {
+    $(`#sl-${s.key}`).value = p[s.key]; $(`#out-${s.key}`).textContent = (+p[s.key]).toFixed(2);
+    const off = omni && OMNI_OFF.includes(s.key);
+    $(`#sl-${s.key}`).disabled = off;
+    $(`#sl-${s.key}`).closest(".slider").title = off ? "OmniVoice-ის ხმაზე არ მოქმედებს — მხოლოდ ტემპი და ხმამაღლობა" : "";
+  });
   $("#emotions").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", c.dataset.emo === key));
 }
 
@@ -400,7 +413,7 @@ $("#phrases").querySelectorAll(".chip").forEach((c) => c.addEventListener("click
 $("#speak").addEventListener("click", async () => {
   const btn = $("#speak");
   btn.disabled = true;
-  $("#speak-info").textContent = "გენერირდება…";
+  $("#speak-info").textContent = isOmni(curVoice()) ? "გენერირდება (OmniVoice — ნელია: ~10 წმ ყოველ 1 წმ აუდიოზე)…" : "გენერირდება…";
   try {
     const t0 = performance.now();
     const r = await synth(sliderParams());

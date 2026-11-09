@@ -1,0 +1,6 @@
+# მეორე ძრავი — OmniVoice (k2-fsa; კოდი Apache-2.0, წონები CC-BY-NC): ხმები აღწერით (omnivoice/.venv). ./install.sh --omnivoice აყენებს.
+# torch==2.8.0 / torchaudio==2.8.0 install.sh აყენებს ცალკე (NVIDIA → cu126, სხვაგან → CPU / macOS — ნაგულისხმევი).
+omnivoice @ git+https://github.com/k2-fsa/OmniVoice.git@08be0b4ccbac3e13e374e86fbfead4b4cac343e2
+fastapi>=0.115
+uvicorn>=0.30
+soundfile>=0.12

@@ -3,6 +3,7 @@
 #
 #   ./install.sh                 # პანელი + ხმის შემქმნელი (.venv)
 #   ./install.sh --training      # + ხმების მომზადება/ექსპორტი/შემოწმება (training/.venv, torch)
+#   ./install.sh --omnivoice     # + მეორე ძრავი: OmniVoice — ხმები აღწერით (omnivoice/.venv, torch; GPU სასურველია)
 #   ./install.sh --data ~/aivoice-data   # მონაცემების საქაღალდე (ნაგულისხმევი ~/aivoice-data)
 #
 # შემდეგ: ./aivoice serve  →  http://127.0.0.1:8200  (პირველად გაიხსნება „პარამეტრები“ — დაყენების ოსტატი)
@@ -10,12 +11,14 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 TRAINING=0
+OMNI=0
 DATA=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --training) TRAINING=1 ;;
+    --omnivoice) OMNI=1 ;;
     --data) DATA="$2"; shift ;;
-    -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
     *) echo "უცნობი პარამეტრი: $1"; exit 1 ;;
   esac
   shift
@@ -89,6 +92,28 @@ if [ "$TRAINING" = 1 ]; then
       && mkdir -p monotonic_align && mv -f core*.so monotonic_align/ )
   training/.venv/bin/python -c "import piper.train.vits.monotonic_align as m, torch; print('   torch', torch.__version__)"
   ok "წვრთნის გარემო მზადაა"
+fi
+
+# ---------- 5. OmniVoice — მეორე ძრავი (არასავალდებულო) ----------
+if [ "$OMNI" = 1 ]; then
+  say "OmniVoice (omnivoice/.venv)"
+  if [ -x omnivoice/.venv/bin/python ] && omnivoice/.venv/bin/python -c "import omnivoice, torch" 2>/dev/null; then
+    ok "უკვე დაყენებულია — არ ვცვლი (თავიდან: rm -rf omnivoice/.venv)"
+  else
+    [ -x omnivoice/.venv/bin/python ] || { mkdir -p omnivoice; "$PY" -m venv omnivoice/.venv; }
+    OP=omnivoice/.venv/bin/pip
+    $OP install -q --upgrade pip
+    if [ "$OS" = "Darwin" ]; then
+      $OP install -q torch==2.8.0 torchaudio==2.8.0                       # Apple Silicon: MPS
+    elif command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null 2>&1; then
+      $OP install -q torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126
+    else
+      $OP install -q torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+    fi
+    $OP install -q -r requirements-omnivoice.txt
+    omnivoice/.venv/bin/python -c "import omnivoice, torch; print('   torch', torch.__version__, '· GPU:', torch.cuda.is_available())"
+    ok "OmniVoice მზადაა (წონები, ~3 GB, ჩამოიტვირთება პირველ გამოყენებაზე: <data_root>/models/hf)"
+  fi
 fi
 
 say "მზადაა!"

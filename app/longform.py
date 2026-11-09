@@ -5,6 +5,7 @@ GET  /api/longform/{id}       მდგომარეობა: status, done/to
 GET  /api/longform/{id}/{f}   audio.wav / audio.mp3 / subtitles.srt
 
 წინადადებები ცალ-ცალკე ხმოვანდება (ქეშით: იგივე წინადადება თავიდან აღარ ითვლება) — ამიტომ SRT-ის დრო ზუსტია.
+OmniVoice-ის ხმები (app/omni.py) — იმავე გზით, ოღონდ ~5-ჯერ ნელა, ვიდრე რეალური დრო (GTX 1050 Ti).
 ერთდროულად ერთი სამუშაო; დანარჩენი რიგში დგება.
 """
 
@@ -70,6 +71,9 @@ class LongIn(BaseModel):
 
 def _synth_sentence(M, v: dict, text: str, params: dict) -> np.ndarray:
     norm = ka_text(text)
+    if M.engine(v) == "omnivoice":  # მეორე ძრავი: სერვერზე (ნელია — ქეში app.main-ისაა, იგივე, რაც „მოსმენისას“)
+        with wave.open(str(M.omni_synth_cached(v, norm, params)), "rb") as w:
+            return np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
     key = hashlib.sha1(json.dumps([v["model"], norm, params], ensure_ascii=False).encode()).hexdigest()[:20]
     f = SENT_CACHE / f"{key}.npy"
     if f.exists():
@@ -111,7 +115,8 @@ def _run(jid: str, req: LongIn):
             if st.get("cancel"):
                 raise RuntimeError("გაუქმებულია")
             a = _synth_sentence(M, v, s, params)
-            rate = M.read_json((M.VOICES / v["model"]).with_suffix(".onnx.json"), {}).get("audio", {}).get("sample_rate", 22050)
+            rate = M.omni.SAMPLE_RATE if M.engine(v) == "omnivoice" else \
+                M.read_json((M.VOICES / v["model"]).with_suffix(".onnx.json"), {}).get("audio", {}).get("sample_rate", 22050)
             if sr is None:
                 sr = rate
             elif rate != sr:  # სხვა სიხშირის ხმა — მარტივი გადათვლა
@@ -163,7 +168,7 @@ def start(req: LongIn):
     from app import main as M
     for b in req.blocks:
         v = M.find_voice(b.voice)
-        if v.get("status") not in ("ready", "testing") or not v.get("model"):
+        if v.get("status") not in ("ready", "testing") or not (v.get("model") or M.engine(v) == "omnivoice"):
             raise HTTPException(409, f"ხმა „{v['name']}“ ჯერ არ არის მზად")
     jid = time.strftime("%Y%m%d-%H%M%S-") + hashlib.sha1(req.model_dump_json().encode()).hexdigest()[:6]
     _jobs[jid] = {"id": jid, "status": "queued", "done": 0, "total": 0, "seconds": 0, "queued": _q.qsize(), "started": time.time()}

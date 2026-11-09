@@ -7,6 +7,7 @@ TPY=training/.venv/bin/python  # ხმის მომზადება, ე�
 
 need_training() { [ -x "$TPY" ] || { echo "საჭიროა წვრთნის გარემო: ./install.sh --training"; exit 1; }; }
 cfg() { $PY -c "import sys; sys.path.insert(0, '.'); from app.config import cfg; c = cfg(); print(c$1)"; }
+cpath() { $PY -c "import sys; sys.path.insert(0, '.'); from app.config import path; print(path('$1'))"; }
 
 cmd="${1:-help}"; shift || true
 case "$cmd" in
@@ -56,6 +57,35 @@ case "$cmd" in
   gcp)      $PY tools/gcp_train.py "$@" ;;                             # create | push | status | fetch | watch | delete
   local)    need_training; $TPY tools/local_train.py "$@" ;;           # ლოკალური (CPU) წვრთნის სერვისი
 
+  omni)    # მეორე ძრავი — OmniVoice (tools/omni_server.py): serve | start | status | stop
+    OPY=omnivoice/.venv/bin/python
+    sub="${1:-status}"; shift || true
+    pidf="$(cpath tmp)/omni_server.pid"
+    alive() { [ -f "$pidf" ] && pid="$(cat "$pidf")" && ps -p "$pid" -o command= 2>/dev/null | grep -q "omni_server.py"; }
+    case "$sub" in
+      serve)   # წინა პლანზე (systemd: aivoice-omni.service); პანელი ფონურად თავადაც უშვებს
+        [ -x "$OPY" ] || { echo "OmniVoice არ არის დაყენებული: ./install.sh --omnivoice"; exit 1; }
+        echo "OmniVoice: http://127.0.0.1:$(cfg '["omnivoice"]["port"]')  (გაჩერება: Ctrl+C)"
+        exec "$OPY" tools/omni_server.py ;;
+      start)   # ფონურად (ლოგი: logs/omni_server.log)
+        [ -x "$OPY" ] || { echo "OmniVoice არ არის დაყენებული: ./install.sh --omnivoice"; exit 1; }
+        if alive; then echo "უკვე ეშვება (PID $pid)"; exit 0; fi
+        mkdir -p logs
+        nohup "$OPY" tools/omni_server.py >> logs/omni_server.log 2>&1 < /dev/null &
+        echo "გაეშვა (PID $!) · ლოგი: logs/omni_server.log" ;;
+      status)
+        $PY -c "import sys, json; sys.path.insert(0, '.'); from app import omni; print(json.dumps(omni.status(), ensure_ascii=False, indent=1))" ;;
+      stop)
+        if command -v systemctl >/dev/null && systemctl is-active --quiet aivoice-omni 2>/dev/null; then
+          sudo -n systemctl stop aivoice-omni && echo "გაჩერდა (systemd: aivoice-omni)"
+        elif alive; then
+          kill "$pid" && echo "გაჩერდა (PID $pid)"
+        else
+          echo "არ ეშვება"
+        fi ;;
+      *) echo "./aivoice omni serve|start|status|stop"; exit 1 ;;
+    esac ;;
+
   help|-h|--help|*)
     cat <<'EOF'
 aivoice — ქართული სინთეზური ხმები
@@ -86,8 +116,11 @@ aivoice — ქართული სინთეზური ხმები
   ./aivoice cv download --accept-terms               ჩამოტვირთვა (~10 GB) + ცხრილები + დინამიკების ანალიზი
   ./aivoice cv status | cv download --dry-run|--check
 
+  მეორე ძრავი — OmniVoice (ხმები აღწერით; ./install.sh --omnivoice):
+  ./aivoice omni status | start | stop                სერვერი (პანელი საჭიროებისას თავად უშვებს)
+
   სხვა: designer | rank | kaggle ... | gcp ... | local
-  დაყენება: ./install.sh [--training]  ·  დოკუმენტაცია: README.md
+  დაყენება: ./install.sh [--training] [--omnivoice]  ·  დოკუმენტაცია: README.md
 EOF
     ;;
 esac

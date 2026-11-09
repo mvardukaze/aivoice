@@ -76,7 +76,7 @@ def get_settings():
         for k, (default, label, help_) in keys.items():
             v = c[s].get(k, default)
             f = {"key": k, "label": label, "help": help_, "value": v, "default": default,
-                 "type": "int" if isinstance(default, int) and not isinstance(default, bool) else "text"}
+                 "type": "bool" if isinstance(default, bool) else "int" if isinstance(default, int) else "text"}
             if s == "paths":
                 p = C.expand(v)
                 f.update(resolved=str(p), exists=p.exists())
@@ -279,6 +279,11 @@ def setup_status():
     patched = any(c.exists() and "aivoice: with DDP" in c.read_text(encoding="utf-8", errors="replace") for c in cands)
     add("ხელსაწყოები", "Piper (ჩვენი შესწორებებით)", "ok" if patched else "warn",
         "" if patched else "./install.sh --training ადებს piper_overlay/-ს ოფიციალურ Piper-ზე")
+
+    opy = C.ROOT / "omnivoice" / ".venv" / "bin" / "python"
+    add("ხელსაწყოები", "OmniVoice — მეორე ძრავი (არასავალდებულო)", "ok" if opy.exists() else "warn",
+        ("ჩართულია" if C.cfg()["omnivoice"]["enabled"] else "დაყენებულია, მაგრამ გამორთულია („პარამეტრები“ → OmniVoice)") if opy.exists()
+        else "ხმები აღწერით (სასურველია GPU) — ./install.sh --omnivoice")
 
     # ხმის შემქმნელი: ძველი (designer/), ახალი (designer_base_ka_v*) ან საჯარო (…_public) — რომელიმე საკმარისია
     dirs = [d for d in [C.path("designer"), *sorted(C.path("designer").parent.glob("designer_base_ka_v*"))]

@@ -1,6 +1,7 @@
 """aivoice.nikora.dev — Piper-ის ქართული ხმების სამუშაო პანელი.
 
-ხმის ტემბრი ფიქსირებულია: თითო ხმა ცალკე გაწვრთნილი Piper-ის მოდელია.
+ხმის ტემბრი ფიქსირებულია: თითო ხმა ცალკე გაწვრთნილი Piper-ის მოდელია (ან OmniVoice-ის შენახული ხმა —
+"engine": "omnivoice", app/omni.py; მისთვის ემოცია = ტემპი + ხმამაღლობა).
 ემოცია მხოლოდ სინთეზის პარამეტრებით იცვლება, შეზღუდულ ფარგლებში (EMOTION_LIMITS),
 რომ ასაკი/სქესი ვერასდროს შეიცვალოს — videoka-ს DSP-ტემბრის შეცდომა აქ აღარ მეორდება.
 """
@@ -10,6 +11,7 @@ import hashlib
 import json
 import shutil
 import subprocess
+import threading
 import wave
 from functools import lru_cache
 from pathlib import Path
@@ -30,7 +32,8 @@ from app.settings import router as settings_router
 from app.train_api import router as train_router
 from app.textnorm import LEXICON, LEXICON_DEFAULT, ka_text, lexicon
 
-from app.config import ROOT, path as cpath  # noqa: E402
+from app import omni  # noqa: E402
+from app.config import ROOT, cfg as ccfg, path as cpath  # noqa: E402
 
 VOICES = ROOT / "voices"
 DATASETS = cpath("datasets")
@@ -67,6 +70,7 @@ app.include_router(train_router)
 app.include_router(models_router)
 app.include_router(longform_router)
 app.include_router(quality_router)
+app.include_router(omni.router)
 
 
 @app.middleware("http")
@@ -87,6 +91,17 @@ def read_json(path: Path, default=None):
 
 def catalog() -> list[dict]:
     return read_json(VOICES / "catalog.json", {"voices": []})["voices"]
+
+
+def engine(v: dict) -> str:
+    return v.get("engine") or "piper"
+
+
+def voice_available(v: dict) -> bool:
+    """ხმის ფაილები ამ კომპიუტერზეა: Piper — .onnx; OmniVoice — voices/<id>/prompt.pt."""
+    if engine(v) == "omnivoice":
+        return omni.voice_files_ok(v["id"])
+    return bool(v.get("model")) and (VOICES / v["model"]).exists()
 
 
 def find_voice(voice_id: str) -> dict:
@@ -123,8 +138,10 @@ def clamp(params: dict) -> dict:
 
 
 def voice_defaults(v: dict) -> dict:
-    """ხმის ნორმა: Piper-ის onnx.json → "inference" (+ ხმამაღლობა catalog-იდან)."""
+    """ხმის ნორმა: Piper-ის onnx.json → "inference" (+ ხმამაღლობა catalog-იდან); OmniVoice — catalog-იდან."""
     inf = read_json((VOICES / v["model"]).with_suffix(".onnx.json"), {}).get("inference", {}) if v.get("model") else {}
+    if engine(v) == "omnivoice":
+        inf = {"length_scale": v.get("length_scale", 1.0)}
     n = EMOTIONS["neutral"]
     return clamp({"length_scale": inf.get("length_scale", n["length_scale"]), "noise_scale": inf.get("noise_scale", n["noise_scale"]),
                   "noise_w_scale": inf.get("noise_w", n["noise_w_scale"]), "volume": v.get("volume", 1.0)})
@@ -140,7 +157,13 @@ def api_voices(all: bool = False):
     out = []
     for v in catalog():
         v = dict(v)
-        if v.get("model"):
+        if engine(v) == "omnivoice":
+            v["engine"] = "omnivoice"
+            v["available"] = voice_available(v)
+            v["sample_rate"] = omni.SAMPLE_RATE
+            v["defaults"] = voice_defaults(v)
+            v["emotions"] = {k: emotion_params(v, k) for k in EMOTIONS}
+        elif v.get("model"):
             model = VOICES / v["model"]
             v["available"] = model.exists()
             cfg = read_json(model.with_suffix(".onnx.json"), {}) if model.exists() else {}
@@ -175,7 +198,10 @@ def api_voice_edit(voice_id: str, e: VoiceEdit):
     for k in ("name", "gender", "age", "character", "status"):
         if getattr(e, k) is not None:
             v[k] = getattr(e, k).strip()
-    if e.defaults is not None:
+    if e.defaults is not None and engine(v) == "omnivoice":  # ნორმა: ტემპი + ხმამაღლობა (catalog-ში)
+        d = clamp({**voice_defaults(v), **{k: x for k, x in e.defaults.items() if k in PARAM_KEYS}})
+        v["length_scale"], v["volume"] = d["length_scale"], d["volume"]
+    elif e.defaults is not None:
         if not v.get("model") or not (VOICES / v["model"]).exists():
             raise HTTPException(409, "ხმის მოდელი არ არის")
         d = clamp({**voice_defaults(v), **{k: x for k, x in e.defaults.items() if k in PARAM_KEYS}})
@@ -193,8 +219,8 @@ def api_voice_edit(voice_id: str, e: VoiceEdit):
 def api_voice_reset(voice_id: str):
     """ნორმის დაბრუნება წვრთნისას დაყენებულზე."""
     v = find_voice(voice_id)
-    cp = (VOICES / v["model"]).with_suffix(".onnx.json")
-    c = read_json(cp, {})
+    cp = (VOICES / v["model"]).with_suffix(".onnx.json") if v.get("model") else None
+    c = read_json(cp, {}) if cp else {}
     if c.get("_inference_trained"):
         c["inference"] = c.pop("_inference_trained")
         write_json(cp, c)
@@ -202,6 +228,7 @@ def api_voice_reset(voice_id: str):
     for x in cat["voices"]:
         if x["id"] == voice_id:
             x.pop("volume", None)
+            x.pop("length_scale", None)  # OmniVoice
     write_json(VOICES / "catalog.json", cat)
     return {"ok": True}
 
@@ -286,7 +313,7 @@ class SynthRequest(BaseModel):
 @app.post("/api/synthesize")
 def api_synthesize(req: SynthRequest):
     v = find_voice(req.voice)
-    if v.get("status") not in ("ready", "testing", "hidden") or not v.get("model"):
+    if v.get("status") not in ("ready", "testing", "hidden") or not (v.get("model") or engine(v) == "omnivoice"):
         raise HTTPException(409, "ეს ხმა ჯერ არ არის მზად")
     if req.emotion and req.emotion not in EMOTIONS:
         raise HTTPException(400, "უცნობი ემოცია")
@@ -295,6 +322,9 @@ def api_synthesize(req: SynthRequest):
     params = clamp({k: getattr(req, k) if getattr(req, k) is not None else base[k] for k in PARAM_KEYS})
 
     text = ka_text(req.text.strip())
+    if engine(v) == "omnivoice":
+        out = omni_synth_cached(v, text, params)
+        return {"url": f"/api/audio/{out.name}", "seconds": round(wav_seconds(out), 2), "params": params, "engine": "omnivoice"}
     key = hashlib.sha1(json.dumps([v["model"], text, params], ensure_ascii=False).encode()).hexdigest()[:16]
     out = CACHE / f"{key}.wav"
     if not out.exists():
@@ -304,6 +334,30 @@ def api_synthesize(req: SynthRequest):
             voice.synthesize_wav(text, w, syn_config=SynthesisConfig(**params))
         tmp.rename(out)
     return {"url": f"/api/audio/{out.name}", "seconds": round(wav_seconds(out), 2), "params": params}
+
+
+def omni_speed(params: dict) -> float:
+    """Piper-ის „ტემპი (სიგრძე)“ → OmniVoice-ის speed: ნაგულისხმევი ტემპი (კონფიგურაცია) / length_scale."""
+    return round(float(ccfg()["omnivoice"]["speed"]) / params["length_scale"], 3)
+
+
+def omni_key(v: dict, text: str, params: dict) -> str:
+    """ქეშის გასაღები: ხმა (prompt.pt-ის ვერსია) + ტექსტი + ტემპი/ხმამაღლობა + ნაბიჯები."""
+    p = VOICES / v["id"] / "prompt.pt"
+    num_step = ccfg()["omnivoice"]["num_step"]
+    return hashlib.sha1(json.dumps(["omni", v["id"], p.stat().st_mtime if p.exists() else 0, text, omni_speed(params),
+                                    params["volume"], num_step], ensure_ascii=False).encode()).hexdigest()[:16]
+
+
+def omni_synth_cached(v: dict, text: str, params: dict) -> Path:
+    if not voice_available(v):
+        raise HTTPException(409, "OmniVoice-ის ხმის ფაილი (prompt.pt) ამ კომპიუტერზე არ არის")
+    out = CACHE / f"{omni_key(v, text, params)}.wav"
+    if not out.exists():
+        tmp = out.with_suffix(f".{threading.get_ident()}.tmp")  # ერთდროული მოთხოვნები ერთმანეთს არ გადაეწერება
+        tmp.write_bytes(omni.synth_wav(v, text, omni_speed(params), params["volume"]))
+        tmp.rename(out)
+    return out
 
 
 # ---------- ტექსტი: როგორ წაიკითხავს + ლექსიკონი (app/textnorm.py) ----------
