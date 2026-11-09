@@ -9,18 +9,22 @@
     ./aivoice models push --data       # + ხარისხის მონაცემები (მხოლოდ შეცვლილი; clips/ ერთ tar-ად)
 
 რეპოზიტორიის სტრუქტურა:
-    designer/      designer.onnx, embeddings.npy, config.json, meta.json, speakers.json   (ხმის შემქმნელი)
+    designer_base_ka_v3/  designer.onnx, embeddings.npy, config.json, meta.json, speakers.json  (ხმის შემქმნელი)
     designs/       <id>.json                                                              (შენახული ნარევები)
     lexicon/       lexicon.json                                                           (წარმოთქმის ლექსიკონი)
-    rank/          mms_rank.json                                                          (ხმების რეიტინგი, MMS)
+    rank/          mms_rank_<model>.json                                                  (ხმების რეიტინგი, MMS)
     voices/<id>/   <id>.onnx, <id>.onnx.json, voice.json (კატალოგის ჩანაწერი)             (ხმები)
-    base_ka/       final.ckpt, config.json                                                (--base)
+    base_ka_v3/    final.ckpt, config.json                                                (--base)
     ljspeech/      ljspeech-medium.clean.ckpt                                             (--base)
     cv27/          clips.tar (Common Voice-ის mp3, CC0), clips.jsonl, mms.jsonl, mms.cpu.jsonl, corpus.json  (--data)
     data/          dataset_decisions.json (ყურით ამოგდებული ჩანაწერები/დინამიკები)       (--data)
 
 რამდენიმე ადამიანი ერთ რეპოზიტორიას იყენებს: pull უმატებს ახალ ხმებს/ნარევებს და არ გადაწერს
 ამ კომპიუტერზე შეცვლილ პარამეტრებს (onnx.json, voice.json) — --force-ის გარდა.
+
+2026-11-09: v1 (designer/, base_ka/, rank/mms_rank.json) და v2 (designer_base_ka_v2/, base_ka_v2/) ლოკალურად
+წაიშალა — რეპოზიტორიაში რჩება, მაგრამ pull აღარ ჩამოტვირთავს (REMOVED_BASES). v3-ის Common Voice ხმები 110-მდე
+შემცირდა ლოკალურად (PRUNED): pull მათ სრულ ვერსიებს არ აბრუნებს, push კი რეპოზიტორიის სრულ ვერსიებს არ გადაწერს.
 """
 
 import argparse
@@ -69,7 +73,14 @@ def repo() -> str:
 
 DESIGNS = ROOT / "data" / "designs"
 CATALOG = ROOT / "voices" / "catalog.json"
-RANK = ROOT / "data" / "mms_rank.json"  # ხმის შემქმნელის რეიტინგი (MMS)
+# ლოკალურად წაშლილი საბაზო მოდელები (v1 = base_ka, v2) — რეპოზიტორიაში რჩება, pull არ აბრუნებს
+REMOVED_BASES = ("base_ka", "base_ka_v2")
+REMOVED_PATHS = ("designer/", "base_ka/", "designer_base_ka_v2/", "base_ka_v2/",
+                 "rank/mms_rank.json", "rank/mms_rank_base_ka_v2.json")
+# ლოკალურად შემცირებული (110 Common Voice ხმა, 2026-11-09): რეპოზიტორიის სრული ვერსია არც ჩამოიწერება, არც გადაიწერება
+PRUNED = {"designer_base_ka_v3/config.json", "designer_base_ka_v3/embeddings.npy", "designer_base_ka_v3/meta.json",
+          "designer_base_ka_v3/speakers.json", "rank/mms_rank_base_ka_v3.json",
+          "cv27/clips.jsonl", "cv27/mms.jsonl", "cv27/mms.cpu.jsonl", "cv27/clips.tar"}
 LEXICON = ROOT / "data" / "lexicon.json"  # ლექსიკონის დამატებები (pull: აერთიანებს, ადგილობრივი უპირატესია)
 SHARED_STATUS = ("ready", "testing")  # ეს ხმები იტვირთება; „დამალული“/„იქმნება“ — არა
 
@@ -90,14 +101,11 @@ def save_catalog(cat: dict):
 
 def local_files(base: bool) -> list[tuple[Path, str]]:
     """(ლოკალური ფაილი, მისამართი რეპოზიტორიაში)."""
-    des = cpath("designer")
-    out = [(des / f, f"designer/{f}") for f in ("designer.onnx", "embeddings.npy", "config.json", "meta.json")]
-    out.append((cpath("datasets") / "base_ka_v1" / "speakers.json", "designer/speakers.json"))
-    out += [(p, f"designs/{p.name}") for p in sorted(DESIGNS.glob("*.json"))] if DESIGNS.exists() else []
+    out = [(p, f"designs/{p.name}") for p in sorted(DESIGNS.glob("*.json"))] if DESIGNS.exists() else []
     if LEXICON.exists():
         out.append((LEXICON, "lexicon/lexicon.json"))
     out += [(r, f"rank/{r.name}") for r in sorted((ROOT / "data").glob("mms_rank*.json")) if "progress" not in r.name]
-    # ახალი საბაზო მოდელები (v2, v3 …): ხმის შემქმნელი + დინამიკების სია
+    # საბაზო მოდელები (v3 …): ხმის შემქმნელი + დინამიკების სია
     for d in sorted(cpath("designer").parent.glob("designer_base_ka_v*")):
         slot = d.name.removeprefix("designer_")
         out += [(d / f, f"{d.name}/{f}") for f in ("designer.onnx", "embeddings.npy", "config.json", "meta.json")]
@@ -161,12 +169,10 @@ def public_files(base: bool) -> list[tuple[Path, str]]:
 
 def base_files() -> list[tuple[Path, str]]:
     extra = []
-    for ko in sorted(cpath("runs").glob("base_ka_v*/kaggle_out")):  # base_ka_v2/, base_ka_v3/ … (ახალი ხმების მოსამზადებლად)
+    for ko in sorted(cpath("runs").glob("base_ka_v*/kaggle_out")):  # base_ka_v3/ … (ახალი ხმების მოსამზადებლად)
         slot = ko.parent.name
         extra += [(ko / "final.ckpt", f"{slot}/final.ckpt"), (ko / "config.json", f"{slot}/config.json")]
-    ko = cpath("runs") / "base_ka" / "kaggle_out"
-    return extra + [(ko / "final.ckpt", "base_ka/final.ckpt"), (ko / "config.json", "base_ka/config.json"),
-            (ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt",
+    return extra + [(ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt",
              "ljspeech/ljspeech-medium.clean.ckpt")]
 
 
@@ -345,7 +351,7 @@ def cmd_push(a):
         if not src.exists():
             print("  გამოტოვებულია (აქ არ არის):", src)
             continue
-        if same(src, rem.get(dst), cache):
+        if same(src, rem.get(dst), cache) or (dst in PRUNED and dst in rem):
             continue
         print(f"  ↑ {dst} ({src.stat().st_size / 1e6:.1f} MB)", flush=True)
         api.upload_file(path_or_fileobj=str(src), path_in_repo=dst, repo_id=repo(), repo_type="model")
@@ -372,8 +378,8 @@ def push_clips(api, rem) -> int:
         print("  გამოტოვებულია (აქ არ არის):", QDIR / "clips")
         return 0
     r, mark = rem.get(CLIPS_TAR), clips_mark()
-    if r and mark.get("fp") == fp and mark.get("sha256") == r[2]:
-        return 0
+    if r and (CLIPS_TAR in PRUNED or (mark.get("fp") == fp and mark.get("sha256") == r[2])):
+        return 0  # PRUNED: ლოკალური clips/ შემცირებულია — რეპოზიტორიის სრული tar არ გადაიწერება
     print(f"  tar: {QDIR / 'clips'} → {CLIPS_TAR} (ცვლილება ან პირველი ატვირთვა)…", flush=True)
     tar = build_clips_tar(cpath("tmp") / "hf_data" / "clips.tar")
     try:
@@ -429,16 +435,16 @@ def fetch_file(f: str, dst: Path) -> Path:
 
 def target_for(f: str, base: bool, data: bool = False) -> Path | None:
     top, rest = (f.split("/", 1) + [""])[:2]
+    if f.startswith(REMOVED_PATHS):
+        return None
     if data and (f in {d: s for s, d in data_files()}):
         return {d: s for s, d in data_files()}[f]
-    if top == "designer":
-        return cpath("datasets") / "base_ka_v1" / "speakers.json" if rest == "speakers.json" else cpath("designer") / rest
     if top == "designs":
         return DESIGNS / rest
     if top == "lexicon":
         return LEXICON
-    if top == "rank":
-        return ROOT / "data" / (rest or "mms_rank.json")
+    if top == "rank" and rest:
+        return ROOT / "data" / rest
     if top.startswith("designer_") and top.endswith("_public"):
         return cpath("designer").parent / top / rest
     if top.startswith("designer_base_ka_v"):
@@ -448,8 +454,6 @@ def target_for(f: str, base: bool, data: bool = False) -> Path | None:
         return cpath("runs") / top / "kaggle_out" / rest
     if top == "voices":
         return ROOT / f
-    if base and top == "base_ka":
-        return cpath("runs") / "base_ka" / "kaggle_out" / rest
     if base and top == "ljspeech":
         return ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / rest
     return None
@@ -498,6 +502,8 @@ def _pull(a, t, required=True, data=False):
         dst = target_for(f, a.base, data)
         if dst is None or f.endswith("/voice.json"):
             continue
+        if f in PRUNED and dst.exists():
+            continue  # ლოკალურად შემცირებული (2026-11-09) — სრული ვერსია არ ბრუნდება
         if dst.exists() and not a.force and f.endswith(".jsonl") and dst.stat().st_size >= r[0]:
             continue  # ანალიზის შედეგები მხოლოდ ემატება — აქ უფრო სრული (ან იგივე) ფაილი არ გადაიწერება
         if f == "lexicon/lexicon.json":  # გაერთიანება: ახალი სიტყვები ემატება, აქაური არ იცვლება
@@ -514,6 +520,8 @@ def _pull(a, t, required=True, data=False):
             continue
         print(f"  ↓ {f} ({r[0] / 1e6:.1f} MB)", flush=True)
         p = hf_hub_download(repo(), f, token=t)
+        if f.startswith("designs/") and (json.loads(Path(p).read_text(encoding="utf-8")).get("model") or "base_ka") in REMOVED_BASES:
+            continue  # v1/v2-ის ნარევი — მოდელი წაშლილია
         dst.parent.mkdir(parents=True, exist_ok=True)
         tmp = dst.with_name(dst.name + ".part")
         shutil.copy2(p, tmp)

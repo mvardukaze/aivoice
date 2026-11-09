@@ -28,17 +28,19 @@ from piper.train.vits.lightning import VitsModel
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from app.config import path as cpath  # noqa: E402,F401
-DEFAULT_CKPT = cpath("runs") / "base_ka" / "kaggle_out" / "final.ckpt"
+DEFAULT_CKPT = cpath("runs") / "base_ka_v3" / "kaggle_out" / "final.ckpt"
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("checkpoint", nargs="?", default=str(DEFAULT_CKPT))
-    ap.add_argument("--out", default=str(cpath("designer")))  # app/designer.py აქედან კითხულობს
+    # app/designer.py: <paths.designer>/../designer_<slot>; ნაგულისხმევად slot = runs/<slot>/kaggle_out/<ckpt>
+    ap.add_argument("--out", default=None)
     ap.add_argument("--config", help="Piper-ის config.json (ნაგულისხმევად checkpoint-ის გვერდით)")
     ap.add_argument("--source", default="kaggle", help="მეტამონაცემისთვის: kaggle | local")
     a = ap.parse_args()
-    ckpt, out = Path(a.checkpoint), Path(a.out)
+    ckpt = Path(a.checkpoint)
+    out = Path(a.out) if a.out else cpath("designer").parent / f"designer_{ckpt.parent.parent.name}"
     tmp = out.with_name(out.name + ".tmp")
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(parents=True)

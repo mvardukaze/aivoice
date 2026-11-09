@@ -11,7 +11,7 @@ from .config import ROOT, path as cpath
 
 RUNS = cpath("runs")
 DDATA = cpath("datasets")
-BASE_SLOT = "base_ka"
+BASE_SLOT = "base_ka_v3"  # v1 (base_ka) და v2 წაშლილია 2026-11-09
 KAGGLE_WEEKLY_HOURS = 30
 GCP_STATE = cpath("gcp") / "state.json"
 GCP_SEC_PER_BATCH = 1.05  # L4, batch 32 — გაზომილი 2026-10-08
@@ -118,7 +118,7 @@ def _speakers_summary(path: str, mtime: float):
 
 
 def base_slot() -> str:
-    """რომელ საბაზო მოდელს ვაჩვენებთ: Google Cloud-ზე ბოლოს გაშვებული (state.json → slot), ან base_ka."""
+    """რომელ საბაზო მოდელს ვაჩვენებთ: Google Cloud-ზე ბოლოს გაშვებული (state.json → slot), ან BASE_SLOT."""
     return (read_json(GCP_STATE, {}) or {}).get("slot") or BASE_SLOT
 
 
@@ -126,7 +126,7 @@ def base_slot() -> str:
 def base():
     BASE_SLOT = base_slot()  # noqa: N806
     job = read_json(ROOT / "data" / "kaggle_jobs" / f"{BASE_SLOT}.json", {}) or {}
-    ds = Path(job.get("dataset_dir") or DDATA / "base_ka_v1")
+    ds = Path(job.get("dataset_dir") or DDATA / BASE_SLOT)
     sp = ds / "speakers.json"
     summary = _speakers_summary(str(sp), sp.stat().st_mtime) if sp.exists() else {}
     names = read_json(sp, {}) or {}

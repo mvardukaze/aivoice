@@ -4,7 +4,7 @@
 პანელის „პარამეტრების“ ჩანართი იგივე ფაილს წერს. პანელიც და tools/*-იც ამას კითხულობს:
 
     from app.config import cfg, path
-    path("datasets") / "base_ka_v1"
+    path("datasets") / "base_ka_v3"
     cfg()["server"]["port"]
 
 მისამართებში შეიძლება {data_root} და ~ — მაგ. "{data_root}/datasets".
@@ -28,7 +28,8 @@ SCHEMA: dict[str, dict[str, tuple]] = {
                       "დიდი ფაილები: dataset-ები, მოდელები, ჩანაწერები, წვრთნის შედეგები. სასურველია სწრაფი დისკი, ≥ 50 GB."),
         "datasets": ("{data_root}/datasets", "Dataset-ები", "წვრთნის ჩანაწერები (wav/flac + metadata.csv)."),
         "runs": ("{data_root}/runs", "წვრთნის შედეგები", "checkpoint-ები, ნიმუშები, სტატუსი."),
-        "designer": ("{data_root}/designer", "ხმის შემქმნელის მოდელი", "საბაზო მოდელის ONNX + დინამიკების ვექტორები."),
+        "designer": ("{data_root}/designer", "ხმის შემქმნელის მოდელი",
+                     "მისი გვერდით: designer_base_ka_v3, …_public (ONNX + დინამიკების ვექტორები). თავად designer/ (v1) წაშლილია."),
         "sources": ("{data_root}/sources", "წყაროები", "Common Voice-ის არქივები და ცხრილები."),
         "work": ("{data_root}/kaggle", "Kaggle-ის დროებითი ფაილები", "ატვირთვამდე მომზადებული საქაღალდეები."),
         "gcp": ("{data_root}/gcp", "Google Cloud-ის ფაილები", "მანქანის მდგომარეობა და ატვირთვები."),

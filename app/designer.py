@@ -39,7 +39,7 @@ def models() -> dict:
     """საბაზო მოდელები, რომლებიც შემქმნელისთვის დაექსპორტებულია (tools/export_designer.py).
     თითოს თავისი რუკა (დინამიკები), რეიტინგი და შეფასებები აქვს; ნარევები მოდელითაა მონიშნული."""
     out = {}
-    entries = [("base_ka", "ძველი (v1)", cpath("designer"), "base_ka_v1", "mms_rank.json", "designer_ratings.json")]
+    entries = []  # v1 (designer/) და v2 წაშლილია 2026-11-09 — მხოლოდ designer_base_ka_v3+ და საჯარო
     for d in sorted(cpath("designer").parent.glob("designer_base_ka_v*")):  # designer_base_ka_v2, _v3 … (export_designer)
         slot = d.name.removeprefix("designer_")
         v = slot.rsplit("_", 1)[-1]
@@ -71,7 +71,7 @@ def active() -> str:
     if a in ms:
         return a
     real = sorted(k for k in ms if not k.endswith("_public") and ms[k].get("commercial", True))
-    return real[-1] if real else (next(iter(ms)) if ms else "base_ka")  # ნაგულისხმევად — უახლესი (არა საჯარო)
+    return real[-1] if real else (next(iter(ms)) if ms else "")  # ნაგულისხმევად — უახლესი (არა საჯარო)
 
 
 def M() -> dict:
@@ -132,7 +132,8 @@ def state(slot: str | None = None):
             emb = np.load(des / "embeddings.npy")
             cfg = read_json(des / "config.json", {})
             smap = cfg.get("speaker_id_map", {})
-            # v2-ს 600 ადგილი აქვს (მომავალი ხმებისთვის) — რუკაზე მხოლოდ ნასწავლი დინამიკები
+            # 600 ადგილი (მომავალი ხმებისთვის); v3-ის რუკა 2026-11-09-ს 110 Common Voice ხმამდე შემცირდა —
+            # რუკაზე მხოლოდ speaker_id_map-ის დინამიკები (ინდექსები უცვლელია)
             names = [n for n, _ in sorted(smap.items(), key=lambda x: x[1])]
             used = emb[[smap[n] for n in names]]
             info = read_json(m["speakers"], {}) or {}
@@ -276,7 +277,7 @@ def suggest(mode: str = "neutral", k: int = 4, seed: int | None = None):
     s = state()
     rng = np.random.default_rng(seed if seed is not None else int(time.time() * 1000) % 2**32)
     pool = [(n, s["info"].get(n, {}).get("f0_median")) for n in s["names"]]
-    # საკმარისად ნასწავლი ხმები: v1-ში ≥ 10 წთ; v2-ში თითო ხმას ≤ 8 წთ აქვს (შერჩევის ზღვარი) → ≥ 5 წთ
+    # საკმარისად ნასწავლი ხმები: ბევრწუთიან მოდელში ≥ 10 წთ, თორემ ≥ 5 წთ
     mins = [s["info"].get(n, {}).get("minutes") or 0 for n, _ in pool]
     thr = 10 if max(mins, default=0) > 20 else 5 if max(mins, default=0) > 0 else 0  # საჯარო (სინთეზური) — წუთები არ აქვს
     pool = [(n, f) for n, f in pool if f and (s["info"].get(n, {}).get("minutes") or 0) >= thr]
@@ -317,7 +318,7 @@ class Design(BaseModel):
 
 @router.get("/designs")
 def designs():
-    """ყველა ნარევი; "model" — რომელ საბაზო მოდელზეა შექმნილი (ძველებს ველი არ აქვთ → base_ka)."""
+    """ყველა ნარევი; "model" — რომელ საბაზო მოდელზეა შექმნილი (ველის გარეშე — ძველი v1, წაშლილი: base_ka)."""
     out = [read_json(p) for p in sorted(DESIGNS.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)] \
         if DESIGNS.exists() else []
     for d in out:

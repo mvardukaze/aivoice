@@ -106,7 +106,8 @@ def measure(job):
 def select(cap_hours: float):
     corpus = {s["client_id"]: s for s in json.loads((SRC / "corpus.json").read_text(encoding="utf-8"))["speakers"]}
     chosen = {cid for cid, s in corpus.items() if good(s)}
-    cur = {v["client_id"] for v in json.loads((cpath("datasets") / "base_ka_v1" / "speakers.json").read_text(encoding="utf-8")).values()}
+    v1 = cpath("datasets") / "base_ka_v1" / "speakers.json"  # v1 წაშლილია 2026-11-09 → "current" ყველგან False
+    cur = {v["client_id"] for v in json.loads(v1.read_text(encoding="utf-8")).values()} if v1.exists() else set()
     dur = {r["clip"]: int(r["duration[ms]"]) for r in rows(SRC / "clip_durations.tsv")}
     rng = random.Random(27)
     per = {}

@@ -23,7 +23,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("checkpoint")
     ap.add_argument("--label", required=True)
-    ap.add_argument("--slot", default="base_ka")
+    ap.add_argument("--slot", default="base_ka_v3")
     a = ap.parse_args()
     import torch
     epoch = torch.load(a.checkpoint, map_location="cpu", weights_only=False, mmap=True)["epoch"]

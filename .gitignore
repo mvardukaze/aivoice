@@ -52,8 +52,6 @@ aivoice.toml
 voices/catalog.json
 data/designs/
 data/kaggle_jobs/*
-!data/kaggle_jobs/base_ka.json
-!data/kaggle_jobs/base_ka_v2.json
 !data/kaggle_jobs/base_ka_v3.json
 !data/kaggle_jobs/base_ka_v4_omni_nc.json
 data/ghtest/answers.json

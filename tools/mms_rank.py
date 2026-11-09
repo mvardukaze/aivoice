@@ -3,7 +3,7 @@ MMS „ღ“-ს მსაჯულად არ გამოდგა, მა�
 მომხმარებლის ყურთან კარგად ასახავს (2026-10-12). ტექსტი გახმოვანებამდე ka_text()-ით მზადდება („ოდეს-ღაც“).
 
     ./aivoice rank [--kind all|speaker|mix] [--fresh]   (ან პანელიდან: ხმის შემქმნელი → რეიტინგი)
-შედეგი: data/mms_rank.json — {key: {kind, name, f0, cer, per: [cer…], texts: […], epoch}}; შეჩერების შემდეგ აგრძელებს.
+შედეგი: data/mms_rank_<model>.json — {key: {kind, name, f0, cer, per: [cer…], texts: […], epoch}}; შეჩერების შემდეგ აგრძელებს.
 პროგრესი: data/mms_rank.progress.json (პანელი აჩვენებს). --fresh — არჩეული ტიპის ძველი შედეგები იშლება.
 """
 
@@ -88,7 +88,7 @@ def main():
     items = []
     if args.kind in ("all", "speaker"):
         items += [("speaker", s["name"], {s["name"]: 1}, s.get("f0")) for s in get(f"{API}/speakers?model={MODEL}")["speakers"]]
-    designs = [d for d in get(f"{API}/designs") if d.get("model", "base_ka") == MODEL]
+    designs = [d for d in get(f"{API}/designs") if d.get("model") == MODEL]
     if args.kind in ("all", "mix"):
         items += [("mix", d["name"], d["weights"], d.get("f0_estimate")) for d in designs]
     epoch = minfo.get("epoch")

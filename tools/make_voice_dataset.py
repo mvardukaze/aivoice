@@ -26,7 +26,9 @@ from app.textnorm import ka_text  # noqa: E402
 
 def designer_dir(model: str) -> Path:
     """ნარევის საბაზო მოდელის შემქმნელი (app/designer.py → models())."""
-    return cpath("designer") if model == "base_ka" else cpath("designer").parent / f"designer_{model}"
+    if not model or model in ("base_ka", "base_ka_v2"):  # v1/v2 წაშლილია 2026-11-09
+        raise SystemExit(f"ნარევის საბაზო მოდელი ({model or 'base_ka'}) აღარ არის — შექმენით ნარევი v3-ზე")
+    return cpath("designer").parent / f"designer_{model}"
 
 
 SR = 22050
@@ -60,7 +62,7 @@ def main():
 
     design = next(d for p in (ROOT / "data" / "designs").glob("*.json")
                   if (d := json.loads(p.read_text(encoding="utf-8")))["name"] == a.design)
-    DES = designer_dir(design.get("model", "base_ka"))
+    DES = designer_dir(design.get("model"))
     print("საბაზო მოდელი:", DES, flush=True)
     out = cpath("datasets") / a.slot
     (out / "wav").mkdir(parents=True, exist_ok=True)

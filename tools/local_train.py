@@ -270,11 +270,12 @@ class Local:
         if not cands:
             return
         info = ckpt_info(cands[-1])
-        meta = read_json(cpath("designer") / "meta.json", {}) or {}
+        des = cpath("designer").parent / f"designer_{self.slot}"
+        meta = read_json(des / "meta.json", {}) or {}
         if not info or (meta.get("epoch") is not None and info[0] <= meta["epoch"]):
             return
         r = subprocess.run([str(PY), str(ROOT / "tools" / "export_designer.py"), str(cands[-1]),
-                            "--config", str(self.run / "kaggle_out" / "config.json"), "--source", "local"],
+                            "--config", str(self.run / "kaggle_out" / "config.json"), "--source", "local", "--out", str(des)],
                            capture_output=True, text=True, env={**os.environ, "CUDA_VISIBLE_DEVICES": "", "OMP_NUM_THREADS": "4"})
         self.save(designer_at_ts=time.time(), designer_epoch=info[0],
                   designer_result=(r.stdout.strip() or r.stderr.strip())[-300:])

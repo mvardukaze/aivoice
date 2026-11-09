@@ -309,7 +309,7 @@ def cmd_fetch(a):
         cat_p = ROOT / "voices" / "catalog.json"
         cat = json.loads(cat_p.read_text(encoding="utf-8")) if cat_p.exists() else {"voices": []}
         if not any(v["id"] == slot for v in cat["voices"]):
-            cat["voices"].append({"id": slot, "name": slot, "status": "testing", "license": "own", "base": "base_ka"})
+            cat["voices"].append({"id": slot, "name": slot, "status": "testing", "license": "own", "base": ""})  # train_ctl new წერს ნარევის მოდელს
         for v in cat["voices"]:
             if v["id"] == slot:
                 v.update(status="testing", model=f"{slot}/{onnx.name}")  # „სატესტო“ — შემოწმების შემდეგ „მზადაა“

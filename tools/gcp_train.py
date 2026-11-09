@@ -30,8 +30,8 @@ ZONES = ["us-central1-a", "us-central1-b", "us-central1-c"]
 KEY = expand(cfg()["gcp"]["ssh_key"])
 STAGE = cpath("gcp")
 STATE = STAGE / "state.json"
-# რომელ მოდელს ვწვრთნით — state.json-ის "slot" (create <slot>); ძველი გაშვებები: base_ka
-SLOT = (json.loads(STATE.read_text()).get("slot") if STATE.exists() else None) or "base_ka"
+# რომელ მოდელს ვწვრთნით — state.json-ის "slot" (create <slot>); v1 (base_ka) და v2 წაშლილია 2026-11-09
+SLOT = (json.loads(STATE.read_text()).get("slot") if STATE.exists() else None) or "base_ka_v3"
 RUN = cpath("runs") / SLOT
 JOB = ROOT / "data" / "kaggle_jobs" / f"{SLOT}.json"
 LJSPEECH = ROOT / "training" / "checkpoints" / "en_US-ljspeech-medium" / "ljspeech-medium.clean.ckpt"
@@ -158,7 +158,7 @@ def cmd_push():
     ds = Path(job["dataset_dir"]).name
     tar = STAGE / f"{ds}.tar"
     assert tar.exists(), f"dataset-ის არქივი ჯერ არ არის მზად: {tar}"
-    fresh = bool(job.get("warmstart")) and not (RUN / "gcp" / "latest.ckpt").exists() and SLOT != "base_ka"
+    fresh = bool(job.get("warmstart")) and not (RUN / "gcp" / "latest.ckpt").exists()
     # გაგრძელება სხვა მოდელიდან (job: "resume_from", მაგ. v2-ის final.ckpt) — ან უკვე ჩამოტვირთული უახლესი
     if fresh:
         ckpt = LJSPEECH
@@ -281,7 +281,7 @@ def remote_progress() -> dict:
 
 def export_designer(ckpt: Path):
     # ახალი მოდელი (base_ka_v2…) — ცალკე საქაღალდეში, რომ მიმდინარე ხმის შემქმნელი წვრთნის დროს არ შეიცვალოს
-    out = cpath("designer") if SLOT == "base_ka" else cpath("designer").parent / f"designer_{SLOT}"
+    out = cpath("designer").parent / f"designer_{SLOT}"
     cfgp = RUN / "kaggle_out" / "config.json"
     if not cfgp.exists():
         cfgp = RUN / "gcp" / "config.json"
@@ -415,7 +415,7 @@ def cmd_watch():
                         export_designer(RUN / "gcp" / "latest.ckpt")
                         n = len(list((RUN / "previews").glob("k*")))
                         subprocess.run([TPY, str(ROOT / "tools" / "make_previews.py"), str(RUN / "gcp" / "latest.ckpt"),
-                                        "--label", f"Google Cloud #{n if SLOT != 'base_ka' else n - 1}", "--slot", SLOT],
+                                        "--label", f"Google Cloud #{n}", "--slot", SLOT],
                                        capture_output=True,
                                        env={"CUDA_VISIBLE_DEVICES": "", "PATH": "/usr/bin:/bin", "OMP_NUM_THREADS": "4"})
             except Exception as e:

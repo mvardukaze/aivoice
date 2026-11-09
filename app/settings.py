@@ -285,11 +285,9 @@ def setup_status():
         ("ჩართულია" if C.cfg()["omnivoice"]["enabled"] else "დაყენებულია, მაგრამ გამორთულია („პარამეტრები“ → OmniVoice)") if opy.exists()
         else "ხმები აღწერით (სასურველია GPU) — ./install.sh --omnivoice")
 
-    # ხმის შემქმნელი: ძველი (designer/), ახალი (designer_base_ka_v*) ან საჯარო (…_public) — რომელიმე საკმარისია
-    dirs = [d for d in [C.path("designer"), *sorted(C.path("designer").parent.glob("designer_base_ka_v*"))]
-            if (d / "designer.onnx").exists()]
-    names = ", ".join("v1" if d.name == "designer" else d.name.removeprefix("designer_base_ka_").replace("_public", " საჯარო")
-                      for d in dirs)
+    # ხმის შემქმნელი: designer_base_ka_v* (v3 …) ან საჯარო (…_public) — რომელიმე საკმარისია (v1/v2 წაშლილია)
+    dirs = [d for d in sorted(C.path("designer").parent.glob("designer_base_ka_v*")) if (d / "designer.onnx").exists()]
+    names = ", ".join(d.name.removeprefix("designer_base_ka_").replace("_public", " საჯარო") for d in dirs)
     add("მოდელები", "ხმის შემქმნელის მოდელი", "ok" if dirs else "missing",
         names if dirs else "ჩამოტვირთვა Hugging Face-იდან (მოდელები → ჩამოტვირთვა)", "models")
     voices = [p for p in (C.ROOT / "voices").glob("*/*.onnx")]

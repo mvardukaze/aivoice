@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from app.config import path as cpath  # noqa: E402,F401
 def base_ckpt(model: str) -> Path:
-    """ნარევის საბაზო მოდელის checkpoint (ნარევში "model": base_ka | base_ka_v2 …)."""
+    """ნარევის საბაზო მოდელის checkpoint (ნარევში "model": base_ka_v3 …; v1/v2 წაშლილია)."""
     return cpath("runs") / model / "kaggle_out" / "final.ckpt"
 
 
@@ -34,7 +34,7 @@ def main():
 
     design = next(d for p in (ROOT / "data" / "designs").glob("*.json")
                   if (d := json.loads(p.read_text(encoding="utf-8")))["name"] == a.design)
-    a.base = a.base or str(base_ckpt(design.get("model", "base_ka")))
+    a.base = a.base or str(base_ckpt(design.get("model") or "base_ka"))
     print("საბაზო მოდელი:", a.base, flush=True)
     base = VitsModel.load_from_checkpoint(a.base, map_location="cpu", weights_only=False).eval()
     gm = base.model_g
