@@ -69,7 +69,13 @@ def main():
     f0 = np.array([info.get(n, {}).get("f0_median") or np.nan for n in names], dtype=float)
     f0 = np.where(np.isnan(f0), np.nanmedian(f0), f0)
     E = emb[[smap[n] for n in names]]
-    lab = labels(set(names))
+    # სინთეზური ხმები (base_ka_v4_omni_nc): სქესი/ასაკი OmniVoice-ის აღწერიდან (speakers.json → instruct)
+    syn = {n: info[n]["instruct"] for n in names if info.get(n, {}).get("instruct")}
+    if syn:
+        AGE = {"teenager": "teens", "young adult": "twenties", "middle-aged": "fourties", "elderly": "seventies"}
+        lab = {n: (t.split(",")[0].strip(), next((v for k, v in AGE.items() if k in t), "")) for n, t in syn.items()}
+    else:
+        lab = labels(set(names))
 
     # სქესი: ანაბეჭდი + log(F0)
     Xg = np.hstack([E, np.log(f0)[:, None] * 10])

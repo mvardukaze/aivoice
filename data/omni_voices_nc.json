@@ -1,0 +1,1817 @@
+{
+ "_note": "base_ka_v4_omni_nc: OmniVoice-ით აღწერით შექმნილი ხმები (არა ნამდვილი ადამიანები). reference-ები: /mnt/d/aivoice/omni_nc/refs. ⚠ არაკომერციული (cc-by-nc-4.0).",
+ "license": "cc-by-nc-4.0",
+ "commercial": false,
+ "license_note": "OmniVoice-ის სინთეზური ჩანაწერები: წონები CC-BY-NC-4.0 (Emilia), აუდიო ტოკენიზატორი — Boson Higgs Audio 2 Community License. მხოლოდ არაკომერციული გამოყენება; საჯაროდ არ ქვეყნდება.",
+ "slot": "base_ka_v4_omni_nc",
+ "created": "2026-11-09T16:40:10",
+ "voices": [
+  {
+   "name": "omni_f01",
+   "shard": "voice_01.jsonl",
+   "instruct": "female, young adult, moderate pitch",
+   "seed": 8919,
+   "ref": "omni_f01.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.96,
+   "ref_cer": 0.0,
+   "ref_cps": 13.07,
+   "f0": 241.4,
+   "test_cer": 0.037,
+   "clone_cps_x1": 14.33,
+   "clone_cps_x09": 13.48,
+   "clone_rtf": 0.48,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 8919,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.037,
+     "f0": 241.4,
+     "dur": 7.96
+    },
+    {
+     "seed": 16838,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.055,
+     "f0": 269.4,
+     "dur": 7.67
+    },
+    {
+     "seed": 1000,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.067,
+     "f0": 229.2,
+     "dur": 8.02
+    }
+   ]
+  },
+  {
+   "name": "omni_f02",
+   "shard": "voice_02.jsonl",
+   "instruct": "female, young adult, high pitch",
+   "seed": 1037,
+   "ref": "omni_f02.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.48,
+   "ref_cer": 0.0,
+   "ref_cps": 13.9,
+   "f0": 212.6,
+   "test_cer": 0.037,
+   "clone_cps_x1": 14.35,
+   "clone_cps_x09": 14.11,
+   "clone_rtf": 0.468,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 1037,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.037,
+     "f0": 212.6,
+     "dur": 7.48
+    },
+    {
+     "seed": 16875,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.026,
+     "f0": 247.0,
+     "dur": 7.56
+    },
+    {
+     "seed": 8956,
+     "ok": true,
+     "cer": 0.029,
+     "test_cer": 0.088,
+     "f0": 234.5,
+     "dur": 7.65
+    }
+   ]
+  },
+  {
+   "name": "omni_f03",
+   "shard": "voice_03.jsonl",
+   "instruct": "female, young adult, low pitch",
+   "seed": 8993,
+   "ref": "omni_f03.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.92,
+   "ref_cer": 0.01,
+   "ref_cps": 13.13,
+   "f0": 235.9,
+   "test_cer": 0.025,
+   "clone_cps_x1": 13.53,
+   "clone_cps_x09": 13.29,
+   "clone_rtf": 0.48,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 8993,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.025,
+     "f0": 235.9,
+     "dur": 7.92
+    },
+    {
+     "seed": 1074,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.035,
+     "f0": 226.5,
+     "dur": 7.73
+    },
+    {
+     "seed": 16912,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.038,
+     "f0": 237.2,
+     "dur": 8.04
+    }
+   ]
+  },
+  {
+   "name": "omni_f04",
+   "shard": "voice_04.jsonl",
+   "instruct": "female, young adult, moderate pitch",
+   "seed": 9030,
+   "ref": "omni_f04.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.57,
+   "ref_cer": 0.01,
+   "ref_cps": 13.74,
+   "f0": 260.2,
+   "test_cer": 0.029,
+   "clone_cps_x1": 13.83,
+   "clone_cps_x09": 13.75,
+   "clone_rtf": 0.482,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9030,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.029,
+     "f0": 260.2,
+     "dur": 7.57
+    },
+    {
+     "seed": 1111,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.054,
+     "f0": 255.7,
+     "dur": 8.02
+    },
+    {
+     "seed": 16949,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.07,
+     "f0": 261.7,
+     "dur": 7.79
+    }
+   ]
+  },
+  {
+   "name": "omni_f05",
+   "shard": "voice_05.jsonl",
+   "instruct": "female, young adult, high pitch",
+   "seed": 1148,
+   "ref": "omni_f05.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.75,
+   "ref_cer": 0.0,
+   "ref_cps": 13.42,
+   "f0": 229.2,
+   "test_cer": 0.029,
+   "clone_cps_x1": 13.95,
+   "clone_cps_x09": 13.93,
+   "clone_rtf": 0.494,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 1148,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.029,
+     "f0": 229.2,
+     "dur": 7.75
+    },
+    {
+     "seed": 16986,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.055,
+     "f0": 267.8,
+     "dur": 7.54
+    },
+    {
+     "seed": 9067,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.056,
+     "f0": 233.2,
+     "dur": 7.64
+    }
+   ]
+  },
+  {
+   "name": "omni_f06",
+   "shard": "voice_06.jsonl",
+   "instruct": "female, young adult, low pitch",
+   "seed": 1185,
+   "ref": "omni_f06.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.97,
+   "ref_cer": 0.0,
+   "ref_cps": 13.05,
+   "f0": 237.2,
+   "test_cer": 0.05,
+   "clone_cps_x1": 13.18,
+   "clone_cps_x09": 12.82,
+   "clone_rtf": 0.472,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 1185,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.05,
+     "f0": 237.2,
+     "dur": 7.97
+    },
+    {
+     "seed": 9104,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.043,
+     "f0": 235.2,
+     "dur": 8.44
+    },
+    {
+     "seed": 17023,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.053,
+     "f0": 242.8,
+     "dur": 8.2
+    }
+   ]
+  },
+  {
+   "name": "omni_f07",
+   "shard": "voice_07.jsonl",
+   "instruct": "female, young adult, moderate pitch",
+   "seed": 9141,
+   "ref": "omni_f07.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.32,
+   "ref_cer": 0.01,
+   "ref_cps": 12.5,
+   "f0": 251.4,
+   "test_cer": 0.0,
+   "clone_cps_x1": 13.95,
+   "clone_cps_x09": 13.19,
+   "clone_rtf": 0.498,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9141,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.0,
+     "f0": 251.4,
+     "dur": 8.32
+    },
+    {
+     "seed": 17060,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.044,
+     "f0": 244.9,
+     "dur": 7.82
+    },
+    {
+     "seed": 1222,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.055,
+     "f0": 259.5,
+     "dur": 7.23
+    }
+   ]
+  },
+  {
+   "name": "omni_f08",
+   "shard": "voice_08.jsonl",
+   "instruct": "female, middle-aged, moderate pitch",
+   "seed": 1259,
+   "ref": "omni_f08.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.9,
+   "ref_cer": 0.01,
+   "ref_cps": 13.16,
+   "f0": 233.2,
+   "test_cer": 0.041,
+   "clone_cps_x1": 13.52,
+   "clone_cps_x09": 13.35,
+   "clone_rtf": 0.476,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 1259,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.041,
+     "f0": 233.2,
+     "dur": 7.9
+    },
+    {
+     "seed": 9178,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.043,
+     "f0": 267.8,
+     "dur": 7.8
+    },
+    {
+     "seed": 17097,
+     "ok": true,
+     "cer": 0.029,
+     "test_cer": 0.035,
+     "f0": 269.4,
+     "dur": 8.17
+    }
+   ]
+  },
+  {
+   "name": "omni_f09",
+   "shard": "voice_09.jsonl",
+   "instruct": "female, middle-aged, low pitch",
+   "seed": 1296,
+   "ref": "omni_f09.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.14,
+   "ref_cer": 0.01,
+   "ref_cps": 12.78,
+   "f0": 241.4,
+   "test_cer": 0.06,
+   "clone_cps_x1": 13.34,
+   "clone_cps_x09": 13.32,
+   "clone_rtf": 0.47,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 1296,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.06,
+     "f0": 241.4,
+     "dur": 8.14
+    },
+    {
+     "seed": 17134,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.061,
+     "f0": 247.0,
+     "dur": 7.59
+    },
+    {
+     "seed": 9215,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.061,
+     "f0": 240.0,
+     "dur": 8.16
+    }
+   ]
+  },
+  {
+   "name": "omni_f10",
+   "shard": "voice_10.jsonl",
+   "instruct": "female, middle-aged, high pitch",
+   "seed": 1333,
+   "ref": "omni_f10.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.81,
+   "ref_cer": 0.01,
+   "ref_cps": 13.32,
+   "f0": 223.3,
+   "test_cer": 0.044,
+   "clone_cps_x1": 13.87,
+   "clone_cps_x09": 13.87,
+   "clone_rtf": 0.489,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 1333,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.044,
+     "f0": 223.3,
+     "dur": 7.81
+    },
+    {
+     "seed": 9252,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.044,
+     "f0": 250.6,
+     "dur": 7.92
+    },
+    {
+     "seed": 17171,
+     "ok": true,
+     "cer": 0.029,
+     "test_cer": 0.029,
+     "f0": 221.4,
+     "dur": 7.8
+    }
+   ]
+  },
+  {
+   "name": "omni_f11",
+   "shard": "voice_11.jsonl",
+   "instruct": "female, middle-aged, moderate pitch",
+   "seed": 9289,
+   "ref": "omni_f11.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.86,
+   "ref_cer": 0.01,
+   "ref_cps": 13.23,
+   "f0": 282.1,
+   "test_cer": 0.026,
+   "clone_cps_x1": 14.26,
+   "clone_cps_x09": 14.05,
+   "clone_rtf": 0.488,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9289,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.026,
+     "f0": 282.1,
+     "dur": 7.86
+    },
+    {
+     "seed": 1370,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.033,
+     "f0": 261.7,
+     "dur": 7.75
+    },
+    {
+     "seed": 17208,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.074,
+     "f0": 258.0,
+     "dur": 7.67
+    }
+   ]
+  },
+  {
+   "name": "omni_f12",
+   "shard": "voice_12.jsonl",
+   "instruct": "female, middle-aged, low pitch",
+   "seed": 9326,
+   "ref": "omni_f12.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.18,
+   "ref_cer": 0.01,
+   "ref_cps": 12.71,
+   "f0": 241.4,
+   "test_cer": 0.023,
+   "clone_cps_x1": 13.13,
+   "clone_cps_x09": 13.0,
+   "clone_rtf": 0.474,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9326,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.023,
+     "f0": 241.4,
+     "dur": 8.18
+    },
+    {
+     "seed": 17245,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.035,
+     "f0": 233.2,
+     "dur": 7.67
+    },
+    {
+     "seed": 1407,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.055,
+     "f0": 245.6,
+     "dur": 8.27
+    }
+   ]
+  },
+  {
+   "name": "omni_f13",
+   "shard": "voice_13.jsonl",
+   "instruct": "female, middle-aged, high pitch",
+   "seed": 1444,
+   "ref": "omni_f13.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.68,
+   "ref_cer": 0.01,
+   "ref_cps": 13.54,
+   "f0": 238.6,
+   "test_cer": 0.019,
+   "clone_cps_x1": 13.51,
+   "clone_cps_x09": 13.05,
+   "clone_rtf": 0.472,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 1444,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.019,
+     "f0": 238.6,
+     "dur": 7.68
+    },
+    {
+     "seed": 9363,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.043,
+     "f0": 244.9,
+     "dur": 7.63
+    },
+    {
+     "seed": 17282,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.038,
+     "f0": 254.3,
+     "dur": 7.64
+    }
+   ]
+  },
+  {
+   "name": "omni_f14",
+   "shard": "voice_14.jsonl",
+   "instruct": "female, elderly, moderate pitch",
+   "seed": 9400,
+   "ref": "omni_f14.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.56,
+   "ref_cer": 0.01,
+   "ref_cps": 13.76,
+   "f0": 215.7,
+   "test_cer": 0.0,
+   "clone_cps_x1": 14.28,
+   "clone_cps_x09": 13.54,
+   "clone_rtf": 0.5,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9400,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.0,
+     "f0": 215.7,
+     "dur": 7.56
+    },
+    {
+     "seed": 17319,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.027,
+     "f0": 238.6,
+     "dur": 8.3
+    },
+    {
+     "seed": 1481,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.044,
+     "f0": 240.0,
+     "dur": 7.67
+    }
+   ]
+  },
+  {
+   "name": "omni_f15",
+   "shard": "voice_15.jsonl",
+   "instruct": "female, elderly, low pitch",
+   "seed": 1518,
+   "ref": "omni_f15.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.99,
+   "ref_cer": 0.0,
+   "ref_cps": 13.02,
+   "f0": 229.2,
+   "test_cer": 0.016,
+   "clone_cps_x1": 13.28,
+   "clone_cps_x09": 12.86,
+   "clone_rtf": 0.475,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 1518,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.016,
+     "f0": 229.2,
+     "dur": 7.99
+    },
+    {
+     "seed": 9437,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.01,
+     "f0": 238.6,
+     "dur": 8.23
+    },
+    {
+     "seed": 17356,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.044,
+     "f0": 240.0,
+     "dur": 8.36
+    }
+   ]
+  },
+  {
+   "name": "omni_f16",
+   "shard": "voice_16.jsonl",
+   "instruct": "female, elderly, high pitch",
+   "seed": 9474,
+   "ref": "omni_f16.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.9,
+   "ref_cer": 0.01,
+   "ref_cps": 13.16,
+   "f0": 227.2,
+   "test_cer": 0.056,
+   "clone_cps_x1": 13.58,
+   "clone_cps_x09": 12.93,
+   "clone_rtf": 0.486,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9474,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.056,
+     "f0": 227.2,
+     "dur": 7.9
+    },
+    {
+     "seed": 1555,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.054,
+     "f0": 208.9,
+     "dur": 8.01
+    },
+    {
+     "seed": 17393,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.055,
+     "f0": 205.3,
+     "dur": 7.87
+    }
+   ]
+  },
+  {
+   "name": "omni_f17",
+   "shard": "voice_17.jsonl",
+   "instruct": "female, elderly, moderate pitch",
+   "seed": 17430,
+   "ref": "omni_f17.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.75,
+   "ref_cer": 0.01,
+   "ref_cps": 13.42,
+   "f0": 218.8,
+   "test_cer": 0.023,
+   "clone_cps_x1": 13.98,
+   "clone_cps_x09": 13.63,
+   "clone_rtf": 0.491,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 17430,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.023,
+     "f0": 218.8,
+     "dur": 7.75
+    },
+    {
+     "seed": 9511,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.027,
+     "f0": 247.0,
+     "dur": 8.16
+    },
+    {
+     "seed": 1592,
+     "ok": true,
+     "cer": 0.029,
+     "test_cer": 0.019,
+     "f0": 247.0,
+     "dur": 7.85
+    }
+   ]
+  },
+  {
+   "name": "omni_f18",
+   "shard": "voice_18.jsonl",
+   "instruct": "female, teenager, moderate pitch",
+   "seed": 17467,
+   "ref": "omni_f18.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.89,
+   "ref_cer": 0.01,
+   "ref_cps": 13.18,
+   "f0": 272.5,
+   "test_cer": 0.01,
+   "clone_cps_x1": 13.76,
+   "clone_cps_x09": 13.51,
+   "clone_rtf": 0.49,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 17467,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.01,
+     "f0": 272.5,
+     "dur": 7.89
+    },
+    {
+     "seed": 1629,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.037,
+     "f0": 264.8,
+     "dur": 7.69
+    },
+    {
+     "seed": 9548,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.038,
+     "f0": 271.0,
+     "dur": 7.97
+    }
+   ]
+  },
+  {
+   "name": "omni_f19",
+   "shard": "voice_19.jsonl",
+   "instruct": "female, teenager, high pitch",
+   "seed": 9585,
+   "ref": "omni_f19.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.7,
+   "ref_cer": 0.01,
+   "ref_cps": 13.51,
+   "f0": 279.7,
+   "test_cer": 0.025,
+   "clone_cps_x1": 14.67,
+   "clone_cps_x09": 13.93,
+   "clone_rtf": 0.509,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9585,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.025,
+     "f0": 279.7,
+     "dur": 7.7
+    },
+    {
+     "seed": 17504,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.041,
+     "f0": 303.3,
+     "dur": 7.95
+    },
+    {
+     "seed": 1666,
+     "ok": false,
+     "cer": 0.0,
+     "test_cer": 0.134,
+     "f0": 297.2,
+     "dur": 7.54
+    }
+   ]
+  },
+  {
+   "name": "omni_f20",
+   "shard": "voice_20.jsonl",
+   "instruct": "female, teenager, moderate pitch",
+   "seed": 17541,
+   "ref": "omni_f20.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.54,
+   "ref_cer": 0.01,
+   "ref_cps": 13.79,
+   "f0": 274.9,
+   "test_cer": 0.025,
+   "clone_cps_x1": 14.46,
+   "clone_cps_x09": 13.87,
+   "clone_rtf": 0.506,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 17541,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.025,
+     "f0": 274.9,
+     "dur": 7.54
+    },
+    {
+     "seed": 1703,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.044,
+     "f0": 278.9,
+     "dur": 8.14
+    },
+    {
+     "seed": 9622,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.046,
+     "f0": 254.3,
+     "dur": 7.82
+    }
+   ]
+  },
+  {
+   "name": "omni_m01",
+   "shard": "voice_21.jsonl",
+   "instruct": "male, young adult, moderate pitch",
+   "seed": 9659,
+   "ref": "omni_m01.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.4,
+   "ref_cer": 0.01,
+   "ref_cps": 14.05,
+   "f0": 169.7,
+   "test_cer": 0.054,
+   "clone_cps_x1": 14.78,
+   "clone_cps_x09": 14.22,
+   "clone_rtf": 0.504,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9659,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.054,
+     "f0": 169.7,
+     "dur": 7.4
+    },
+    {
+     "seed": 17578,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.052,
+     "f0": 170.8,
+     "dur": 7.03
+    },
+    {
+     "seed": 1740,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.045,
+     "f0": 177.7,
+     "dur": 7.82
+    }
+   ]
+  },
+  {
+   "name": "omni_m02",
+   "shard": "voice_22.jsonl",
+   "instruct": "male, young adult, low pitch",
+   "seed": 9696,
+   "ref": "omni_m02.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.71,
+   "ref_cer": 0.0,
+   "ref_cps": 11.94,
+   "f0": 155.6,
+   "test_cer": 0.019,
+   "clone_cps_x1": 12.0,
+   "clone_cps_x09": 11.19,
+   "clone_rtf": 0.443,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9696,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.019,
+     "f0": 155.6,
+     "dur": 8.71
+    },
+    {
+     "seed": 1777,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.023,
+     "f0": 143.1,
+     "dur": 8.63
+    },
+    {
+     "seed": 17615,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.055,
+     "f0": 148.6,
+     "dur": 8.72
+    }
+   ]
+  },
+  {
+   "name": "omni_m03",
+   "shard": "voice_23.jsonl",
+   "instruct": "male, young adult, high pitch",
+   "seed": 17652,
+   "ref": "omni_m03.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.93,
+   "ref_cer": 0.01,
+   "ref_cps": 13.11,
+   "f0": 238.6,
+   "test_cer": 0.037,
+   "clone_cps_x1": 13.64,
+   "clone_cps_x09": 13.49,
+   "clone_rtf": 0.486,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 17652,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.037,
+     "f0": 238.6,
+     "dur": 7.93
+    },
+    {
+     "seed": 9733,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.053,
+     "f0": 235.2,
+     "dur": 7.73
+    },
+    {
+     "seed": 1814,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.062,
+     "f0": 251.4,
+     "dur": 7.94
+    }
+   ],
+   "auto_check": "F0 სქესის ზღვარს გარეთ"
+  },
+  {
+   "name": "omni_m04",
+   "shard": "voice_24.jsonl",
+   "instruct": "male, young adult, moderate pitch",
+   "seed": 17689,
+   "ref": "omni_m04.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.8,
+   "ref_cer": 0.0,
+   "ref_cps": 13.33,
+   "f0": 185.1,
+   "test_cer": 0.054,
+   "clone_cps_x1": 14.56,
+   "clone_cps_x09": 14.26,
+   "clone_rtf": 0.515,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 17689,
+     "ok": false,
+     "cer": 0.0,
+     "test_cer": 0.054,
+     "f0": 185.1,
+     "dur": 7.8
+    },
+    {
+     "seed": 1851,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.048,
+     "f0": 191.6,
+     "dur": 7.76
+    },
+    {
+     "seed": 9770,
+     "ok": false,
+     "cer": 0.019,
+     "test_cer": 0.046,
+     "f0": 188.3,
+     "dur": 7.98
+    }
+   ],
+   "auto_check": "F0 სქესის ზღვარს გარეთ"
+  },
+  {
+   "name": "omni_m05",
+   "shard": "voice_25.jsonl",
+   "instruct": "male, young adult, low pitch",
+   "seed": 17726,
+   "ref": "omni_m05.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.49,
+   "ref_cer": 0.0,
+   "ref_cps": 12.25,
+   "f0": 152.1,
+   "test_cer": 0.035,
+   "clone_cps_x1": 12.66,
+   "clone_cps_x09": 11.46,
+   "clone_rtf": 0.455,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 17726,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.035,
+     "f0": 152.1,
+     "dur": 8.49
+    },
+    {
+     "seed": 1888,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.036,
+     "f0": 143.5,
+     "dur": 8.51
+    },
+    {
+     "seed": 9807,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.042,
+     "f0": 146.0,
+     "dur": 8.56
+    }
+   ]
+  },
+  {
+   "name": "omni_m06",
+   "shard": "voice_26.jsonl",
+   "instruct": "male, young adult, very low pitch",
+   "seed": 17763,
+   "ref": "omni_m06.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.52,
+   "ref_cer": 0.0,
+   "ref_cps": 12.21,
+   "f0": 86.8,
+   "test_cer": 0.018,
+   "clone_cps_x1": 13.13,
+   "clone_cps_x09": 13.02,
+   "clone_rtf": 0.486,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 17763,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.018,
+     "f0": 86.8,
+     "dur": 8.52
+    },
+    {
+     "seed": 9844,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.019,
+     "f0": 105.7,
+     "dur": 8.48
+    },
+    {
+     "seed": 1925,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.038,
+     "f0": 105.4,
+     "dur": 8.72
+    }
+   ]
+  },
+  {
+   "name": "omni_m07",
+   "shard": "voice_27.jsonl",
+   "instruct": "male, young adult, moderate pitch",
+   "seed": 17800,
+   "ref": "omni_m07.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.71,
+   "ref_cer": 0.019,
+   "ref_cps": 13.49,
+   "f0": 167.8,
+   "test_cer": 0.052,
+   "clone_cps_x1": 14.43,
+   "clone_cps_x09": 13.88,
+   "clone_rtf": 0.506,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 17800,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.052,
+     "f0": 167.8,
+     "dur": 7.71
+    },
+    {
+     "seed": 1962,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.044,
+     "f0": 189.9,
+     "dur": 7.64
+    },
+    {
+     "seed": 9881,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.045,
+     "f0": 189.4,
+     "dur": 7.77
+    }
+   ]
+  },
+  {
+   "name": "omni_m08",
+   "shard": "voice_28.jsonl",
+   "instruct": "male, middle-aged, low pitch",
+   "seed": 9918,
+   "ref": "omni_m08.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.54,
+   "ref_cer": 0.01,
+   "ref_cps": 12.18,
+   "f0": 147.7,
+   "test_cer": 0.0,
+   "clone_cps_x1": 11.65,
+   "clone_cps_x09": 10.53,
+   "clone_rtf": 0.438,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 9918,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.0,
+     "f0": 147.7,
+     "dur": 8.54
+    },
+    {
+     "seed": 1999,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.023,
+     "f0": 147.3,
+     "dur": 8.72
+    },
+    {
+     "seed": 17837,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.071,
+     "f0": 142.3,
+     "dur": 8.37
+    }
+   ]
+  },
+  {
+   "name": "omni_m09",
+   "shard": "voice_29.jsonl",
+   "instruct": "male, middle-aged, moderate pitch",
+   "seed": 2036,
+   "ref": "omni_m09.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.73,
+   "ref_cer": 0.01,
+   "ref_cps": 13.45,
+   "f0": 168.7,
+   "test_cer": 0.032,
+   "clone_cps_x1": 13.71,
+   "clone_cps_x09": 13.8,
+   "clone_rtf": 0.479,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 2036,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.032,
+     "f0": 168.7,
+     "dur": 7.73
+    },
+    {
+     "seed": 17874,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.061,
+     "f0": 172.7,
+     "dur": 7.93
+    },
+    {
+     "seed": 9955,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.064,
+     "f0": 180.8,
+     "dur": 7.77
+    }
+   ]
+  },
+  {
+   "name": "omni_m10",
+   "shard": "voice_30.jsonl",
+   "instruct": "male, middle-aged, very low pitch",
+   "seed": 2073,
+   "ref": "omni_m10.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.72,
+   "ref_cer": 0.01,
+   "ref_cps": 11.93,
+   "f0": 80.6,
+   "test_cer": 0.019,
+   "clone_cps_x1": 12.8,
+   "clone_cps_x09": 13.02,
+   "clone_rtf": 0.473,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 2073,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.019,
+     "f0": 80.6,
+     "dur": 8.72
+    },
+    {
+     "seed": 17911,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.029,
+     "f0": 98.0,
+     "dur": 8.5
+    },
+    {
+     "seed": 9992,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.046,
+     "f0": 106.3,
+     "dur": 8.45
+    }
+   ]
+  },
+  {
+   "name": "omni_m11",
+   "shard": "voice_31.jsonl",
+   "instruct": "male, middle-aged, low pitch",
+   "seed": 17948,
+   "ref": "omni_m11.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.43,
+   "ref_cer": 0.01,
+   "ref_cps": 12.34,
+   "f0": 144.4,
+   "test_cer": 0.0,
+   "clone_cps_x1": 12.78,
+   "clone_cps_x09": 11.64,
+   "clone_rtf": 0.469,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 17948,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.0,
+     "f0": 144.4,
+     "dur": 8.43
+    },
+    {
+     "seed": 2110,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.022,
+     "f0": 148.6,
+     "dur": 8.06
+    },
+    {
+     "seed": 10029,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.029,
+     "f0": 142.7,
+     "dur": 8.26
+    }
+   ]
+  },
+  {
+   "name": "omni_m12",
+   "shard": "voice_32.jsonl",
+   "instruct": "male, middle-aged, moderate pitch",
+   "seed": 2147,
+   "ref": "omni_m12.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.74,
+   "ref_cer": 0.01,
+   "ref_cps": 13.44,
+   "f0": 163.0,
+   "test_cer": 0.033,
+   "clone_cps_x1": 14.53,
+   "clone_cps_x09": 13.46,
+   "clone_rtf": 0.515,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 2147,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.033,
+     "f0": 163.0,
+     "dur": 7.74
+    },
+    {
+     "seed": 17985,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.019,
+     "f0": 178.8,
+     "dur": 8.09
+    },
+    {
+     "seed": 10066,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.031,
+     "f0": 176.7,
+     "dur": 7.89
+    }
+   ]
+  },
+  {
+   "name": "omni_m13",
+   "shard": "voice_33.jsonl",
+   "instruct": "male, middle-aged, high pitch",
+   "seed": 10103,
+   "ref": "omni_m13.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.24,
+   "ref_cer": 0.01,
+   "ref_cps": 12.62,
+   "f0": 251.4,
+   "test_cer": 0.017,
+   "clone_cps_x1": 13.55,
+   "clone_cps_x09": 12.92,
+   "clone_rtf": 0.489,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 10103,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.017,
+     "f0": 251.4,
+     "dur": 8.24
+    },
+    {
+     "seed": 18022,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.027,
+     "f0": 244.2,
+     "dur": 7.61
+    },
+    {
+     "seed": 2184,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.037,
+     "f0": 242.8,
+     "dur": 7.52
+    }
+   ],
+   "auto_check": "F0 სქესის ზღვარს გარეთ"
+  },
+  {
+   "name": "omni_m14",
+   "shard": "voice_34.jsonl",
+   "instruct": "male, elderly, low pitch",
+   "seed": 2221,
+   "ref": "omni_m14.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.12,
+   "ref_cer": 0.01,
+   "ref_cps": 12.81,
+   "f0": 149.5,
+   "test_cer": 0.027,
+   "clone_cps_x1": 13.14,
+   "clone_cps_x09": 12.58,
+   "clone_rtf": 0.477,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 2221,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.027,
+     "f0": 149.5,
+     "dur": 8.12
+    },
+    {
+     "seed": 10140,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.032,
+     "f0": 147.7,
+     "dur": 8.44
+    },
+    {
+     "seed": 18059,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.029,
+     "f0": 146.0,
+     "dur": 8.54
+    }
+   ]
+  },
+  {
+   "name": "omni_m15",
+   "shard": "voice_35.jsonl",
+   "instruct": "male, elderly, moderate pitch",
+   "seed": 2258,
+   "ref": "omni_m15.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.92,
+   "ref_cer": 0.01,
+   "ref_cps": 13.13,
+   "f0": 172.7,
+   "test_cer": 0.036,
+   "clone_cps_x1": 14.07,
+   "clone_cps_x09": 13.37,
+   "clone_rtf": 0.501,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 2258,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.036,
+     "f0": 172.7,
+     "dur": 7.92
+    },
+    {
+     "seed": 18096,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.025,
+     "f0": 186.1,
+     "dur": 7.78
+    },
+    {
+     "seed": 10177,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.043,
+     "f0": 177.7,
+     "dur": 7.91
+    }
+   ]
+  },
+  {
+   "name": "omni_m16",
+   "shard": "voice_36.jsonl",
+   "instruct": "male, elderly, low pitch",
+   "seed": 10214,
+   "ref": "omni_m16.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.65,
+   "ref_cer": 0.019,
+   "ref_cps": 12.02,
+   "f0": 152.1,
+   "test_cer": 0.0,
+   "clone_cps_x1": 11.82,
+   "clone_cps_x09": 10.46,
+   "clone_rtf": 0.447,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 10214,
+     "ok": true,
+     "cer": 0.019,
+     "test_cer": 0.0,
+     "f0": 152.1,
+     "dur": 8.65
+    },
+    {
+     "seed": 18133,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.018,
+     "f0": 156.5,
+     "dur": 8.71
+    },
+    {
+     "seed": 2295,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.032,
+     "f0": 157.4,
+     "dur": 8.65
+    }
+   ]
+  },
+  {
+   "name": "omni_m17",
+   "shard": "voice_37.jsonl",
+   "instruct": "male, elderly, high pitch",
+   "seed": 18170,
+   "ref": "omni_m17.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.87,
+   "ref_cer": 0.01,
+   "ref_cps": 13.21,
+   "f0": 242.8,
+   "test_cer": 0.052,
+   "clone_cps_x1": 14.76,
+   "clone_cps_x09": 13.83,
+   "clone_rtf": 0.516,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 18170,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.052,
+     "f0": 242.8,
+     "dur": 7.87
+    },
+    {
+     "seed": 10251,
+     "ok": false,
+     "cer": 0.029,
+     "test_cer": 0.035,
+     "f0": 234.5,
+     "dur": 7.82
+    },
+    {
+     "seed": 2332,
+     "ok": false,
+     "cer": 0.019,
+     "test_cer": 0.055,
+     "f0": 248.5,
+     "dur": 7.92
+    }
+   ],
+   "auto_check": "F0 სქესის ზღვარს გარეთ"
+  },
+  {
+   "name": "omni_m18",
+   "shard": "voice_38.jsonl",
+   "instruct": "male, teenager, moderate pitch",
+   "seed": 10288,
+   "ref": "omni_m18.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 7.89,
+   "ref_cer": 0.01,
+   "ref_cps": 13.18,
+   "f0": 189.9,
+   "test_cer": 0.018,
+   "clone_cps_x1": 13.95,
+   "clone_cps_x09": 13.29,
+   "clone_rtf": 0.497,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 10288,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.018,
+     "f0": 189.9,
+     "dur": 7.89
+    },
+    {
+     "seed": 18207,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.019,
+     "f0": 176.7,
+     "dur": 7.77
+    },
+    {
+     "seed": 2369,
+     "ok": false,
+     "cer": 0.01,
+     "test_cer": 0.052,
+     "f0": 177.7,
+     "dur": 7.73
+    }
+   ],
+   "auto_check": "F0 სქესის ზღვარს გარეთ"
+  },
+  {
+   "name": "omni_m19",
+   "shard": "voice_39.jsonl",
+   "instruct": "male, teenager, high pitch",
+   "seed": 2406,
+   "ref": "omni_m19.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.72,
+   "ref_cer": 0.019,
+   "ref_cps": 11.93,
+   "f0": 401.3,
+   "test_cer": 0.073,
+   "clone_cps_x1": 11.31,
+   "clone_cps_x09": 10.43,
+   "clone_rtf": 0.43,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 2406,
+     "ok": false,
+     "cer": 0.019,
+     "test_cer": 0.073,
+     "f0": 401.3,
+     "dur": 8.72
+    },
+    {
+     "seed": 10325,
+     "ok": false,
+     "cer": 1.0,
+     "test_cer": 1.0,
+     "f0": null,
+     "dur": 8.72
+    },
+    {
+     "seed": 18244,
+     "ok": false,
+     "cer": 1.0,
+     "test_cer": 1.0,
+     "f0": 230.5,
+     "dur": 7.73
+    }
+   ],
+   "auto_check": "F0 სქესის ზღვარს გარეთ"
+  },
+  {
+   "name": "omni_m20",
+   "shard": "voice_40.jsonl",
+   "instruct": "male, teenager, low pitch",
+   "seed": 18281,
+   "ref": "omni_m20.wav",
+   "ref_text": "დღეს ამინდი მშვიდი და თბილია, ამიტომ საღამოს მეგობრებთან ერთად ძველ უბანში გავისეირნებთ და ახალ წიგნის მაღაზიასაც ვნახავთ.",
+   "ref_speed": 0.9,
+   "num_step": 16,
+   "ref_dur": 8.56,
+   "ref_cer": 0.0,
+   "ref_cps": 12.15,
+   "f0": 154.7,
+   "test_cer": 0.038,
+   "clone_cps_x1": 11.8,
+   "clone_cps_x09": 11.43,
+   "clone_rtf": 0.445,
+   "ok": true,
+   "candidates": [
+    {
+     "seed": 18281,
+     "ok": true,
+     "cer": 0.0,
+     "test_cer": 0.038,
+     "f0": 154.7,
+     "dur": 8.56
+    },
+    {
+     "seed": 2443,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.038,
+     "f0": 150.3,
+     "dur": 8.09
+    },
+    {
+     "seed": 10362,
+     "ok": true,
+     "cer": 0.01,
+     "test_cer": 0.041,
+     "f0": 151.6,
+     "dur": 8.72
+    }
+   ]
+  }
+ ],
+ "approved": "2026-11-09: მომხმარებელმა მოისმინა 40 reference და დაამტკიცა („all good“), m03/m13/m17/m19-ის ჩათვლით"
+}

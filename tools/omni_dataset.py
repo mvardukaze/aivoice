@@ -69,6 +69,7 @@ _M = [("young adult", "moderate pitch"), ("young adult", "low pitch"), ("young a
       ("middle-aged", "low pitch"), ("middle-aged", "moderate pitch"), ("middle-aged", "high pitch"),
       ("elderly", "low pitch"), ("elderly", "moderate pitch"), ("elderly", "low pitch"), ("elderly", "high pitch"),
       ("teenager", "moderate pitch"), ("teenager", "high pitch"), ("teenager", "low pitch")]
+# კაცის „high pitch“ (m03, m13, m17, m19) F0 235–400 Hz-ს იძლევა (ქალის/ბავშვის სიმაღლე) — მომხმარებელმა მოისმინა და დაამტკიცა (2026-11-09)
 VOICES = ([{"name": f"omni_f{i + 1:02d}", "shard": f"voice_{i + 1:02d}.jsonl", "instruct": f"female, {a}, {p}"}
            for i, (a, p) in enumerate(_F)] +
           [{"name": f"omni_m{i + 1:02d}", "shard": f"voice_{i + 21:02d}.jsonl", "instruct": f"male, {a}, {p}"}
@@ -134,10 +135,15 @@ def omni_text(r: dict) -> str:
 
 # ---------------- refs ----------------
 def cmd_refs_push(a):
+    only = set(a.only.split(",")) if a.only else None
     cfg = {"mode": "refs", "pip": PIP, "num_step": NUM_STEP, "ref_text": REF_TEXT, "ref_speed": REF_SPEED,
            "tests": TESTS, "test_speeds": [1.0, 0.9],
            "voices": [{"name": v["name"], "instruct": v["instruct"],
-                       "seeds": [1000 + i * 37 + k * 7919 for k in range(a.seeds)]} for i, v in enumerate(VOICES)]}
+                       "seeds": [1000 + i * 37 + k * 7919 for k in range(a.seeds)]} for i, v in enumerate(VOICES)
+                      if not only or v["name"] in only]}
+    if only:  # ხელახლა — სხვა seed-ები
+        for v in cfg["voices"]:
+            v["seeds"] = [s + 500 for s in v["seeds"]]
     push_kernel("refs", cfg, 3 * 3600, [])
 
 
@@ -151,19 +157,22 @@ def fetch(name: str, dst: Path):
     kaggle("kernels", "output", kid(name), "-p", str(dst), "-o")
 
 
-def cmd_refs_fetch(_):
-    fetch("refs", D / "refs_kernel")
-    print(json.dumps(rj(D / "refs_kernel" / "status.json"), ensure_ascii=False))
+def cmd_refs_fetch(a):
+    d = D / ("refs_kernel" + (f"_{a.round}" if a.round > 1 else ""))
+    fetch("refs", d)
+    print(json.dumps(rj(d / "status.json"), ensure_ascii=False))
 
 
 def cmd_pick(a):
     """თითო ხმაზე საუკეთესო კანდიდატი: გამართული (MMS CER ≤ 0.08, 6–13 წმ, clipping-ის გარეშე), F0 სქესს
     შეესაბამება (ქალი ≥ 150 Hz, კაცი ≤ 175 Hz), clone-ის ტესტებიც კარგად იკითხება; რჩეულიდან — დაბალი CER."""
-    res = rj(D / "refs_kernel" / "refs.json", [])
     by = defaultdict(list)
-    for r in res:
-        if not r.get("error"):
-            by[r["name"]].append(r)
+    instr = {v["name"]: v["instruct"] for v in VOICES}
+    for d in sorted(D.glob("refs_kernel*")):  # refs_kernel, refs_kernel_2 … (ხელახალი რაუნდები)
+        for r in rj(d / "refs.json", []):
+            if not r.get("error") and r["instruct"] == instr.get(r["name"]):
+                r["_dir"] = d
+                by[r["name"]].append(r)
     out, bad = [], []
     refs = D / "refs"
     refs.mkdir(parents=True, exist_ok=True)
@@ -173,7 +182,7 @@ def cmd_pick(a):
             tests = [t for t in r.get("tests", []) if t["speed"] == 1.0]
             tcer = sum(t["cer"] for t in tests) / max(1, len(tests))
             f0 = r.get("f0") or 0
-            sex_ok = (f0 >= 150) if v["name"].startswith("omni_f") else (0 < f0 <= 175)
+            sex_ok = (f0 >= 150) if v["name"].startswith("omni_f") else (0 < f0 <= 195)
             ok = (r["cer"] <= 0.08 and 6 <= r["dur"] <= 13 and r.get("clip", 0) <= 0.001 and r.get("max_gap_s", 0) <= 1.0
                   and sex_ok and tcer <= 0.12)
             cands.append((not ok, round(r["cer"] + tcer, 3), r, tcer))
@@ -184,7 +193,7 @@ def cmd_pick(a):
         notok, _, r, tcer = cands[0]
         if notok:
             bad.append(v["name"])
-        shutil.copy2(D / "refs_kernel" / "refs" / r["file"], refs / f"{v['name']}.wav")
+        shutil.copy2(r["_dir"] / "refs" / r["file"], refs / f"{v['name']}.wav")
         t1 = [t for t in r.get("tests", []) if t["speed"] == 1.0]
         t9 = [t for t in r.get("tests", []) if t["speed"] == 0.9]
         cps1 = sum(t["cps"] for t in t1) / max(1, len(t1))
@@ -235,7 +244,7 @@ def ensure_input() -> str:
     vj = rj(VOICES_JSON)
     if not vj:
         raise SystemExit("ჯერ: refs-fetch + pick")
-    sig = {"voices": [(v["name"], v["seed"]) for v in vj["voices"]]}
+    sig = {"voices": [[v["name"], v["seed"]] for v in vj["voices"]]}  # JSON-ში სიებად ინახება
     if (m := rj(mark)) and m.get("sig") == sig:
         return m["ref"]
     up = WORK / "omni-nc-input"
@@ -266,7 +275,6 @@ def part_state(part: str) -> dict:
 
 
 def cmd_gen_push(a):
-    ref = ensure_input()
     vj = {v["name"]: v for v in rj(VOICES_JSON)["voices"]}
     done = defaultdict(list)
     for r in rows_from_tars(tars(a.part)).values():
@@ -292,6 +300,7 @@ def cmd_gen_push(a):
     print(f"ნაწილი {a.part}, გაშვება r{run}: {len(voices)} ხმა, {sum(v['todo'] for v in voices)} წინადადება, ლიმიტი {a.hours} სთ")
     if a.dry_run:
         return
+    ref = ensure_input()
     push_kernel(f"gen-{a.part}", cfg, min(12 * 3600 - 300, budget + 5400), [ref])
     st["runs"].append({"run": run, "pushed": time.strftime("%Y-%m-%dT%H:%M:%S"), "voices": len(voices),
                        "todo": sum(v["todo"] for v in voices), "budget_h": a.hours, "speed": a.speed})
@@ -501,9 +510,11 @@ def write_selection(kept, speakers, stats):
 def main():
     ap = argparse.ArgumentParser(prog="tools/omni_dataset.py")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("refs-push").add_argument("--seeds", type=int, default=3)
-    for c in ("status", "refs-fetch"):
-        sub.add_parser(c)
+    p = sub.add_parser("refs-push")
+    p.add_argument("--seeds", type=int, default=3)
+    p.add_argument("--only", help="მხოლოდ ეს ხმები (მძიმით), სხვა seed-ებით")
+    sub.add_parser("status")
+    sub.add_parser("refs-fetch").add_argument("--round", type=int, default=1)
     sub.add_parser("pick")
     p = sub.add_parser("gen-push")
     p.add_argument("--part", choices=list(PARTS), required=True)
